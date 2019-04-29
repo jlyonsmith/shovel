@@ -14,23 +14,6 @@ export class OctopusTool {
     this.debug = options.debug
   }
 
-  async connectToHost(options) {
-    const ssh = new NodeSSH()
-
-    await ssh.connect({
-      host: options.hostname,
-      port: options.port,
-      username: options.username,
-      password: options.password,
-      agent: options.authSock,
-      tryKeyboard: !!options.keyboardInteractive,
-      debug: this.debug ? (detail) => this.log.info(detail) : null,
-      onKeyboardInteractive: options.onKeyboardInteractive,
-    })
-
-    return ssh
-  }
-
   async run(argv) {
     const options = {
       boolean: ["help", "version"],
@@ -63,11 +46,11 @@ Runs an Octopus configuration script on one or more hosts over SSH.
 Options:
   --help              Shows this help
   --version           Shows the tool version
-  --host, -h              The SSH host name
-  --user, -u              The SSH user name
-  --port, -p              The SSH port number
-  --password, -P          SSH password
-  --hosts-file, -f        JSON5 file containing multiple host names
+  --host, -h          The SSH host name
+  --user, -u          The SSH user name
+  --port, -p          The SSH port number
+  --password, -P      SSH password
+  --hosts-file, -f    JSON5 file containing multiple host names
 `)
       return 0
     }
@@ -76,15 +59,16 @@ Options:
     let attempts = 0
     let success = false
     const userInfo = os.userInfo()
-    let ssh = null
+    let ssh = new NodeSSH()
 
     try {
-      ssh = await this.connectToHost({
+      await ssh.connect({
         username: args.user || userInfo.username,
-        hostname: args.host || "localhost",
+        host: args.host || "localhost",
         port: args.port ? parseInt(args.port) : 22,
         password,
-        authSock: process.env["SSH_AUTH_SOCK"],
+        agent: process.env["SSH_AUTH_SOCK"],
+        tryKeyboard: true,
         onKeyboardInteractive: async (
           name,
           instructions,
@@ -92,6 +76,7 @@ Options:
           prompts,
           finish
         ) => {
+          console.log("------- HERE -------")
           const rl = readlinePassword.createInstance(
             process.stdin,
             process.stdout
@@ -104,6 +89,7 @@ Options:
           rl.close()
           finish(responses)
         },
+        debug: this.debug ? (detail) => this.log.info(detail) : null,
       })
       this.log.info("BEGIN")
       const result = await ssh.exec("uptime", [], {
