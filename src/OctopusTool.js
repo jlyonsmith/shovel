@@ -1,10 +1,9 @@
 import parseArgs from "minimist"
 import { fullVersion } from "./version"
 import readlinePassword from "@johnls/readline-password"
-import { Client as SSHClient } from "ssh2"
+import NodeSSH from "node-ssh"
 import os from "os"
 import autobind from "autobind-decorator"
-import { tsParenthesizedType } from "@babel/types"
 
 @autobind
 export class OctopusTool {
@@ -15,45 +14,21 @@ export class OctopusTool {
     this.debug = options.debug
   }
 
-  execOnHost(options) {
-    const connection = new SSHClient()
+  async connectToHost(options) {
+    const ssh = new NodeSSH()
 
-    return new Promise((resolve, reject) => {
-      connection
-        .on("ready", () => {
-          this.log.info("BEGIN")
-          connection.exec("uptime", (err, stream) => {
-            if (err) {
-              reject(err)
-            }
-            stream
-              .on("close", (code, signal) => {
-                connection.end()
-              })
-              .on("data", (data) => {
-                this.log.info("STDOUT: " + data)
-              })
-              .stderr.on("data", function(data) {
-                this.log.error("STDERR: " + data)
-              })
-          })
-        })
-        .on("error", (err) => reject(err))
-        .on("end", () => {
-          this.log.info("END")
-          resolve()
-        })
-        .on("keyboard-interactive", options.keyboardInteractive)
-        .connect({
-          host: options.hostname,
-          port: options.port,
-          username: options.username,
-          password: options.password,
-          agent: options.authSock,
-          tryKeyboard: !!options.keyboardInteractive,
-          debug: this.debug ? (detail) => this.log.info(detail) : null,
-        })
+    await ssh.connect({
+      host: options.hostname,
+      port: options.port,
+      username: options.username,
+      password: options.password,
+      agent: options.authSock,
+      tryKeyboard: !!options.keyboardInteractive,
+      debug: this.debug ? (detail) => this.log.info(detail) : null,
+      onKeyboardInteractive: options.onKeyboardInteractive,
     })
+
+    return ssh
   }
 
   async run(argv) {
@@ -101,15 +76,16 @@ Options:
     let attempts = 0
     let success = false
     const userInfo = os.userInfo()
+    let ssh = null
 
     try {
-      await this.execOnHost({
+      ssh = await this.connectToHost({
         username: args.user || userInfo.username,
         hostname: args.host || "localhost",
         port: args.port ? parseInt(args.port) : 22,
         password,
         authSock: process.env["SSH_AUTH_SOCK"],
-        keyboardInteractive: async (
+        onKeyboardInteractive: async (
           name,
           instructions,
           instructionsLang,
@@ -129,7 +105,21 @@ Options:
           finish(responses)
         },
       })
+      this.log.info("BEGIN")
+      const result = await ssh.exec("uptime", [], {
+        onStdout: (chunk) => {
+          this.log.info("STDOUT: " + chunk.toString("utf8"))
+        },
+        onStderr: (chunk) => {
+          this.log.info("STDERR: " + chunk.toString("utf8"))
+        },
+      })
     } finally {
+      if (ssh) {
+        ssh.dispose()
+        this.log.info("END")
+      }
+
       process.stdin.unref() // To free the Node event loop
     }
 
