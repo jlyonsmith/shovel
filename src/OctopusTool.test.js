@@ -1,17 +1,17 @@
 import { OctopusTool } from "./OctopusTool"
-import tmp from "tmp"
-import fs from "fs"
-import util from "util"
+import tmp from "tmp-promise"
 
+const toolName = "octopus"
 let tmpDirObj = null
 
-beforeAll(() => {
-  tmpDirObj = tmp.dirSync()
+beforeAll(async (done) => {
+  tmpDirObj = await tmp.dir()
+  done()
 })
 
 afterAll(() => {
   if (tmpDirObj) {
-    tmpDirObj.removeCallback()
+    tmpDirObj.cleanup()
   }
 })
 
@@ -34,7 +34,7 @@ function getOutput(fn) {
 
 test("--help", async (done) => {
   const mockLog = getMockLog()
-  const tool = new OctopusTool("octopus", mockLog)
+  const tool = new OctopusTool(toolName, mockLog)
   const exitCode = await tool.run(["--help"])
 
   expect(exitCode).toBe(0)
@@ -44,7 +44,7 @@ test("--help", async (done) => {
 
 test("--version", async (done) => {
   const mockLog = getMockLog()
-  const tool = new OctopusTool("octopus", mockLog)
+  const tool = new OctopusTool(toolName, mockLog)
   const exitCode = await tool.run(["--version"])
 
   expect(exitCode).toBe(0)

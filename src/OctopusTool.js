@@ -1,8 +1,12 @@
 import parseArgs from "minimist"
 import { fullVersion } from "./version"
-import { exec } from "child_process"
-import { sync as commandExistsSync } from "command-exists"
+import readlinePassword from "@johnls/readline-password"
+import { Client as SSHClient } from "ssh2"
+import os from "os"
+import autobind from "autobind-decorator"
+import { tsParenthesizedType } from "@babel/types"
 
+@autobind
 export class OctopusTool {
   constructor(toolName, log, options) {
     options = options || {}
@@ -11,118 +15,57 @@ export class OctopusTool {
     this.debug = options.debug
   }
 
-  _ensureCommands(cmds) {
-    this.cmds = this.cmds || new Set()
+  execOnHost(options) {
+    const connection = new SSHClient()
 
-    cmds.forEach((cmd) => {
-      if (!this.cmds.has(cmd) && !commandExistsSync(cmd)) {
-        throw new Error(`Command '${cmd}' does not exist.  Please install it.`)
-      } else {
-        this.cmds.add(cmd)
-      }
-    })
-  }
-
-  _execAndCapture(command, options) {
     return new Promise((resolve, reject) => {
-      const cp = exec(command, options)
-      let output = ""
-
-      cp.stdout.on("data", (data) => {
-        output += data.toString()
-      })
-
-      cp.on("error", (error) => {
-        reject(error)
-      })
-
-      cp.on("exit", function(code) {
-        if (code !== 0) {
-          reject(new Error("Non-zero exit code"))
-        } else {
-          resolve(output)
-        }
-      })
-    })
-  }
-
-  _execAndLog(command, options = {}) {
-    return new Promise((resolve, reject) => {
-      const cp = exec(command, options)
-      const re = new RegExp(/\n$/)
-
-      cp.stdout.on("data", (data) => {
-        const s = data.toString().replace(re, "")
-
-        if (options.ansible) {
-          if (s.startsWith("ok: ")) {
-            this.log.ansibleOK(s)
-          } else if (s.startsWith("changed: ")) {
-            this.log.ansibleChanged(s)
-          } else if (s.startsWith("skipping: ")) {
-            this.log.ansibleSkipping(s)
-          } else if (s.startsWith("error: ")) {
-            this.log.ansibleError(s)
-          } else {
-            this.log.info(s)
-          }
-        } else {
-          this.log.info(s)
-        }
-      })
-
-      cp.stderr.on("data", (data) => {
-        const s = data.toString().replace(re, "")
-
-        if (s !== "npm" && s !== "notice" && s !== "npm notice") {
-          this.log.info(s)
-        }
-      })
-
-      cp.on("error", (error) => {
-        reject(error)
-      })
-
-      cp.on("exit", function(code) {
-        if (code !== 0) {
-          reject(new Error(`'${command}' returned ${code}`))
-        } else {
+      connection
+        .on("ready", () => {
+          this.log.info("BEGIN")
+          connection.exec("uptime", (err, stream) => {
+            if (err) {
+              reject(err)
+            }
+            stream
+              .on("close", (code, signal) => {
+                connection.end()
+              })
+              .on("data", (data) => {
+                this.log.info("STDOUT: " + data)
+              })
+              .stderr.on("data", function(data) {
+                this.log.error("STDERR: " + data)
+              })
+          })
+        })
+        .on("error", (err) => reject(err))
+        .on("end", () => {
+          this.log.info("END")
           resolve()
-        }
-      })
-    })
-  }
-
-  _execAndCapture(command, options) {
-    return new Promise((resolve, reject) => {
-      const cp = exec(command, options)
-      let output = ""
-
-      cp.stdout.on("data", (data) => {
-        output += data.toString()
-      })
-
-      cp.on("error", (error) => {
-        reject(error)
-      })
-
-      cp.on("exit", function(code) {
-        if (code !== 0) {
-          reject(new Error(`'${command}' returned ${code}`))
-        } else {
-          resolve(output)
-        }
-      })
+        })
+        .on("keyboard-interactive", options.keyboardInteractive)
+        .connect({
+          host: options.hostname,
+          port: options.port,
+          username: options.username,
+          password: options.password,
+          agent: options.authSock,
+          tryKeyboard: !!options.keyboardInteractive,
+          debug: this.debug ? (detail) => this.log.info(detail) : null,
+        })
     })
   }
 
   async run(argv) {
     const options = {
       boolean: ["help", "version"],
-      string: ["host", "host-file"],
+      string: ["host", "hosts-file", "user", "port", "password"],
       alias: {
         h: "host",
-        f: "host-file",
+        u: "user",
+        p: "port",
+        f: "hosts-file",
+        P: "password",
       },
     }
     const args = parseArgs(argv, options)
@@ -136,22 +79,59 @@ export class OctopusTool {
 
     if (args.help) {
       this.log.info(`
-Usage: ${this.toolName} [options] <script>
+Usage: ${this.toolName} [options] <assertion-file>
 
 Description:
 
 Runs an Octopus configuration script on one or more hosts over SSH.
 
 Options:
-  --help        Shows this help
-  --version     Shows the tool version
-  --host        Host name
-  --host-file   JSON5 file containing multiple host names
+  --help              Shows this help
+  --version           Shows the tool version
+  --host              The SSH host name
+  --user              The SSH user name
+  --port              The SSH port number
+  --password          SSH password
+  --hosts-file        JSON5 file containing multiple host names
 `)
       return 0
     }
 
-    // TODO: Run the script
+    let password = args.password
+    let attempts = 0
+    let success = false
+    const userInfo = os.userInfo()
+
+    try {
+      await this.execOnHost({
+        username: args.user || userInfo.username,
+        hostname: args.host || "localhost",
+        port: args.port ? parseInt(args.port) : 22,
+        password,
+        authSock: process.env["SSH_AUTH_SOCK"],
+        keyboardInteractive: async (
+          name,
+          instructions,
+          instructionsLang,
+          prompts,
+          finish
+        ) => {
+          const rl = readlinePassword.createInstance(
+            process.stdin,
+            process.stdout
+          )
+          let responses = []
+
+          for (const prompt of prompts) {
+            responses.push(await rl.passwordAsync(prompt))
+          }
+          rl.close()
+          finish(responses)
+        },
+      })
+    } finally {
+      process.stdin.unref() // To free the Node event loop
+    }
 
     return 0
   }

@@ -1,0 +1,88 @@
+{
+  description: "Bootstrap and start consul cluster",
+  assertions: [
+    {
+      assert: "otherAssertions",
+      with: {
+        file: "./install-consul.json5",
+      },
+    },
+    {
+      description: "Ensure consul group",
+      assert: "group",
+      with: {
+        name: "consul",
+        system: true,
+      },
+    },
+    {
+      description: "Ensure consul user",
+      assert: "user",
+      with: {
+        name: "consul",
+        inGroup: "consul",
+        system: true,
+        noLogin: true,
+      },
+    },
+    {
+      description: "Ensure data directory and ownership",
+      assert: "directory",
+      with: {
+        path: "/var/lib/consul",
+        ownership: {
+          user: "consul",
+          group: "consul",
+        },
+        permissions: {
+          user: "rwx",
+          group: "rwx",
+          other: "rx",
+        },
+        recursive: true,
+      },
+    },
+    {
+      description: "Ensure configurations directory and ownership",
+      assert: "directory",
+      with: {
+        path: "/etc/consul.d",
+        ownership: {
+          user: "consul",
+          group: "consul",
+        },
+        recursive: true,
+      },
+    },
+    {
+      assert: "fileAndContents",
+      with: {
+        path: "/etc/systemd/system/consul.service",
+        content: "[Unit]\
+Description=Consul Service Discovery Agent\
+Documentation=https://www.consul.io/\
+After=network-online.target\
+Wants=network-online.target\
+\
+[Service]\
+Type=simple\
+User=consul\
+Group=consul\
+ExecStart=/usr/local/bin/consul agent -server -ui \
+	-bind='192.168.18.40' \
+	-data-dir=/var/lib/consul \
+	-node=monitor1 \
+	-config-dir=/etc/consul.d
+\
+ExecReload=/bin/kill -HUP $MAINPID\
+KillSignal=SIGINT\
+TimeoutStopSec=5\
+Restart=on-failure\
+SyslogIdentifier=consul\
+\
+[Install]\
+WantedBy=multi-user.target"
+      }
+    },
+  ],
+}

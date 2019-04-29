@@ -4,8 +4,8 @@ import chalk from "chalk"
 import path from "path"
 
 const log = {
-  info: console.error,
-  info2: function() {
+  info: console.log,
+  confirm: function() {
     console.error(chalk.green([...arguments].join(" ")))
   },
   error: function() {
@@ -13,18 +13,6 @@ const log = {
   },
   warning: function() {
     console.error(chalk.yellow("warning:", [...arguments].join(" ")))
-  },
-  ansibleOK: function() {
-    console.error(chalk.green([...arguments].join(" ")))
-  },
-  ansibleChanged: function() {
-    console.error(chalk.yellow([...arguments].join(" ")))
-  },
-  ansibleSkipping: function() {
-    console.error(chalk.cyan([...arguments].join(" ")))
-  },
-  ansibleError: function() {
-    console.error(chalk.red([...arguments].join(" ")))
   },
 }
 

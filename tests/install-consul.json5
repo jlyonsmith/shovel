@@ -1,0 +1,45 @@
+{
+  vars: {
+    consulVersion: "1.2.3",
+    consulZipFile: "${HOME}/downloads/consul_${consulVersion}_linux_amd64.zip",
+    consulUnzipDir: "${HOME}/downloads/consul_${consulVersion}",
+  },
+  assertions: [
+    {
+      assert: "directoryExists",
+      with: {
+        path: "${HOME}/downloads",
+      },
+    },
+    {
+      assert: "fileDownloaded",
+      with: {
+        url: "https://releases.hashicorp.com/consul/${consulVersion}/consul_${consulVersion}_linux_amd64.zip",
+        checksum: "xxx",
+        toFile: "${consulZipFile}",
+      },
+    },
+    {
+      assert: "fileUnzipped",
+      with: {
+        zipFile: "${consulZipFile}",
+        dirDir: "${zipDir}",
+      },
+    },
+    {
+      assert: "fileCopied",
+      with: {
+        fromFile: "${consulUnzipDir}/consul",
+        toDir: "/usr/local/bin",
+      },
+    },
+    {
+      assert: "commandOutputs",
+      with: {
+        programName: "consul",
+        regex: "^Consul\\sv${consuleVersion}$",
+        occurance: 1,
+      },
+    },
+  ],
+}
