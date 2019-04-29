@@ -63,11 +63,11 @@ Runs an Octopus configuration script on one or more hosts over SSH.
 Options:
   --help              Shows this help
   --version           Shows the tool version
-  --host              The SSH host name
-  --user              The SSH user name
-  --port              The SSH port number
-  --password          SSH password
-  --hosts-file        JSON5 file containing multiple host names
+  --host, -h              The SSH host name
+  --user, -u              The SSH user name
+  --port, -p              The SSH port number
+  --password, -P          SSH password
+  --hosts-file, -f        JSON5 file containing multiple host names
 `)
       return 0
     }
