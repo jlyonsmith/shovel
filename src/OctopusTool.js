@@ -5,6 +5,8 @@ import NodeSSH from "node-ssh"
 import os from "os"
 import autobind from "autobind-decorator"
 import validate from "./Validator"
+import JSON5 from "json5"
+import fs from "fs-extra"
 
 @autobind
 export class OctopusTool {
@@ -108,7 +110,7 @@ node --version > node_version.txt`
 
     if (args.help) {
       this.log.info(`
-Usage: ${this.toolName} [options] <assertion-file>
+Usage: ${this.toolName} [options] <script-file>
 
 Description:
 
@@ -126,10 +128,19 @@ Options:
       return 0
     }
 
-    const validityCheck = validate(assertions, this.validationConstraints)
+    const assertFile = args._[0]
+
+    if (!assertFile) {
+      throw new Error("Please specify a script file")
+    }
+
+    const assertContents = JSON5.parse(await fs.readFile(assertFile))
+    const validityCheck = validate(assertContents, this.validationConstraints)
     let validationMessage =
       validityCheck || "Validation complete: no errors found."
     console.log("_________*****___________", validationMessage)
+
+    process.exit(0)
 
     let ssh = null
 
