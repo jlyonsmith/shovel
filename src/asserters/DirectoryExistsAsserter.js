@@ -18,12 +18,20 @@ export class DirectoryExistsAsserter {
 
   async assert(args) {
     try {
-      await this.fs.lstat(args.path)
+      const status = await this.fs.lstat(args.path)
       return true
+      // return !!status?.isDirectory()
     } catch (error) {
       return false
     }
   }
 
-  async run(args) {}
+  async run(args) {
+    try {
+      await this.fs.mkdir(args.path)
+      return true
+    } catch (error) {
+      return false
+    }
+  }
 }

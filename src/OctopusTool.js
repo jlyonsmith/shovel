@@ -103,7 +103,7 @@ node --version > node_version.txt`
     const assertionPassed = await asserter.assert(testAssertion.with)
     if (!assertionPassed) {
       console.log("OCTOPUS::: ASSERTION FAILED - RUNNING THE THING")
-      asserter.run(testAssertion.with)
+      await asserter.run(testAssertion.with)
     }
   }
 

@@ -31,6 +31,7 @@ test("run", async (done) => {
   const asserter = new DirectoryExistsAsserter({ fs: mock })
   const result = await asserter.run({ path: "/test" })
 
+  expect(result).toBe(true)
   // TODO: ...
 
   done()
