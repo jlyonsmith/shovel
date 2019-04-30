@@ -4,6 +4,7 @@ import readlinePassword from "@johnls/readline-password"
 import NodeSSH from "node-ssh"
 import os from "os"
 import autobind from "autobind-decorator"
+import validate from "./Validator"
 
 @autobind
 export class OctopusTool {
@@ -12,13 +13,26 @@ export class OctopusTool {
     this.toolName = toolName
     this.log = log
     this.debug = options.debug
+    this.validationConstraints = {
+      description: {
+        isString: true,
+      },
+      vars: {
+        isObject: true,
+      },
+      assertions: {
+        presence: true,
+        isArray: true,
+        isAssertion: true, // an assertion contains an "assert" object and a "with" object
+      },
+    }
   }
 
   static bootstrapScript = `#!/bin/bash
-  curl -sL https://deb.nodesource.com/setup_10.x -o ./nodesource_setup.sh
-  sudo bash ./nodesource_setup.sh
-  sudo apt -y -q install nodejs
-  node --version > node_version.txt`
+curl -sL https://deb.nodesource.com/setup_10.x -o ./nodesource_setup.sh
+sudo bash ./nodesource_setup.sh
+sudo apt -y -q install nodejs
+node --version > node_version.txt`
 
   async createConnection(options) {
     let ssh = new NodeSSH()
@@ -111,6 +125,11 @@ Options:
 `)
       return 0
     }
+
+    const validityCheck = validate(assertions, this.validationConstraints)
+    let validationMessage =
+      validityCheck || "Validation complete: no errors found."
+    console.log("_________*****___________", validationMessage)
 
     let ssh = null
 
