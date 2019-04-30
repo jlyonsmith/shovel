@@ -71,20 +71,28 @@ node --version > node_version.txt`
       logResult(result)
     }
 
-    // this.log.info("BOOTSTRAP: Creating /opt/octopus/bootstrap.sh script")
-    // await ssh.execCommand(
-    //   `sudo cat "${OctopusTool.bootstrapScript}" > ./bootstrap.sh`,
-    //   {
-    //     cwd: "/opt/octopus",
-    //     stdin: password,
-    //   }
-    // )
+    this.log.info("BOOTSTRAP: Creating /opt/octopus/bootstrap.sh script")
+    await ssh.execCommand(
+      `sudo bash -c 'echo "${OctopusTool.bootstrapScript}" > ./bootstrap.sh'`,
+      {
+        options: { pty: !!password },
+        cwd: "/opt/octopus",
+        stdin: password + "\n",
+      }
+    )
+    if (result.code !== 0) {
+      logResult(result)
+    }
 
-    // this.log.info("BOOTSTRAP: Running /opt/octopus/bootstrap.sh script")
-    // await ssh.execCommand("sudo bash ./bootstrap.sh", {
-    //   cwd: "/opt/octopus",
-    //   stdin: password,
-    // })
+    this.log.info("BOOTSTRAP: Running /opt/octopus/bootstrap.sh script")
+    await ssh.execCommand("sudo bash ./bootstrap.sh", {
+      options: { pty: !!password },
+      cwd: "/opt/octopus",
+      stdin: password + "\n",
+    })
+    if (result.code !== 0) {
+      logResult(result)
+    }
   }
 
   async run(argv) {
@@ -138,10 +146,6 @@ Options:
     const validityCheck = validate(assertContents, this.validationConstraints)
     let validationMessage =
       validityCheck || "Validation complete: no errors found."
-    console.log("_________*****___________", validationMessage)
-
-    process.exit(0)
-
     let ssh = null
 
     try {
