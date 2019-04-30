@@ -4,6 +4,11 @@ import readlinePassword from "@johnls/readline-password"
 import NodeSSH from "node-ssh"
 import os from "os"
 import autobind from "autobind-decorator"
+import validate from "./Validator"
+
+// TODO: use import syntax without breaking the ability to import json5 files
+require("json5/lib/register")
+const assertions = require("../tests/install-consul.json5")
 
 @autobind
 export class OctopusTool {
@@ -12,6 +17,20 @@ export class OctopusTool {
     this.toolName = toolName
     this.log = log
     this.debug = options.debug
+
+    this.validationConstraints = {
+      description: {
+        isString: true,
+      },
+      vars: {
+        isObject: true,
+      },
+      assertions: {
+        presence: true,
+        isArray: true,
+        isAssertion: true, // an assertion contains an "assert" object and a "with" object
+      },
+    }
   }
 
   async run(argv) {
@@ -55,6 +74,11 @@ Options:
       return 0
     }
 
+    const validityCheck = validate(assertions, this.validationConstraints)
+    let validationMessage =
+      validityCheck || "Validation complete: no errors found."
+    console.log("_________*****___________", validationMessage)
+
     let password = args.password
     let attempts = 0
     let success = false
@@ -76,7 +100,6 @@ Options:
           prompts,
           finish
         ) => {
-          console.log("------- HERE -------")
           const rl = readlinePassword.createInstance(
             process.stdin,
             process.stdout

@@ -5,5 +5,5 @@ class DirectoryExistsAsserter {
 
   assert(args) {}
 
-  actualize(args) {}
+  run(args) {}
 }
