@@ -14,6 +14,63 @@ export class OctopusTool {
     this.debug = options.debug
   }
 
+  static bootstrapScript = `#!/bin/bash
+  curl -sL https://deb.nodesource.com/setup_10.x -o ./nodesource_setup.sh
+  sudo bash ./nodesource_setup.sh
+  sudo apt -y -q install nodejs
+  node --version > node_version.txt`
+
+  async createConnection(options) {
+    let ssh = new NodeSSH()
+
+    await ssh.connect({
+      username: options.username,
+      host: options.host,
+      port: options.port,
+      password: options.password,
+      agent: options.agent,
+      tryKeyboard: !!options.onKeyboardInteractive,
+      onKeyboardInteractive: options.onKeyboardInteractive,
+      debug: this.debug ? (detail) => this.log.info(detail) : null,
+    })
+
+    this.log.info(
+      `CONNECTED: ${options.username}@${options.host}:${options.port}`
+    )
+
+    return ssh
+  }
+
+  async bootstrapRemote(ssh, password) {
+    const logResult = (result) => {
+      this.log.info("STDOUT: " + result.stdout)
+      this.log.info("STDERR: " + result.stderr)
+    }
+    this.log.info("BOOTSTRAP: Creating /opt/octopus directory")
+    const result = await ssh.execCommand("sudo mkdir -p /opt/octopus", {
+      options: { pty: !!password },
+      stdin: password + "\n",
+    })
+    if (result.code !== 0) {
+      logResult(result)
+    }
+
+    // this.log.info("BOOTSTRAP: Creating /opt/octopus/bootstrap.sh script")
+    // await ssh.execCommand(
+    //   `sudo cat "${OctopusTool.bootstrapScript}" > ./bootstrap.sh`,
+    //   {
+    //     cwd: "/opt/octopus",
+    //     stdin: password,
+    //   }
+    // )
+
+    // this.log.info("BOOTSTRAP: Running /opt/octopus/bootstrap.sh script")
+    // await ssh.execCommand("sudo bash ./bootstrap.sh", {
+    //   cwd: "/opt/octopus",
+    //   stdin: password,
+    // })
+  }
+
   async run(argv) {
     const options = {
       boolean: ["help", "version"],
@@ -55,20 +112,17 @@ Options:
       return 0
     }
 
-    let password = args.password
-    let attempts = 0
-    let success = false
-    const userInfo = os.userInfo()
-    let ssh = new NodeSSH()
+    let ssh = null
 
     try {
-      await ssh.connect({
+      const userInfo = os.userInfo()
+
+      ssh = await this.createConnection({
         username: args.user || userInfo.username,
         host: args.host || "localhost",
         port: args.port ? parseInt(args.port) : 22,
-        password,
+        password: args.password,
         agent: process.env["SSH_AUTH_SOCK"],
-        tryKeyboard: true,
         onKeyboardInteractive: async (
           name,
           instructions,
@@ -76,7 +130,6 @@ Options:
           prompts,
           finish
         ) => {
-          console.log("------- HERE -------")
           const rl = readlinePassword.createInstance(
             process.stdin,
             process.stdout
@@ -89,21 +142,13 @@ Options:
           rl.close()
           finish(responses)
         },
-        debug: this.debug ? (detail) => this.log.info(detail) : null,
       })
-      this.log.info("BEGIN")
-      const result = await ssh.exec("uptime", [], {
-        onStdout: (chunk) => {
-          this.log.info("STDOUT: " + chunk.toString("utf8"))
-        },
-        onStderr: (chunk) => {
-          this.log.info("STDERR: " + chunk.toString("utf8"))
-        },
-      })
+
+      await this.bootstrapRemote(ssh, args.password)
     } finally {
       if (ssh) {
         ssh.dispose()
-        this.log.info("END")
+        this.log.info("DISCONNECTED")
       }
 
       process.stdin.unref() // To free the Node event loop

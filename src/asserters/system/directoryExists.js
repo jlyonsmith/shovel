@@ -1,9 +1,7 @@
-//
-
 class DirectoryExistsAsserter {
   constructor() {}
 
   assert(args) {}
 
-  actualize(args) {}
+  run(args) {}
 }
