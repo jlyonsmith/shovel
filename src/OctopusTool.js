@@ -8,6 +8,8 @@ import validate from "./Validator"
 import JSON5 from "json5"
 import fs from "fs-extra"
 
+import DirectoryExistsAsserter from "./asserters/system/directoryExists"
+
 @autobind
 export class OctopusTool {
   constructor(toolName, log, options) {
@@ -95,6 +97,17 @@ node --version > node_version.txt`
     }
   }
 
+  async processAssertions(ssh, assertContents) {
+    // TEMP grab first assertion which is directoryExists
+    const testAssertion = assertContents.assertions[0]
+    const asserter = new DirectoryExistsAsserter()
+    const assertionPassed = await asserter.assert(testAssertion.with)
+    if (!assertionPassed) {
+      console.log("OCTOPUS::: ASSERTION FAILED - RUNNING THE THING")
+      asserter.run(testAssertion.with)
+    }
+  }
+
   async run(argv) {
     const options = {
       boolean: ["help", "version"],
@@ -179,6 +192,7 @@ Options:
       })
 
       await this.bootstrapRemote(ssh, args.password)
+      await this.processAssertions(ssh, assertContents)
     } finally {
       if (ssh) {
         ssh.dispose()
