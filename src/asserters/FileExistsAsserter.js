@@ -4,14 +4,14 @@ import fs from "fs-extra"
 Example:
 
 {
-  assert: "directoryExists",
+  assert: "fileExists",
   with: {
-    path: "/path/to/dir"
+    path: "/path/to/file"
   }
 }
 */
 
-export class DirectoryExistsAsserter {
+export class FileExistsAsserter {
   constructor(container) {
     this.fs = container.fs || fs
   }
@@ -20,7 +20,7 @@ export class DirectoryExistsAsserter {
     try {
       const status = await this.fs.lstat(args.path)
       return true
-      // return !!status?.isDirectory()
+      // return !!status?.isFile()
     } catch (error) {
       return false
     }
@@ -28,7 +28,7 @@ export class DirectoryExistsAsserter {
 
   async run(args) {
     try {
-      await this.fs.mkdir(args.path)
+      await this.fs.writeFile(args.path)
       return true
     } catch (error) {
       return false
