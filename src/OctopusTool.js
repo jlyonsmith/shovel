@@ -8,8 +8,6 @@ import validate from "./Validator"
 import JSON5 from "json5"
 import fs from "fs-extra"
 
-import DirectoryExistsAsserter from "./asserters/system/directoryExists"
-
 @autobind
 export class OctopusTool {
   constructor(toolName, log, options) {
