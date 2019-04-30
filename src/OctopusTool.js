@@ -101,6 +101,7 @@ node --version > node_version.txt`
     // TEMP grab first assertion which is directoryExists
     const testAssertion = assertContents.assertions[0]
     const asserter = new DirectoryExistsAsserter()
+
     const assertionPassed = await asserter.assert(testAssertion.with)
     if (!assertionPassed) {
       console.log("OCTOPUS::: ASSERTION FAILED - RUNNING THE THING")
