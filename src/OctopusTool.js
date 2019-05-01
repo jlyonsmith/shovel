@@ -57,14 +57,14 @@ node --version > node_version.txt`
     return ssh
   }
 
-  async bootstrapRemote(ssh, password) {
+  async bootstrapRemote(ssh, username, password) {
     const logResult = (result) => {
       this.log.info("STDOUT: " + result.stdout)
       this.log.info("STDERR: " + result.stderr)
     }
     this.log.info("BOOTSTRAP: Creating /opt/octopus directory")
     const result = await ssh.execCommand(
-      "sudo mkdir -p /opt/octopus/asserters",
+      `sudo mkdir -p /opt/octopus/asserters; sudo chown ${username}:${username} /opt/octopus/asserters`,
       {
         options: { pty: !!password },
         stdin: password + "\n",
@@ -211,7 +211,7 @@ Options:
         },
       })
 
-      await this.bootstrapRemote(ssh, args.password)
+      await this.bootstrapRemote(ssh, args.user, args.password)
       await this.processAssertions(ssh, assertContents)
     } finally {
       if (ssh) {
