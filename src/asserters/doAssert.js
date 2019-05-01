@@ -1,9 +1,7 @@
-//const DirectoryExistsAsserter = require("./system/directoryExists")
 const fs = require("fs")
 const registryPath = "./asserters.json"
 class DoAssert {
   constructor() {
-    console.log("construct assertion runner")
     this.registry = null
   }
 
@@ -12,31 +10,40 @@ class DoAssert {
 
     const asserterName = args[0]
     const dataArg = args[1]
-    const data = JSON.parse(dataArg)
-    console.log(`Run ${asserterName}  data: ${JSON.stringify(data, null, 2)}`)
-    // const assertClass = require(`./${assertion}`)
-    // const asserter = new assertClass()
-    // const registry = await this.getRegistry()
-    // console.log(JSON.stringify(registry, null, 2))
+    let data
+    try {
+      data = JSON.parse(dataArg)
+    } catch (ex) {
+      process.stderr.write(`Could not parse arguments as json: ${ex.message}`)
+      return 1
+    }
 
     const asserter = await this.getAsserter(asserterName)
     if (asserter) {
       const constName = asserter.constructor.name
-      // console.log(`Asserter: ${constName}`)
+      console.log(`Asserter: ${constName} (${JSON.stringify(data)})`)
 
-      const result = await asserter.assert(data)
-      if (!result) {
-        console.log(
-          `Running asserter ${constName} with ${JSON.stringify(data)}`
-        )
-        const success = await asserter.run(data)
+      const assertionTrue = await asserter.assert(data)
+      if (!assertionTrue) {
+        // console.log(
+        //   `Running asserter ${constName} with ${JSON.stringify(data)}`
+        // )
+        try {
+          const success = await asserter.run(data)
+          console.log(`Asserter Run. Success: ${success}`)
+        } catch (ex) {
+          console.error(`Error executing assertion action: ${ex.message}`)
+          return 1
+        }
       } else {
-        process.stderr.write("Nothing to see here... Move Along.\n")
+        console.log(`Assertion true. No action requred`)
       }
 
       return 0
     } else {
-      console.error(`asserter ${asserterName} does not exist`)
+      process.stderr.write(
+        `Error: asserter \"${asserterName}\" does not exist\n`
+      )
       return 1
     }
   }
@@ -48,7 +55,7 @@ class DoAssert {
 
   async getAsserter(asserterName) {
     const info = await this.getAsserterInfo(asserterName)
-    console.log(`getAsserterInfo for ${asserterName} : ${JSON.stringify(info)}`)
+    // console.log(`getAsserterInfo for ${asserterName} : ${JSON.stringify(info)}`)
     if (info) {
       const asserterClass = require(`./${info.module}`)
       const container = {} // pass in logger at least

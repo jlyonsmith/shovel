@@ -63,7 +63,7 @@ node --version > node_version.txt`
       this.log.info("STDERR: " + result.stderr)
     }
     this.log.info("BOOTSTRAP: Creating /opt/octopus directory")
-    const result = await ssh.execCommand(
+    let result = await ssh.execCommand(
       `sudo mkdir -p /opt/octopus/asserters; sudo chown ${username}:${username} /opt/octopus/asserters`,
       {
         options: { pty: !!password },
@@ -75,7 +75,7 @@ node --version > node_version.txt`
     }
 
     this.log.info("BOOTSTRAP: Creating /opt/octopus/bootstrap.sh script")
-    await ssh.execCommand(
+    result = await ssh.execCommand(
       `sudo bash -c 'echo "${OctopusTool.bootstrapScript}" > ./bootstrap.sh'`,
       {
         options: { pty: !!password },
@@ -103,7 +103,7 @@ node --version > node_version.txt`
     }
 
     this.log.info("BOOTSTRAP: Running /opt/octopus/bootstrap.sh script")
-    await ssh.execCommand("sudo bash ./bootstrap.sh", {
+    result = await ssh.execCommand("sudo bash ./bootstrap.sh", {
       options: { pty: !!password },
       cwd: "/opt/octopus",
       stdin: password + "\n",
@@ -113,15 +113,31 @@ node --version > node_version.txt`
     }
   }
 
-  async processAssertions(ssh, assertContents) {
-    // TEMP grab first assertion which is directoryExists
-    // const testAssertion = assertContents.assertions[0]
-    // //const asserter = new DirectoryExistsAsserter()
-    // const assertionPassed = await asserter.assert(testAssertion.with)
-    // if (!assertionPassed) {
-    //   console.log("OCTOPUS::: ASSERTION FAILED - RUNNING THE THING")
-    //   await asserter.run(testAssertion.with)
-    // }
+  async processAssertions(ssh, username, password, assertScript) {
+    this.log.info(`Run assertions: ${this.printObj(assertScript)}`)
+    const vars = assertScript.vars || {}
+    const asserts = assertScript.assertions || []
+    for (let an = 0; an < asserts.length; an++) {
+      const assertionSpec = asserts[an]
+      const assertionName = assertionSpec.assert
+      const args = assertionSpec.with || {}
+      let argsString = JSON.stringify(args)
+      argsString = argsString.replace(new RegExp('"', "g"), '\\\\"')
+      const command = `sudo node doAssert.js ${assertionName} "${argsString}"`
+      const result = await this.runAssertion(ssh, username, password, command)
+    }
+  }
+
+  async runAssertion(ssh, username, password, command) {
+    this.log.info(`Run ${command} `)
+    // const command = `sudo node doAssert.js DirectoryExists "{ \\"path\\": \\"/home/vagrant/junk1\\" }"`
+    const result = await ssh.execCommand(command, {
+      options: { pty: !!password },
+      cwd: "/opt/octopus/asserters",
+      stdin: password + "\n",
+    })
+    this.log.info(`Assertion result: ${JSON.stringify(result, null, 2)}`)
+    return true
   }
 
   printObj(obj) {
@@ -212,7 +228,12 @@ Options:
       })
 
       await this.bootstrapRemote(ssh, args.user, args.password)
-      await this.processAssertions(ssh, assertContents)
+      await this.processAssertions(
+        ssh,
+        args.user,
+        args.password,
+        assertContents
+      )
     } finally {
       if (ssh) {
         ssh.dispose()
