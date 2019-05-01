@@ -49,7 +49,8 @@ class DoAssert {
     console.log(`getAsserterInfo for ${asserterName} : ${JSON.stringify(info)}`)
     if (info) {
       const asserterClass = require(`./${info.module}`)
-      const asserter = new asserterClass()
+      const container = {} // pass in logger at least
+      const asserter = new asserterClass(container)
       return asserter
     } else {
       return null

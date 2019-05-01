@@ -63,10 +63,13 @@ node --version > node_version.txt`
       this.log.info("STDERR: " + result.stderr)
     }
     this.log.info("BOOTSTRAP: Creating /opt/octopus directory")
-    const result = await ssh.execCommand("sudo mkdir -p /opt/octopus", {
-      options: { pty: !!password },
-      stdin: password + "\n",
-    })
+    const result = await ssh.execCommand(
+      "sudo mkdir -p /opt/octopus/asserters",
+      {
+        options: { pty: !!password },
+        stdin: password + "\n",
+      }
+    )
     if (result.code !== 0) {
       logResult(result)
     }
@@ -89,12 +92,14 @@ node --version > node_version.txt`
     )
     try {
       result = await ssh.putDirectory(
-        "/Users/breannaanderson/projects/octopus/src/asserters",
+        `${__dirname}/asserters`,
         "/opt/octopus/asserters",
         { recursive: true }
       )
     } catch (ex) {
-      this.log.info(`Error copying: ${this.printObj(ex)}`)
+      this.log.info(
+        `Error copying: ${this.printObj(ex)}  ${ex.constructor.name}`
+      )
     }
 
     this.log.info("BOOTSTRAP: Running /opt/octopus/bootstrap.sh script")
@@ -110,14 +115,17 @@ node --version > node_version.txt`
 
   async processAssertions(ssh, assertContents) {
     // TEMP grab first assertion which is directoryExists
-    const testAssertion = assertContents.assertions[0]
-    const asserter = new DirectoryExistsAsserter()
+    // const testAssertion = assertContents.assertions[0]
+    // //const asserter = new DirectoryExistsAsserter()
+    // const assertionPassed = await asserter.assert(testAssertion.with)
+    // if (!assertionPassed) {
+    //   console.log("OCTOPUS::: ASSERTION FAILED - RUNNING THE THING")
+    //   await asserter.run(testAssertion.with)
+    // }
+  }
 
-    const assertionPassed = await asserter.assert(testAssertion.with)
-    if (!assertionPassed) {
-      console.log("OCTOPUS::: ASSERTION FAILED - RUNNING THE THING")
-      await asserter.run(testAssertion.with)
-    }
+  printObj(obj) {
+    return JSON.stringify(obj, null, 2)
   }
 
   async run(argv) {

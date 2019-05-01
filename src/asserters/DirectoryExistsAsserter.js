@@ -1,4 +1,5 @@
-import fs from "fs-extra"
+// import fs from "fs-extra"
+const fs = require("fs-extra")
 
 /*
 Checks and ensures that a directory exists.
@@ -13,7 +14,8 @@ Example:
 }
 */
 
-export class DirectoryExistsAsserter {
+//export class DirectoryExistsAsserter {
+class DirectoryExistsAsserter {
   constructor(container) {
     this.fs = container.fs || fs
   }
@@ -35,3 +37,5 @@ export class DirectoryExistsAsserter {
     }
   }
 }
+
+module.exports = DirectoryExistsAsserter

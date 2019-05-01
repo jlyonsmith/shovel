@@ -1,0 +1,13 @@
+{
+  vars: {
+    consulVersion: "1.2.3",
+  },
+  assertions: [
+    {
+      assert: "directoryExists",
+      with: {
+        path: "${HOME}/octo-test",
+      },
+    },
+  ],
+}
