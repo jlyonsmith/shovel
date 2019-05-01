@@ -84,6 +84,19 @@ node --version > node_version.txt`
       logResult(result)
     }
 
+    this.log.info(
+      `BOOTSTRAP: Moving Asserters to: /opt/octopus/asserters .  current: ${__dirname}`
+    )
+    try {
+      result = await ssh.putDirectory(
+        "/Users/breannaanderson/projects/octopus/src/asserters",
+        "/opt/octopus/asserters",
+        { recursive: true }
+      )
+    } catch (ex) {
+      this.log.info(`Error copying: ${this.printObj(ex)}`)
+    }
+
     this.log.info("BOOTSTRAP: Running /opt/octopus/bootstrap.sh script")
     await ssh.execCommand("sudo bash ./bootstrap.sh", {
       options: { pty: !!password },
