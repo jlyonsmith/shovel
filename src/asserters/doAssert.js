@@ -22,11 +22,13 @@ class DoAssert {
     const asserter = await this.getAsserter(asserterName)
     if (asserter) {
       const constName = asserter.constructor.name
-      console.log(`Asserter: ${constName}`)
+      // console.log(`Asserter: ${constName}`)
 
       const result = await asserter.assert(data)
-      console.log(result)
-      if (!result.assertion) {
+      if (!result) {
+        console.log(
+          `Running asserter ${constName} with ${JSON.stringify(data)}`
+        )
         const success = await asserter.run(data)
       } else {
         process.stderr.write("Nothing to see here... Move Along.\n")

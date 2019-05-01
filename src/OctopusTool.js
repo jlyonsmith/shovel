@@ -91,7 +91,7 @@ node --version > node_version.txt`
       `BOOTSTRAP: Moving Asserters to: /opt/octopus/asserters .  current: ${__dirname}`
     )
     try {
-      result = await ssh.putDirectory(
+      await ssh.putDirectory(
         `${__dirname}/asserters`,
         "/opt/octopus/asserters",
         { recursive: true }

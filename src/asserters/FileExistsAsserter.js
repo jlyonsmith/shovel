@@ -1,4 +1,4 @@
-import fs from "fs-extra"
+const fs = require("fs-extra")
 
 /*
 Checks and ensures that a file exists.
@@ -13,7 +13,7 @@ Example:
 }
 */
 
-export class FileExistsAsserter {
+class FileExistsAsserter {
   constructor(container) {
     this.fs = container.fs || fs
   }
@@ -28,10 +28,12 @@ export class FileExistsAsserter {
 
   async run(args) {
     try {
-      await this.fs.writeFile(args.path)
+      await this.fs.writeFile(args.path, "a test")
       return true
     } catch (error) {
       return false
     }
   }
 }
+
+module.exports = FileExistsAsserter

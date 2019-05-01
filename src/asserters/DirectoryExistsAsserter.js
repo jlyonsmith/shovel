@@ -1,4 +1,3 @@
-// import fs from "fs-extra"
 const fs = require("fs-extra")
 
 /*
@@ -14,7 +13,6 @@ Example:
 }
 */
 
-//export class DirectoryExistsAsserter {
 class DirectoryExistsAsserter {
   constructor(container) {
     this.fs = container.fs || fs
