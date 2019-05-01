@@ -11,10 +11,10 @@
     "dist/**"
   ],
   "scripts": {
-    "build": "rm -rf dist/* && babel src -d dist -s --ignore **/*.test.js --ignore **/mocks/",
+    "build": "rm -rf dist/* && babel src -d dist -s --ignore **/*.test.js --ignore **/__mocks__/",
     "start": "babel-node src/octopus.js",
     "start:debug": "babel-node --inspect-brk src/octopus.js",
-    "test": "jest --coverage",
+    "test": "jest --coverage $*",
     "test:debug": "babel-node --inspect-brk ./node_modules/jest/bin/jest.js --runInBand",
     "deploy": "npm publish --access public"
   },

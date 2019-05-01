@@ -14,13 +14,9 @@ Example:
 */
 
 export class FileExistsAsserter {
-  constructor(container) {
-    this.fs = container.fs || fs
-  }
-
   async assert(args) {
     try {
-      return (await this.fs.lstat(args.path)).isFile()
+      return (await fs.lstat(args.path)).isFile()
     } catch (error) {
       return false
     }
@@ -28,7 +24,7 @@ export class FileExistsAsserter {
 
   async run(args) {
     try {
-      await this.fs.writeFile(args.path)
+      await fs.writeFile(args.path)
       return true
     } catch (error) {
       return false
