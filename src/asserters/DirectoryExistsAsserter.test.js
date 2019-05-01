@@ -1,35 +1,19 @@
 import { DirectoryExistsAsserter } from "./DirectoryExistsAsserter"
-import fs from "fs-extra"
-
-function getMockFS() {
-  return {
-    lstat: jest.fn(),
-    mkdir: jest.fn(),
-  }
-}
-
-function getOutput(fn) {
-  const calls = fn.mock.calls
-  if (calls.length > 0 && calls[0].length > 0) {
-    return calls[0][0]
-  } else {
-    return ""
-  }
-}
+import { getMockFS } from "./FileExistsAsserter.test"
 
 test("assert", async (done) => {
   const mock = getMockFS()
   const asserter = new DirectoryExistsAsserter({ fs: mock })
-  const result = await asserter.assert({ path: "/notthere" })
 
-  expect(result).toBe(true)
+  expect(await asserter.assert({ path: "/somedir" })).toBe(true)
+  expect(await asserter.assert({ path: "/notthere" })).toBe(false)
   done()
 })
 
 test("run", async (done) => {
   const mock = getMockFS()
   const asserter = new DirectoryExistsAsserter({ fs: mock })
-  const result = await asserter.run({ path: "/test" })
+  const result = await asserter.run({ path: "/somedir" })
 
   expect(result).toBe(true)
   // TODO: ...

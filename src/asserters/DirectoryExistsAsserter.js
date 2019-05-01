@@ -1,6 +1,8 @@
 import fs from "fs-extra"
 
 /*
+Checks and ensures that a directory exists.
+
 Example:
 
 {
@@ -18,9 +20,7 @@ export class DirectoryExistsAsserter {
 
   async assert(args) {
     try {
-      const status = await this.fs.lstat(args.path)
-      return true
-      // return !!status?.isDirectory()
+      return (await this.fs.lstat(args.path)).isDirectory()
     } catch (error) {
       return false
     }

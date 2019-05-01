@@ -1,6 +1,8 @@
 import fs from "fs-extra"
 
 /*
+Checks and ensures that a file exists.
+
 Example:
 
 {
@@ -18,9 +20,7 @@ export class FileExistsAsserter {
 
   async assert(args) {
     try {
-      const status = await this.fs.lstat(args.path)
-      return true
-      // return !!status?.isFile()
+      return (await this.fs.lstat(args.path)).isFile()
     } catch (error) {
       return false
     }
