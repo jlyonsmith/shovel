@@ -8,7 +8,7 @@ import validate from "./Validator"
 import JSON5 from "json5"
 import fs from "fs-extra"
 
-import DirectoryExistsAsserter from "./asserters/system/directoryExists"
+const DirectoryExistsAsserter = require("./asserters/system/directoryExists")
 
 @autobind
 export class OctopusTool {
@@ -65,7 +65,7 @@ node --version > node_version.txt`
       this.log.info("STDERR: " + result.stderr)
     }
     this.log.info("BOOTSTRAP: Creating /opt/octopus directory")
-    const result = await ssh.execCommand("sudo mkdir -p /opt/octopus", {
+    let result = await ssh.execCommand("sudo mkdir -p /opt/octopus", {
       options: { pty: !!password },
       stdin: password + "\n",
     })
@@ -74,7 +74,7 @@ node --version > node_version.txt`
     }
 
     this.log.info("BOOTSTRAP: Creating /opt/octopus/bootstrap.sh script")
-    await ssh.execCommand(
+    result = await ssh.execCommand(
       `sudo bash -c 'echo "${OctopusTool.bootstrapScript}" > ./bootstrap.sh'`,
       {
         options: { pty: !!password },
@@ -86,8 +86,23 @@ node --version > node_version.txt`
       logResult(result)
     }
 
+    this.log.info("BOOTSTRAP: Moving Asserters to: /opt/octopus/asserters")
+    try {
+      result = await ssh.putDirectory(
+        "/Users/breannaanderson/projects/octopus/src/asserters",
+        "/opt/octopus/asserters",
+        { recursive: true }
+      )
+    } catch (ex) {
+      this.log.info(`Error copying: ${this.printObj(ex)}`)
+    }
+
+    // if (result.code !== 0) {
+    //   logResult(result)
+    // }
+
     this.log.info("BOOTSTRAP: Running /opt/octopus/bootstrap.sh script")
-    await ssh.execCommand("sudo bash ./bootstrap.sh", {
+    result = await ssh.execCommand("sudo bash ./bootstrap.sh", {
       options: { pty: !!password },
       cwd: "/opt/octopus",
       stdin: password + "\n",
@@ -99,13 +114,20 @@ node --version > node_version.txt`
 
   async processAssertions(ssh, assertContents) {
     // TEMP grab first assertion which is directoryExists
+
     const testAssertion = assertContents.assertions[0]
+    this.log.info(`Process Assertions ${JSON.stringify(testAssertion)}`)
+
     const asserter = new DirectoryExistsAsserter()
 
     const assertionPassed = await asserter.assert(testAssertion.with)
-    if (!assertionPassed) {
+    this.log.info(`Assertion result: ${this.printObj(assertionPassed)}`)
+    if (assertionPassed.assertion) {
+      this.log.info(`The assertion passed.  Skip over.`)
+    } else {
       console.log("OCTOPUS::: ASSERTION FAILED - RUNNING THE THING")
-      asserter.run(testAssertion.with)
+      const result = await asserter.run(testAssertion.with)
+      this.log.info(`Action result: ${this.printObj(result)}`)
     }
   }
 
@@ -204,5 +226,9 @@ Options:
     }
 
     return 0
+  }
+
+  printObj(object) {
+    return JSON.stringify(object, null, 2)
   }
 }

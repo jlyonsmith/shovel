@@ -1,0 +1,15 @@
+{
+  "DirectoryExists": {
+    "module": "system/directoryExists",
+    "arguments": ["path!", "owner", "permissions"],
+    "remotable": true,
+    "description": "Asserts that a directory exists. with optional specified ownership and permissions"
+  },
+  "NodePackageInstalled": {
+    "module": "nodePackageInstalled",
+    "arguments": ["packageName!", "version"],
+    "remotable": true,
+    "description": "Asserts that a npm module is installed at a version."
+  }
+
+}
