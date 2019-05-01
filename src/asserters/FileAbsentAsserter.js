@@ -20,7 +20,7 @@ class FileAbsentAsserter {
 
   async assert(args) {
     try {
-      return !(await this.fs.lstat(args.path)).isFile()
+      return !(await fs.lstat(args.path)).isFile()
     } catch (error) {
       return true
     }
@@ -28,7 +28,7 @@ class FileAbsentAsserter {
 
   async run(args) {
     try {
-      await this.fs.unlink(args.path)
+      await fs.unlink(args.path)
       return true
     } catch (error) {
       return false

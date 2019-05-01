@@ -1,9 +1,7 @@
 import { DirectoryAbsentAsserter } from "./DirectoryAbsentAsserter"
-import { getMockFS } from "./FileExistsAsserter.test"
 
 test("assert", async (done) => {
-  const mock = getMockFS()
-  const asserter = new DirectoryAbsentAsserter({ fs: mock })
+  const asserter = new DirectoryAbsentAsserter()
 
   expect(await asserter.assert({ path: "/notthere" })).toBe(true)
   expect(await asserter.assert({ path: "/somedir" })).toBe(false)
@@ -11,12 +9,9 @@ test("assert", async (done) => {
 })
 
 test("run", async (done) => {
-  const mock = getMockFS()
-  const asserter = new DirectoryAbsentAsserter({ fs: mock })
+  const asserter = new DirectoryAbsentAsserter()
   const result = await asserter.run({ path: "/notthere" })
 
   expect(result).toBe(true)
-  // TODO: ...
-
   done()
 })

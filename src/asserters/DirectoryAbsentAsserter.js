@@ -20,7 +20,7 @@ class DirectoryAbsentAsserter {
 
   async assert(args) {
     try {
-      return !(await this.fs.lstat(args.path)).isDirectory()
+      return !(await fs.lstat(args.path)).isDirectory()
     } catch (error) {
       return true
     }
@@ -28,7 +28,7 @@ class DirectoryAbsentAsserter {
 
   async run(args) {
     try {
-      await this.fs.rmdir(args.path)
+      await fs.rmdir(args.path)
       return true
     } catch (error) {
       return false
