@@ -1,5 +1,5 @@
 import { DirectoryExistsAsserter } from "./DirectoryExistsAsserter"
-import { getMockFS } from "./FileExistsAsserter.test"
+import { getMockFS } from "./mocks"
 
 test("assert", async (done) => {
   const mock = getMockFS()
