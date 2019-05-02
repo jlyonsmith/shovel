@@ -6,22 +6,20 @@ class DoAssert {
   }
 
   async run(args) {
-    console.log(`Run assertion args:${JSON.stringify(args)}`)
+    //console.log(`Run assertion args:${JSON.stringify(args)}`)
 
     const asserterName = args[0]
-    const dataArg = args[1]
     let data
     try {
-      data = JSON.parse(dataArg)
+      data = this.getArgData(args)
     } catch (ex) {
-      process.stderr.write(`Could not parse arguments as json: ${ex.message}`)
       return 1
     }
 
     const asserter = await this.getAsserter(asserterName)
     if (asserter) {
       const constName = asserter.constructor.name
-      console.log(`Asserter: ${constName} (${JSON.stringify(data)})`)
+      // console.log(`Asserter: ${constName} (${JSON.stringify(data)})`)
 
       const assertionTrue = await asserter.assert(data)
       if (!assertionTrue) {
@@ -46,6 +44,17 @@ class DoAssert {
       )
       return 1
     }
+  }
+
+  getArgData(args) {
+    const encoding = args[1]
+    const encodedData = args[2]
+    let dataString = encodedData
+    if (encoding == "base64") {
+      dataString = Buffer.from(encodedData, "base64").toString("ascii")
+    }
+
+    return JSON.parse(dataString)
   }
 
   async getAsserterInfo(asserterName) {

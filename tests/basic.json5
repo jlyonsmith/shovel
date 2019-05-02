@@ -4,9 +4,25 @@
   },
   assertions: [
     {
+      name: "Create Test Directory",
+      runAs: "sudo",
       assert: "DirectoryExists",
       with: {
-        path: "${HOME}/octo-test",
+        path: "/home/vagrant/octo-test2",
+        owner: "vagrant:vagrant"
+      },
+    },
+    {
+      name: "Create Second Directory",
+      assert: "DirectoryExists",
+      with: {
+        path: "/home/vagrant/anotherDir",
+      },
+    },
+    {
+      assert: "FileExists",
+      with: {
+        path: "/home/vagrant/octo-test/testfile.txt",
       },
     },
   ],

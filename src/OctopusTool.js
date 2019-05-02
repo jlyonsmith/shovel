@@ -34,7 +34,9 @@ export class OctopusTool {
 curl -sL https://deb.nodesource.com/setup_10.x -o ./nodesource_setup.sh
 sudo bash ./nodesource_setup.sh
 sudo apt -y -q install nodejs
-node --version > node_version.txt`
+node --version > node_version.txt
+`
+  static targetNodeVersion = "v10.15.3"
 
   async createConnection(options) {
     let ssh = new NodeSSH()
@@ -87,9 +89,7 @@ node --version > node_version.txt`
       logResult(result)
     }
 
-    this.log.info(
-      `BOOTSTRAP: Moving Asserters to: /opt/octopus/asserters .  current: ${__dirname}`
-    )
+    this.log.info(`BOOTSTRAP: Moving Asserters to: /opt/octopus/asserters `)
     try {
       await ssh.putDirectory(
         `${__dirname}/asserters`,
@@ -102,42 +102,73 @@ node --version > node_version.txt`
       )
     }
 
-    this.log.info("BOOTSTRAP: Running /opt/octopus/bootstrap.sh script")
-    result = await ssh.execCommand("sudo bash ./bootstrap.sh", {
+    this.log.info("BOOTSTRAP: Check if boostrap needs to be run")
+    result = await ssh.execCommand("cat node_version.txt", {
       options: { pty: !!password },
       cwd: "/opt/octopus",
       stdin: password + "\n",
     })
-    if (result.code !== 0) {
-      logResult(result)
+    this.log.info(result)
+    let runBootstrap = true
+    let nodeVersion = "unknown"
+    if (result.code == 0) {
+      nodeVersion = result.stdout.split("\n")[1]
+      runBootstrap = !(nodeVersion == OctopusTool.targetNodeVersion)
+    }
+
+    if (runBootstrap) {
+      this.log.info("BOOTSTRAP: Running /opt/octopus/bootstrap.sh script")
+      result = await ssh.execCommand("sudo bash ./bootstrap.sh", {
+        options: { pty: !!password },
+        cwd: "/opt/octopus",
+        stdin: password + "\n",
+      })
+      this.log.info(result)
+      if (result.code !== 0) {
+        logResult(result)
+      }
+    } else {
+      this.log.info(
+        `BOOTSTRAP: Node is up to date: ${nodeVersion}.  Bootstrap skipped`
+      )
     }
   }
 
   async processAssertions(ssh, username, password, assertScript) {
-    this.log.info(`Run assertions: ${this.printObj(assertScript)}`)
+    // this.log.info(`Run assertions: ${this.printObj(assertScript)}`)
     const vars = assertScript.vars || {}
     const asserts = assertScript.assertions || []
     for (let an = 0; an < asserts.length; an++) {
       const assertionSpec = asserts[an]
+
       const assertionName = assertionSpec.assert
+      const stepName =
+        assertionSpec.name || `Step ${an + 1}: (${assertionName})`
+      const runAs = assertionSpec.runAs || ""
       const args = assertionSpec.with || {}
-      let argsString = JSON.stringify(args)
-      argsString = argsString.replace(new RegExp('"', "g"), '\\\\"')
-      const command = `sudo node doAssert.js ${assertionName} "${argsString}"`
+      const argsString = JSON.stringify(args)
+      const args64 = Buffer.from(argsString).toString("base64")
+      const sudo = runAs == "sudo" ? "sudo" : ""
+      const command = `${sudo} node doAssert.js ${assertionName} base64 ${args64}`
+      this.log.info(
+        `=============================================================`
+      )
+      this.log.info(`>>> ${stepName}\n -------------------------------`)
+      //this.log.info(`Run assertion ${command} \n --------------------------`)
       const result = await this.runAssertion(ssh, username, password, command)
     }
   }
 
   async runAssertion(ssh, username, password, command) {
-    this.log.info(`Run ${command} `)
-    // const command = `sudo node doAssert.js DirectoryExists "{ \\"path\\": \\"/home/vagrant/junk1\\" }"`
     const result = await ssh.execCommand(command, {
       options: { pty: !!password },
       cwd: "/opt/octopus/asserters",
       stdin: password + "\n",
     })
-    this.log.info(`Assertion result: ${JSON.stringify(result, null, 2)}`)
-    return true
+    const success = result.code == 0
+    const response = result.stdout
+    this.log.info(`Assertion Success: ${success}\nResponse:\n${response}`)
+    return success
   }
 
   printObj(obj) {
