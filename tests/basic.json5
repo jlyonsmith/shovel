@@ -1,0 +1,29 @@
+{
+  vars: {
+    consulVersion: "1.2.3",
+  },
+  assertions: [
+    {
+      name: "Create Test Directory",
+      runAs: "sudo",
+      assert: "DirectoryExists",
+      with: {
+        path: "/home/vagrant/octo-test2",
+        owner: "vagrant:vagrant"
+      },
+    },
+    {
+      name: "Create Second Directory",
+      assert: "DirectoryExists",
+      with: {
+        path: "/home/vagrant/anotherDir",
+      },
+    },
+    {
+      assert: "FileExists",
+      with: {
+        path: "/home/vagrant/octo-test/testfile.txt",
+      },
+    },
+  ],
+}
