@@ -1,0 +1,10 @@
+{
+  "name": "@johnls/octopus",
+  "private": false,
+  "version": "1.0.0",
+  "description": "Simple, agentless IT automation",
+  "dependencies": {
+    "fs-extra": "^7.0.1",
+    "json5": "^2.1.0"
+  }
+}
