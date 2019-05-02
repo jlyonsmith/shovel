@@ -24,11 +24,7 @@ export class DirectoryAbsentAsserter {
 
   async run(args) {
     try {
-<<<<<<< HEAD
-      await this.fs.remove(args.path)
-=======
-      await fs.rmdir(args.path)
->>>>>>> 749cf5b7d0730b996f2835e9517b21d4afdf754d
+      await fs.remove(args.path)
       return true
     } catch (error) {
       return false

@@ -1,14 +1,14 @@
 import fs from "fs-extra"
 
 /*
-Checks and ensures that a file exists.
+Checks and ensures that a file contains some specific data.
 
 Example:
 
 {
-  assert: "fileExists",
+  assert: "fileContains",
   with: {
-    path: "/path/to/file"
+    data: "dataToCheck"
   }
 }
 */
@@ -16,7 +16,8 @@ Example:
 export class FileContainsAsserter {
   async assert(args) {
     try {
-      return (await fs.lstat(args.path)).isFile()
+      // TODO : check if file contains relevant info
+      return false
     } catch (error) {
       return false
     }
@@ -24,7 +25,8 @@ export class FileContainsAsserter {
 
   async run(args) {
     try {
-      await fs.writeFile(args.path)
+      // await fs.writeFile(args.path)
+      // TODO : modify the file
       return true
     } catch (error) {
       return false
