@@ -1,7 +1,7 @@
-import { DirectoryExistsAsserter } from "../DirectoryExistsAsserter"
+import { DirectoryExists } from "../DirectoryExists"
 
 test("assert", async (done) => {
-  const asserter = new DirectoryExistsAsserter()
+  const asserter = new DirectoryExists()
 
   expect(await asserter.assert({ path: "/somedir" })).toBe(true)
   expect(await asserter.assert({ path: "/notthere" })).toBe(false)
@@ -9,7 +9,7 @@ test("assert", async (done) => {
 })
 
 test("run", async (done) => {
-  const asserter = new DirectoryExistsAsserter()
+  const asserter = new DirectoryExists()
   const result = await asserter.run({ path: "/somedir" })
 
   expect(result).toBe(true)

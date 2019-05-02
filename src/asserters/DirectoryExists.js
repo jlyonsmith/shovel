@@ -1,7 +1,7 @@
 const fs = require("fs-extra")
 
 /*
-Asserts and ensures that a directory is absent.
+Checks and ensures that a directory exists.
 
 Example:
 
@@ -13,18 +13,18 @@ Example:
 }
 */
 
-class DirectoryAbsentAsserter {
+class DirectoryExists {
   async assert(args) {
     try {
-      return !(await fs.lstat(args.path)).isDirectory()
+      return (await fs.lstat(args.path)).isDirectory()
     } catch (error) {
-      return true
+      return false
     }
   }
 
   async run(args) {
     try {
-      await fs.rmdir(args.path)
+      await fs.mkdir(args.path)
       return true
     } catch (error) {
       return false
@@ -32,4 +32,4 @@ class DirectoryAbsentAsserter {
   }
 }
 
-exports.DirectoryAbsentAsserter = DirectoryAbsentAsserter
+exports.DirectoryExists = DirectoryExists

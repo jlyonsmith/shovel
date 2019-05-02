@@ -98,7 +98,7 @@ node --version > node_version.txt`
   async processAssertions(ssh, assertContents) {
     // TEMP grab first assertion which is directoryExists
     const testAssertion = assertContents.assertions[0]
-    const asserter = new DirectoryExistsAsserter()
+    const asserter = new DirectoryExists()
 
     const assertionPassed = await asserter.assert(testAssertion.with)
     if (!assertionPassed) {

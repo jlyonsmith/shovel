@@ -1,7 +1,7 @@
 const fs = require("fs-extra")
 
 /*
-Checks and ensures that a file exists.
+Checks and ensures that a file does not exist.
 
 Example:
 
@@ -13,18 +13,18 @@ Example:
 }
 */
 
-class FileExistsAsserter {
+class FileAbsent {
   async assert(args) {
     try {
-      return (await fs.lstat(args.path)).isFile()
+      return !(await fs.lstat(args.path)).isFile()
     } catch (error) {
-      return false
+      return true
     }
   }
 
   async run(args) {
     try {
-      await fs.writeFile(args.path)
+      await fs.unlink(args.path)
       return true
     } catch (error) {
       return false
@@ -32,4 +32,4 @@ class FileExistsAsserter {
   }
 }
 
-exports.FileExistsAsserter = FileExistsAsserter
+exports.FileAbsent = FileAbsent
