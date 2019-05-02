@@ -14,13 +14,9 @@ Example:
 */
 
 export class DirectoryExistsAsserter {
-  constructor(container) {
-    this.fs = container.fs || fs
-  }
-
   async assert(args) {
     try {
-      return (await this.fs.lstat(args.path)).isDirectory()
+      return (await fs.lstat(args.path)).isDirectory()
     } catch (error) {
       return false
     }
@@ -28,7 +24,11 @@ export class DirectoryExistsAsserter {
 
   async run(args) {
     try {
+<<<<<<< HEAD
       await this.fs.ensureDir(args.path)
+=======
+      await fs.mkdir(args.path)
+>>>>>>> 749cf5b7d0730b996f2835e9517b21d4afdf754d
       return true
     } catch (error) {
       return false

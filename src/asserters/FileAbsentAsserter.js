@@ -14,13 +14,9 @@ Example:
 */
 
 export class FileAbsentAsserter {
-  constructor(container) {
-    this.fs = container.fs || fs
-  }
-
   async assert(args) {
     try {
-      return !(await this.fs.lstat(args.path)).isFile()
+      return !(await fs.lstat(args.path)).isFile()
     } catch (error) {
       return true
     }
@@ -28,7 +24,7 @@ export class FileAbsentAsserter {
 
   async run(args) {
     try {
-      await this.fs.unlink(args.path)
+      await fs.unlink(args.path)
       return true
     } catch (error) {
       return false
