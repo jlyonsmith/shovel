@@ -10,4 +10,4 @@ fsExtra.lstat = jest.fn((path) => {
   }
 })
 
-export default fsExtra
+module.exports = fsExtra

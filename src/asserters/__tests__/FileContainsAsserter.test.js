@@ -1,4 +1,4 @@
-import { FileContainsAsserter } from "./FileContainsAsserter"
+import { FileContainsAsserter } from "../FileContainsAsserter"
 
 test("assert", async (done) => {
   const asserter = new FileContainsAsserter()

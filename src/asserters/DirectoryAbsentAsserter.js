@@ -1,4 +1,4 @@
-import fs from "fs-extra"
+const fs = require("fs-extra")
 
 /*
 Asserts and ensures that a directory is absent.
@@ -13,7 +13,7 @@ Example:
 }
 */
 
-export class DirectoryAbsentAsserter {
+class DirectoryAbsentAsserter {
   async assert(args) {
     try {
       return !(await fs.lstat(args.path)).isDirectory()
@@ -31,3 +31,5 @@ export class DirectoryAbsentAsserter {
     }
   }
 }
+
+exports.DirectoryAbsentAsserter = DirectoryAbsentAsserter

@@ -1,4 +1,4 @@
-import fs from "fs-extra"
+const fs = require("fs-extra")
 
 /*
 Checks and ensures that a directory exists.
@@ -13,7 +13,7 @@ Example:
 }
 */
 
-export class DirectoryExistsAsserter {
+class DirectoryExistsAsserter {
   async assert(args) {
     try {
       return (await fs.lstat(args.path)).isDirectory()
@@ -31,3 +31,5 @@ export class DirectoryExistsAsserter {
     }
   }
 }
+
+exports.DirectoryExistsAsserter = DirectoryExistsAsserter

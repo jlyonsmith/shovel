@@ -1,4 +1,4 @@
-import fs from "fs-extra"
+const fs = require("fs-extra")
 
 /*
 Checks and ensures that a file exists.
@@ -13,7 +13,7 @@ Example:
 }
 */
 
-export class FileContainsAsserter {
+class FileContainsAsserter {
   async assert(args) {
     try {
       return (await fs.lstat(args.path)).isFile()
@@ -31,3 +31,5 @@ export class FileContainsAsserter {
     }
   }
 }
+
+exports.FileContainsAsserter = FileContainsAsserter

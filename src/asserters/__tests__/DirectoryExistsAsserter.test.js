@@ -1,4 +1,4 @@
-import { DirectoryExistsAsserter } from "./DirectoryExistsAsserter"
+import { DirectoryExistsAsserter } from "../DirectoryExistsAsserter"
 
 test("assert", async (done) => {
   const asserter = new DirectoryExistsAsserter()

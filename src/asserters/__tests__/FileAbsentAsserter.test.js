@@ -1,4 +1,4 @@
-import { FileAbsentAsserter } from "./FileAbsentAsserter"
+import { FileAbsentAsserter } from "../FileAbsentAsserter"
 
 test("assert", async (done) => {
   const asserter = new FileAbsentAsserter()
