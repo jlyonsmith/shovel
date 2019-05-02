@@ -1,0 +1,39 @@
+{
+  "DirectoryExists": {
+    "module": "DirectoryExistsAsserter",
+    "arguments": ["path!"],
+    "remotable": true,
+    "description": "Asserts that a directory exists. ",
+    "dependencies": {
+      "fs-extra": "^7.0.1"
+    }
+  },
+  "DirectoryAbsent": {
+    "module": "DirectoryAbsentAsserter",
+    "arguments": ["path!"],
+    "remotable": true,
+    "description": "Asserts that a directory does not exist",
+    "dependencies": {
+      "fs-extra": "^7.0.1"
+    }
+  },
+  "FileExists": {
+    "module": "FileExistsAsserter",
+    "arguments": ["path!"],
+    "remotable": true,
+    "description": "Asserts that a file exists. If not write a placeholder out",
+    "dependencies": {
+      "fs-extra": "^7.0.1"
+    }
+  },
+  "FileAbsent": {
+    "module": "FileAbsentAsserter",
+    "arguments": ["path!"],
+    "remotable": true,
+    "description": "Asserts that a file does not exist. ",
+    "dependencies": {
+      "fs-extra": "^7.0.1"
+    }
+  }
+
+}

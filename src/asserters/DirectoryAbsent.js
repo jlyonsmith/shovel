@@ -13,7 +13,7 @@ Example:
 }
 */
 
-class DirectoryAbsent {
+export class DirectoryAbsentAsserter {
   async assert(args) {
     try {
       return !(await fs.lstat(args.path)).isDirectory()

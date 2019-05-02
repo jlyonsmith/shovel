@@ -13,7 +13,7 @@ Example:
 }
 */
 
-class FileAbsent {
+class FileAbsentAsserter {
   async assert(args) {
     try {
       return !(await fs.lstat(args.path)).isFile()
@@ -32,4 +32,4 @@ class FileAbsent {
   }
 }
 
-module.exports.FileAbsent = FileAbsent
+module.exports = FileAbsentAsserter

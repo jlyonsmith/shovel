@@ -84,27 +84,90 @@ node --version > node_version.txt`
       logResult(result)
     }
 
-    this.log.info("BOOTSTRAP: Running /opt/octopus/bootstrap.sh script")
-    await ssh.execCommand("sudo bash ./bootstrap.sh", {
+    this.log.info(`BOOTSTRAP: Moving Asserters to: /opt/octopus/asserters `)
+    try {
+      await ssh.putDirectory(
+        `${__dirname}/asserters`,
+        "/opt/octopus/asserters",
+        { recursive: true }
+      )
+    } catch (ex) {
+      this.log.info(
+        `Error copying: ${this.printObj(ex)}  ${ex.constructor.name}`
+      )
+    }
+
+    this.log.info("BOOTSTRAP: Check if boostrap needs to be run")
+    result = await ssh.execCommand("cat node_version.txt", {
       options: { pty: !!password },
       cwd: "/opt/octopus",
       stdin: password + "\n",
     })
+    this.log.info(result)
+    let runBootstrap = true
+    let nodeVersion = "unknown"
+    if (result.code == 0) {
+      nodeVersion = result.stdout.split("\n")[1]
+      runBootstrap = !(nodeVersion == OctopusTool.targetNodeVersion)
+    }
+
+    if (runBootstrap) {
+    this.log.info("BOOTSTRAP: Running /opt/octopus/bootstrap.sh script")
+      result = await ssh.execCommand("sudo bash ./bootstrap.sh", {
+      options: { pty: !!password },
+      cwd: "/opt/octopus",
+      stdin: password + "\n",
+    })
+      this.log.info(result)
     if (result.code !== 0) {
       logResult(result)
     }
+    } else {
+      this.log.info(
+        `BOOTSTRAP: Node is up to date: ${nodeVersion}.  Bootstrap skipped`
+      )
+    }
   }
 
-  async processAssertions(ssh, assertContents) {
-    // TEMP grab first assertion which is directoryExists
-    const testAssertion = assertContents.assertions[0]
-    const asserter = new DirectoryExists()
-    const assertionPassed = await asserter.assert(testAssertion.with)
+  async processAssertions(ssh, username, password, assertScript) {
+    // this.log.info(`Run assertions: ${this.printObj(assertScript)}`)
+    const vars = assertScript.vars || {}
+    const asserts = assertScript.assertions || []
+    for (let an = 0; an < asserts.length; an++) {
+      const assertionSpec = asserts[an]
 
-    if (!assertionPassed) {
-      this.log.info("ACTUALIZING")
-      await asserter.actualize(testAssertion.with)
+      const assertionName = assertionSpec.assert
+      const stepName =
+        assertionSpec.name || `Step ${an + 1}: (${assertionName})`
+      const runAs = assertionSpec.runAs || ""
+      const args = assertionSpec.with || {}
+      const argsString = JSON.stringify(args)
+      const args64 = Buffer.from(argsString).toString("base64")
+      const sudo = runAs == "sudo" ? "sudo" : ""
+      const command = `${sudo} node doAssert.js ${assertionName} base64 ${args64}`
+      this.log.info(
+        `=============================================================`
+      )
+      this.log.info(`>>> ${stepName}\n -------------------------------`)
+      //this.log.info(`Run assertion ${command} \n --------------------------`)
+      const result = await this.runAssertion(ssh, username, password, command)
     }
+  }
+
+  async runAssertion(ssh, username, password, command) {
+    const result = await ssh.execCommand(command, {
+      options: { pty: !!password },
+      cwd: "/opt/octopus/asserters",
+      stdin: password + "\n",
+    })
+    const success = result.code == 0
+    const response = result.stdout
+    this.log.info(`Assertion Success: ${success}\nResponse:\n${response}`)
+    return success
+  }
+
+  printObj(obj) {
+    return JSON.stringify(obj, null, 2)
   }
 
   async run(argv) {
@@ -190,8 +253,13 @@ Options:
         },
       })
 
-      await this.bootstrapRemote(ssh, args.password)
-      await this.processAssertions(ssh, assertContents)
+      await this.bootstrapRemote(ssh, args.user, args.password)
+      await this.processAssertions(
+        ssh,
+        args.user,
+        args.password,
+        assertContents
+      )
     } finally {
       if (ssh) {
         ssh.dispose()
