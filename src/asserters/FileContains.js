@@ -22,7 +22,7 @@ class FileContains {
     }
   }
 
-  async run(args) {
+  async actualize(args) {
     try {
       await fs.writeFile(args.path)
       return true
@@ -32,4 +32,4 @@ class FileContains {
   }
 }
 
-exports.FileContains = FileContains
+module.exports.FileContains = FileContains

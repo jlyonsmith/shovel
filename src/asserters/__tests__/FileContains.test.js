@@ -5,7 +5,7 @@ test("assert", async (done) => {
   done()
 })
 
-test("run", async (done) => {
+test("actualize", async (done) => {
   const asserter = new FileContains()
   done()
 })

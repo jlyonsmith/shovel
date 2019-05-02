@@ -19,7 +19,7 @@ const log = {
 const tool = new OctopusTool(path.basename(process.argv[1], ".js"), log)
 
 tool
-  .run(process.argv.slice(2))
+  .actualize(process.argv.slice(2))
   .then((exitCode) => {
     process.exitCode = exitCode
   })

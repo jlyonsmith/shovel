@@ -22,7 +22,7 @@ class DirectoryExists {
     }
   }
 
-  async run(args) {
+  async actualize(args) {
     try {
       await fs.mkdir(args.path)
       return true
@@ -32,4 +32,4 @@ class DirectoryExists {
   }
 }
 
-exports.DirectoryExists = DirectoryExists
+module.exports.DirectoryExists = DirectoryExists

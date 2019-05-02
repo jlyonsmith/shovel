@@ -8,9 +8,9 @@ test("assert", async (done) => {
   done()
 })
 
-test("run", async (done) => {
+test("actualize", async (done) => {
   const asserter = new DirectoryExists()
-  const result = await asserter.run({ path: "/somedir" })
+  const result = await asserter.actualize({ path: "/somedir" })
 
   expect(result).toBe(true)
   done()

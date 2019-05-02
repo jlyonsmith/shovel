@@ -22,7 +22,7 @@ class FileExists {
     }
   }
 
-  async run(args) {
+  async actualize(args) {
     try {
       await fs.writeFile(args.path)
       return true
@@ -32,4 +32,4 @@ class FileExists {
   }
 }
 
-exports.FileExists = FileExists
+module.exports.FileExists = FileExists

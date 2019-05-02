@@ -8,9 +8,9 @@ test("assert", async (done) => {
   done()
 })
 
-test("run", async (done) => {
+test("actualize", async (done) => {
   const asserter = new FileAbsent()
-  const result = await asserter.run({ path: "/notthere" })
+  const result = await asserter.actualize({ path: "/notthere" })
 
   expect(result).toBe(true)
   done()

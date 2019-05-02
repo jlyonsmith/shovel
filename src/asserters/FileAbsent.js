@@ -22,7 +22,7 @@ class FileAbsent {
     }
   }
 
-  async run(args) {
+  async actualize(args) {
     try {
       await fs.unlink(args.path)
       return true
@@ -32,4 +32,4 @@ class FileAbsent {
   }
 }
 
-exports.FileAbsent = FileAbsent
+module.exports.FileAbsent = FileAbsent

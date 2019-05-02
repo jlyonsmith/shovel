@@ -22,7 +22,7 @@ class DirectoryAbsent {
     }
   }
 
-  async run(args) {
+  async actualize(args) {
     try {
       await fs.rmdir(args.path)
       return true
@@ -32,4 +32,4 @@ class DirectoryAbsent {
   }
 }
 
-exports.DirectoryAbsent = DirectoryAbsent
+module.exports.DirectoryAbsent = DirectoryAbsent
