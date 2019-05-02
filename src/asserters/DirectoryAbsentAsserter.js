@@ -6,7 +6,7 @@ Asserts and ensures that a directory is absent.
 Example:
 
 {
-  assert: "directoryExists",
+  assert: "directoryAbsent",
   with: {
     path: "/path/to/dir"
   }
@@ -28,7 +28,7 @@ export class DirectoryAbsentAsserter {
 
   async run(args) {
     try {
-      await this.fs.rmdir(args.path)
+      await this.fs.remove(args.path)
       return true
     } catch (error) {
       return false

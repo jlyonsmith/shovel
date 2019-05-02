@@ -29,17 +29,22 @@ validate.validators.isObject = (value, options, key, attributes) => {
 }
 
 validate.validators.isAssertion = (value, options, key, attributes) => {
+  let errors = []
   if (!value.length > 0) {
     return "The assertions array is empty. It must contain at least one assertion."
   }
   for (let val in value) {
     const currentValue = value[val]
     if (!currentValue.assert || !currentValue.with) {
-      return "At least one assertion is missing an 'assert' or a 'with' attribute."
+      errors.push(
+        `Assertion at index ${val} ${
+          currentValue.assert ? `(ASSERT: ${currentValue.assert})` : ""
+        }is missing an ASSERT or a WITH key/value.`
+      )
       break
     }
   }
-  return null
+  return errors.length > 0 ? errors : null
 }
 
 export default validate

@@ -28,7 +28,7 @@ export class DirectoryExistsAsserter {
 
   async run(args) {
     try {
-      await this.fs.mkdir(args.path)
+      await this.fs.ensureDir(args.path)
       return true
     } catch (error) {
       return false

@@ -28,7 +28,7 @@ export class FileExistsAsserter {
 
   async run(args) {
     try {
-      await this.fs.writeFile(args.path)
+      await this.fs.ensureFile(args.path)
       return true
     } catch (error) {
       return false
