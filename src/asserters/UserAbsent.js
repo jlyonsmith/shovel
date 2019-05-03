@@ -13,7 +13,7 @@ Example:
 }
 */
 
-export class UserAbsentAsserter {
+export class UserAbsent {
   async assert(args) {
     try {
       // TODO : check if user is absent using something from https://stackoverflow.com/questions/14810684/check-whether-a-user-exists
@@ -23,7 +23,7 @@ export class UserAbsentAsserter {
     }
   }
 
-  async run(args) {
+  async actualize(args) {
     try {
       // TODO : remove the user
       return true

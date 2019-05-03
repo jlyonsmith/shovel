@@ -13,7 +13,7 @@ Example:
 }
 */
 
-export class UserEnabledAsserter {
+export class UserEnabled {
   async assert(args) {
     try {
       // TODO : check if user is enabled using something from https://www.thegeekdiary.com/unix-linux-how-to-lock-or-disable-an-user-account/
@@ -23,7 +23,7 @@ export class UserEnabledAsserter {
     }
   }
 
-  async run(args) {
+  async actualize(args) {
     try {
       // TODO : enable the user
       return true
