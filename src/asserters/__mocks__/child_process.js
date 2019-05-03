@@ -1,3 +1,4 @@
+const util = require("util")
 const childProcess = jest.genMockFromModule("child_process")
 
 let mockFiles = Object.create(null)
@@ -9,30 +10,10 @@ function __setMockFiles(newMockFiles) {
 }
 childProcess.__setMockFiles = __setMockFiles
 
-childProcess.exec = jest.fn((name) => {
-  console.log("&&&&&&&&", mockFiles, name)
-  return mockFiles[name]
-  //   switch (name) {
-  //     case "existentUser":
-  //       return Promise.resolve({ exec: mockFiles[] })
+async function exec(name, args, cb) {
+  cb(null, mockFiles[args.name], null)
+}
 
-  //       break
-  //     case "nonExistentUser":
-  //       return Promise.resolve({ exec: () => true })
-
-  //       break
-  //     case "existentGroup":
-  //       return Promise.resolve({ exec: () => true })
-
-  //       break
-  //     case "nonExistentGroup":
-  //       return Promise.resolve({ exec: () => true })
-
-  //       break
-  //     default:
-  //       return Promise.reject(new Error())
-  //       break
-  //   }
-})
+childProcess.exec = exec
 
 module.exports = childProcess

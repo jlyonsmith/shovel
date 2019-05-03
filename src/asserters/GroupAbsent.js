@@ -1,4 +1,6 @@
-const fs = require("fs-extra")
+const util = require("util")
+const exec = util.promisify(require("child_process").exec)
+const os = require("os")
 
 /*
 Checks and ensures that a group is absent.
@@ -8,16 +10,23 @@ Example:
 {
   assert: "groupAbsent",
   with: {
-    name: "groupName"
+    name: "nonExistentGroup"
   }
 }
 */
 
-export class GroupAbsent {
+const osPlatform = os.platform()
+
+class GroupAbsent {
   async assert(args) {
     try {
-      // TODO : check if group is absent using something from https://stackoverflow.com/questions/29073210/how-to-check-if-a-group-exists-and-add-if-it-doesnt-in-linux-shell-script
-      return false
+      if (osPlatform === "darwin") {
+        let result = await exec("dscl . -list /Groups", args)
+        return !result.stdout.includes(args.name)
+      } else {
+        let result = !(await exec("groups", args))
+        return result.includes(args.name)
+      }
     } catch (error) {
       return false
     }
@@ -25,10 +34,17 @@ export class GroupAbsent {
 
   async actualize(args) {
     try {
-      // TODO : remove the group
-      return true
+      if (osPlatform === "darwin") {
+        await exec(`sudo dscl . delete /Groups/${args.name}`, args)
+        return true
+      } else {
+        await exec(`groupdel ${args.name}`, args)
+        return true
+      }
     } catch (error) {
       return false
     }
   }
 }
+
+module.exports = GroupAbsent
