@@ -1,4 +1,4 @@
-import fs from "fs-extra"
+const fs = require("fs-extra")
 
 /*
 Checks and ensures that a user is disabled.

@@ -1,4 +1,5 @@
-import fs from "fs-extra"
+const fs = require("fs-extra")
+const childProcess = require("child_process")
 
 /*
 Checks and ensures that a user exists.
