@@ -1,14 +1,14 @@
 const fs = require("fs-extra")
 
 /*
-Checks and ensures that a file exists.
+Checks and ensures that a file contains some specific data.
 
 Example:
 
 {
-  assert: "fileExists",
+  assert: "fileContains",
   with: {
-    path: "/path/to/file"
+    data: "dataToCheck"
   }
 }
 */
@@ -16,7 +16,8 @@ Example:
 class FileContains {
   async assert(args) {
     try {
-      return (await fs.lstat(args.path)).isFile()
+      // TODO : check if file contains relevant info
+      return false
     } catch (error) {
       return false
     }
@@ -24,8 +25,8 @@ class FileContains {
 
   async actualize(args) {
     try {
-      await this.fs.writeFile(args.path, "a test")
-      // NOTE: probably should use ensureFile()
+      // await fs.writeFile(args.path)
+      // TODO : modify the file
       return true
     } catch (error) {
       return false
