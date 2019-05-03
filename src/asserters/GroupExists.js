@@ -36,10 +36,11 @@ class GroupExists {
   async actualize(args) {
     try {
       if (osPlatform === "darwin") {
-        let groupAdd = await exec(`sudo dscl . create /Groups/${args.name}`)
-        return groupAdd.stdout
+        await exec(`sudo dscl . create /Groups/${args.name}`)
+        return true
       } else {
-        return await exec(`groupadd ${args.name}`)
+        await exec(`groupadd ${args.name}`)
+        return true
       }
     } catch (error) {
       return false
