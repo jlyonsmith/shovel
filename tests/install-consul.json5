@@ -1,14 +1,14 @@
 {
   vars: {
     consulVersion: "1.2.3",
-    consulZipFile: "${HOME}/downloads/consul_${consulVersion}_linux_amd64.zip",
-    consulUnzipDir: "${HOME}/downloads/consul_${consulVersion}",
+    consulZipFile: "{{HOME}}/downloads/consul_1.2.3_linux_amd64.zip",
+    consulUnzipDir: "{{HOME}}/downloads/consul_1.2.3",
   },
   assertions: [
     {
       assert: "directoryExists",
       with: {
-        path: "${HOME}/downloads",
+        path: "{{HOME}}/downloads",
       },
     },
     {

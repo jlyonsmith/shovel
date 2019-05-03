@@ -29,8 +29,6 @@ class DirectoryExistsAsserter {
   }
 
   async run(args) {
-    const home = process.env.HOME
-    console.log(`Home: "${home}"`)
     try {
       console.log(`mkdir ${args.path}`)
       await fs.mkdir(args.path)

@@ -59,7 +59,7 @@ node --version > node_version.txt
     return ssh
   }
 
-  async bootstrapRemote(ssh, username, password) {
+  async bootstrapRemote(ssh, username, password, forceBootstrap) {
     const logResult = (result) => {
       this.log.info("STDOUT: " + result.stdout)
       this.log.info("STDERR: " + result.stderr)
@@ -102,18 +102,20 @@ node --version > node_version.txt
       )
     }
 
-    this.log.info("BOOTSTRAP: Check if boostrap needs to be run")
-    result = await ssh.execCommand("cat node_version.txt", {
-      options: { pty: !!password },
-      cwd: "/opt/octopus",
-      stdin: password + "\n",
-    })
-    this.log.info(result)
     let runBootstrap = true
     let nodeVersion = "unknown"
-    if (result.code == 0) {
-      nodeVersion = result.stdout.split("\n")[1]
-      runBootstrap = !(nodeVersion == OctopusTool.targetNodeVersion)
+
+    if (!forceBootstrap) {
+      this.log.info("BOOTSTRAP: Check if boostrap needs to be run")
+      result = await ssh.execCommand("cat node_version.txt", {
+        options: { pty: !!password },
+        cwd: "/opt/octopus",
+        stdin: password + "\n",
+      })
+      if (result.code == 0) {
+        nodeVersion = result.stdout.split("\n")[1]
+        runBootstrap = !(nodeVersion == OctopusTool.targetNodeVersion)
+      }
     }
 
     if (runBootstrap) {
@@ -123,7 +125,7 @@ node --version > node_version.txt
         cwd: "/opt/octopus",
         stdin: password + "\n",
       })
-      this.log.info(result)
+      // this.log.info(result)
       if (result.code !== 0) {
         logResult(result)
       }
@@ -135,25 +137,28 @@ node --version > node_version.txt
   }
 
   async processAssertions(ssh, username, password, assertScript) {
-    // this.log.info(`Run assertions: ${this.printObj(assertScript)}`)
+    assertScript = this.expandAssertVariables(assertScript)
+    this.log.info(`Run assertions: ${this.printObj(assertScript)}`)
     const vars = assertScript.vars || {}
     const asserts = assertScript.assertions || []
     for (let an = 0; an < asserts.length; an++) {
       const assertionSpec = asserts[an]
 
       const assertionName = assertionSpec.assert
-      const stepName =
-        assertionSpec.name || `Step ${an + 1}: (${assertionName})`
+      const description =
+        assertionSpec.description || `Step ${an + 1}: (${assertionName})`
       const runAs = assertionSpec.runAs || ""
+
       const args = assertionSpec.with || {}
       const argsString = JSON.stringify(args)
       const args64 = Buffer.from(argsString).toString("base64")
       const sudo = runAs == "sudo" ? "sudo" : ""
       const command = `${sudo} node doAssert.js ${assertionName} base64 ${args64}`
+
       this.log.info(
         `=============================================================`
       )
-      this.log.info(`>>> ${stepName}\n -------------------------------`)
+      this.log.info(`>>> ${description}\n -------------------------------`)
       //this.log.info(`Run assertion ${command} \n --------------------------`)
       const result = await this.runAssertion(ssh, username, password, command)
     }
@@ -171,13 +176,23 @@ node --version > node_version.txt
     return success
   }
 
+  expandAssertVariables(assertionScript) {
+    const varExpander = (tpl, args) =>
+      tpl.replace(/\${(\w+)}/g, (_, v) => args[v])
+    const variables = assertionScript.vars || {}
+    const assertions = assertionScript.assertions || {}
+    const assertionsString = JSON.stringify(assertions)
+    const expanded = varExpander(assertionsString, variables)
+    return { vars: variables, assertions: JSON.parse(expanded) }
+  }
+
   printObj(obj) {
     return JSON.stringify(obj, null, 2)
   }
 
   async run(argv) {
     const options = {
-      boolean: ["help", "version"],
+      boolean: ["help", "version", "force-bootstrap"],
       string: ["host", "hosts-file", "user", "port", "password"],
       alias: {
         h: "host",
@@ -185,6 +200,7 @@ node --version > node_version.txt
         p: "port",
         f: "hosts-file",
         P: "password",
+        F: "force-bootstrap",
       },
     }
     const args = parseArgs(argv, options)
@@ -212,6 +228,7 @@ Options:
   --port, -p          The SSH port number
   --password, -P      SSH password
   --hosts-file, -f    JSON5 file containing multiple host names
+  --force-bootstrap, -F Force execution of node bootstrap
 `)
       return 0
     }
@@ -222,8 +239,11 @@ Options:
       throw new Error("Please specify a script file")
     }
 
-    const assertContents = JSON5.parse(await fs.readFile(assertFile))
-    const validityCheck = validate(assertContents, this.validationConstraints)
+    const forceBootstrap = args["force-bootstrap"]
+
+    const assertScript = JSON5.parse(await fs.readFile(assertFile))
+    const validityCheck = validate(assertScript, this.validationConstraints)
+
     let validationMessage =
       validityCheck || "Validation complete: no errors found."
     let ssh = null
@@ -258,13 +278,8 @@ Options:
         },
       })
 
-      await this.bootstrapRemote(ssh, args.user, args.password)
-      await this.processAssertions(
-        ssh,
-        args.user,
-        args.password,
-        assertContents
-      )
+      await this.bootstrapRemote(ssh, args.user, args.password, forceBootstrap)
+      await this.processAssertions(ssh, args.user, args.password, assertScript)
     } finally {
       if (ssh) {
         ssh.dispose()
