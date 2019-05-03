@@ -1,5 +1,6 @@
 const util = require("util")
 const exec = util.promisify(require("child_process").exec)
+const os = require("os")
 
 /*
 Checks and ensures that a group is absent.
@@ -14,12 +15,18 @@ Example:
 }
 */
 
+const osPlatform = os.platform()
+
 class GroupAbsent {
   async assert(args) {
     try {
-      return !(await exec("groups").then((result) => {
+      if (osPlatform === "darwin") {
+        let result = await exec("dscl . -list /Groups", args)
+        return !result.stdout.includes(args.name)
+      } else {
+        let result = !(await exec("groups", args))
         return result.includes(args.name)
-      }))
+      }
     } catch (error) {
       return false
     }
@@ -27,7 +34,13 @@ class GroupAbsent {
 
   async actualize(args) {
     try {
-      return await exec(`groupdel ${args.name}`)
+      if (osPlatform === "darwin") {
+        await exec(`sudo dscl . delete /Groups/${args.name}`, args)
+        return true
+      } else {
+        await exec(`groupdel ${args.name}`, args)
+        return true
+      }
     } catch (error) {
       return false
     }
