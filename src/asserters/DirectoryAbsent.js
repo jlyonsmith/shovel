@@ -6,7 +6,7 @@ Asserts and ensures that a directory is absent.
 Example:
 
 {
-  assert: "directoryExists",
+  assert: "directoryAbsent",
   with: {
     path: "/path/to/dir"
   }
@@ -24,7 +24,7 @@ export class DirectoryAbsent {
 
   async actualize(args) {
     try {
-      await fs.rmdir(args.path)
+      await fs.remove(args.path)
       return true
     } catch (error) {
       return false

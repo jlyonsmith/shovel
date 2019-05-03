@@ -24,7 +24,8 @@ class FileExists {
 
   async actualize(args) {
     try {
-      await fs.writeFile(args.path)
+      await fs.writeFile(args.path, "a test")
+      // NOTE: probably should use ensureFile()
       return true
     } catch (error) {
       return false
