@@ -13,7 +13,7 @@ Example:
 }
 */
 
-class FileExistsAsserter {
+class FileContains {
   async assert(args) {
     try {
       return (await fs.lstat(args.path)).isFile()
@@ -33,4 +33,4 @@ class FileExistsAsserter {
   }
 }
 
-module.exports = FileExistsAsserter
+module.exports.FileContains = FileContains

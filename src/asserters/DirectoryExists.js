@@ -13,7 +13,7 @@ Example:
 }
 */
 
-class DirectoryExistsAsserter {
+class DirectoryExists {
   async assert(args) {
     try {
       console.log(` assert is dir: ${args.path}`)
@@ -24,7 +24,7 @@ class DirectoryExistsAsserter {
     }
   }
 
-  async run(args) {
+  async actualize(args) {
     const home = process.env.HOME
     console.log(`Home: "${home}"`)
     try {
@@ -38,4 +38,4 @@ class DirectoryExistsAsserter {
   }
 }
 
-module.exports = DirectoryExistsAsserter
+module.exports.DirectoryExists = DirectoryExists
