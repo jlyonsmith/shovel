@@ -6,7 +6,7 @@ Checks and ensures that a directory exists.
 Example:
 
 {
-  assert: "directoryExists",
+  assert: "DirectoryExists",
   with: {
     path: "/path/to/dir"
   }

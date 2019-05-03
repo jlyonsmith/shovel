@@ -6,21 +6,22 @@
   },
   assertions: [
     {
-      assert: "directoryExists",
+      assert: "DirectoryExists",
       with: {
         path: "{{HOME}}/downloads",
       },
     },
     {
-      assert: "fileDownloaded",
+      assert: "FileDownloaded",
       with: {
         url: "https://releases.hashicorp.com/consul/${consulVersion}/consul_${consulVersion}_linux_amd64.zip",
-        checksum: "xxx",
+        checksum: "658f4f3b305cd357a9501728b8a1dc5f",
+        checksumType: "etag",
         toFile: "${consulZipFile}",
       },
     },
     {
-      assert: "fileUnzipped",
+      assert: "FileUnzipped",
       with: {
         zipFile: "${consulZipFile}",
         dirDir: "${zipDir}",
