@@ -29,6 +29,7 @@ class DirectoryExists {
     console.log(`Home: "${home}"`)
     try {
       console.log(`mkdir ${args.path}`)
+      // NOTE: probably should use ensureDir()
       await fs.mkdir(args.path)
       return true
     } catch (error) {
