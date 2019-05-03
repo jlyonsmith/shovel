@@ -1,8 +1,8 @@
 const util = require("util")
 const exec = util.promisify(require("child_process").exec)
-const execFile = util.promisify(require("child_process").execFile)
+
 /*
-Checks and ensures that a file exists.
+Checks and ensures that a group exists.
 
 Example:
 
@@ -27,7 +27,7 @@ class GroupExists {
 
   async actualize(args) {
     try {
-      return await execFile(`groupadd ${args.name}`)
+      return await exec(`groupadd ${args.name}`)
     } catch (error) {
       return false
     }

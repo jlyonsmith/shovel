@@ -1,4 +1,5 @@
-const fs = require("fs-extra")
+const util = require("util")
+const exec = util.promisify(require("child_process").exec)
 
 /*
 Checks and ensures that a group is absent.
@@ -16,8 +17,9 @@ Example:
 export class GroupAbsent {
   async assert(args) {
     try {
-      // TODO : check if group is absent using something from https://stackoverflow.com/questions/29073210/how-to-check-if-a-group-exists-and-add-if-it-doesnt-in-linux-shell-script
-      return false
+      return !(await exec("groups").then((result) => {
+        return result.includes(args.name)
+      }))
     } catch (error) {
       return false
     }
@@ -25,10 +27,11 @@ export class GroupAbsent {
 
   async actualize(args) {
     try {
-      // TODO : remove the group
-      return true
+      eturn await exec(`groupdel ${args.name}`)
     } catch (error) {
       return false
     }
   }
 }
+
+module.exports = GroupAbsent
