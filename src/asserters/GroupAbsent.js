@@ -9,12 +9,12 @@ Example:
 {
   assert: "groupAbsent",
   with: {
-    name: "groupName"
+    name: "nonExistentGroup"
   }
 }
 */
 
-export class GroupAbsent {
+class GroupAbsent {
   async assert(args) {
     try {
       return !(await exec("groups").then((result) => {
@@ -27,7 +27,7 @@ export class GroupAbsent {
 
   async actualize(args) {
     try {
-      eturn await exec(`groupdel ${args.name}`)
+      return await exec(`groupdel ${args.name}`)
     } catch (error) {
       return false
     }
