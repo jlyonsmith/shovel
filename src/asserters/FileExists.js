@@ -1,4 +1,4 @@
-import fs from "fs-extra"
+const fs = require("fs-extra")
 
 /*
 Checks and ensures that a file contains some specific data.
@@ -13,7 +13,7 @@ Example:
 }
 */
 
-export class FileContainsAsserter {
+class FileExists {
   async assert(args) {
     try {
       // TODO : check if file contains relevant info
@@ -23,7 +23,7 @@ export class FileContainsAsserter {
     }
   }
 
-  async run(args) {
+  async actualize(args) {
     try {
       // await fs.writeFile(args.path)
       // TODO : modify the file
@@ -33,3 +33,5 @@ export class FileContainsAsserter {
     }
   }
 }
+
+module.exports.FileExists = FileExists

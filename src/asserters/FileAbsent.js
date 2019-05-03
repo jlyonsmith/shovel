@@ -13,11 +13,7 @@ Example:
 }
 */
 
-class FileAbsentAsserter {
-  constructor(container) {
-    this.fs = container.fs || fs
-  }
-
+class FileAbsent {
   async assert(args) {
     try {
       return !(await fs.lstat(args.path)).isFile()
@@ -26,7 +22,7 @@ class FileAbsentAsserter {
     }
   }
 
-  async run(args) {
+  async actualize(args) {
     try {
       await fs.unlink(args.path)
       return true
@@ -36,4 +32,4 @@ class FileAbsentAsserter {
   }
 }
 
-module.exports = FileAbsentAsserter
+module.exports.FileAbsent = FileAbsent

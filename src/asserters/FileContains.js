@@ -13,11 +13,7 @@ Example:
 }
 */
 
-class FileExistsAsserter {
-  constructor(container) {
-    this.fs = container.fs || fs
-  }
-
+class FileContains {
   async assert(args) {
     try {
       return (await fs.lstat(args.path)).isFile()
@@ -26,7 +22,7 @@ class FileExistsAsserter {
     }
   }
 
-  async run(args) {
+  async actualize(args) {
     try {
       await this.fs.writeFile(args.path, "a test")
       // NOTE: probably should use ensureFile()
@@ -37,4 +33,4 @@ class FileExistsAsserter {
   }
 }
 
-module.exports = FileExistsAsserter
+module.exports.FileContains = FileContains

@@ -13,11 +13,7 @@ Example:
 }
 */
 
-class DirectoryAbsentAsserter {
-  constructor(container) {
-    this.fs = container.fs || fs
-  }
-
+export class DirectoryAbsent {
   async assert(args) {
     try {
       return !(await fs.lstat(args.path)).isDirectory()
@@ -26,7 +22,7 @@ class DirectoryAbsentAsserter {
     }
   }
 
-  async run(args) {
+  async actualize(args) {
     try {
       await fs.remove(args.path)
       return true
@@ -36,4 +32,4 @@ class DirectoryAbsentAsserter {
   }
 }
 
-module.exports = DirectoryAbsentAsserter
+module.exports.DirectoryAbsent = DirectoryAbsent

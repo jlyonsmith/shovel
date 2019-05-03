@@ -34,9 +34,7 @@ export class OctopusTool {
 curl -sL https://deb.nodesource.com/setup_10.x -o ./nodesource_setup.sh
 sudo bash ./nodesource_setup.sh
 sudo apt -y -q install nodejs
-node --version > node_version.txt
-`
-  static targetNodeVersion = "v10.15.3"
+node --version > node_version.txt`
 
   async createConnection(options) {
     let ssh = new NodeSSH()
@@ -59,25 +57,22 @@ node --version > node_version.txt
     return ssh
   }
 
-  async bootstrapRemote(ssh, username, password) {
+  async bootstrapRemote(ssh, password) {
     const logResult = (result) => {
       this.log.info("STDOUT: " + result.stdout)
       this.log.info("STDERR: " + result.stderr)
     }
     this.log.info("BOOTSTRAP: Creating /opt/octopus directory")
-    let result = await ssh.execCommand(
-      `sudo mkdir -p /opt/octopus/asserters; sudo chown ${username}:${username} /opt/octopus/asserters`,
-      {
-        options: { pty: !!password },
-        stdin: password + "\n",
-      }
-    )
+    const result = await ssh.execCommand("sudo mkdir -p /opt/octopus", {
+      options: { pty: !!password },
+      stdin: password + "\n",
+    })
     if (result.code !== 0) {
       logResult(result)
     }
 
     this.log.info("BOOTSTRAP: Creating /opt/octopus/bootstrap.sh script")
-    result = await ssh.execCommand(
+    await ssh.execCommand(
       `sudo bash -c 'echo "${OctopusTool.bootstrapScript}" > ./bootstrap.sh'`,
       {
         options: { pty: !!password },
@@ -117,16 +112,16 @@ node --version > node_version.txt
     }
 
     if (runBootstrap) {
-      this.log.info("BOOTSTRAP: Running /opt/octopus/bootstrap.sh script")
+    this.log.info("BOOTSTRAP: Running /opt/octopus/bootstrap.sh script")
       result = await ssh.execCommand("sudo bash ./bootstrap.sh", {
-        options: { pty: !!password },
-        cwd: "/opt/octopus",
-        stdin: password + "\n",
-      })
+      options: { pty: !!password },
+      cwd: "/opt/octopus",
+      stdin: password + "\n",
+    })
       this.log.info(result)
-      if (result.code !== 0) {
-        logResult(result)
-      }
+    if (result.code !== 0) {
+      logResult(result)
+    }
     } else {
       this.log.info(
         `BOOTSTRAP: Node is up to date: ${nodeVersion}.  Bootstrap skipped`
