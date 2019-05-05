@@ -34,5 +34,15 @@
     "dependencies": {
       "fs-extra": "^7.0.1"
     }
+  },
+  "FileDownloaded": {
+    "module": "FileDownloadedAsserter",
+    "arguments": ["url!", "checksum!", "checksumType", "toFile!"],
+    "remotable": true,
+    "description": "Asserts that a file as been downloaded. ",
+    "dependencies": {
+      "fs-extra":"^7.0.1",
+      "request": "^2.0.0"
+    }
   }
 }

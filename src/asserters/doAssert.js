@@ -15,7 +15,7 @@ class DoAssert {
     } catch (ex) {
       return 1
     }
-
+    // console.log(`Data: ${JSON.stringify(data)}`)
     const asserter = await this.getAsserter(asserterName)
     if (asserter) {
       const constName = asserter.constructor.name
@@ -53,8 +53,14 @@ class DoAssert {
     if (encoding == "base64") {
       dataString = Buffer.from(encodedData, "base64").toString("ascii")
     }
-
+    dataString = this.expandEnvVariables(dataString)
     return JSON.parse(dataString)
+  }
+
+  expandEnvVariables(dataString) {
+    const varExpander = (tpl, args) =>
+      tpl.replace(/{{(\w+)}}/g, (_, v) => args[v])
+    return varExpander(dataString, process.env)
   }
 
   async getAsserterInfo(asserterName) {

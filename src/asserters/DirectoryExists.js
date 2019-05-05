@@ -6,32 +6,38 @@ Checks and ensures that a directory exists.
 Example:
 
 {
-  assert: "directoryExists",
+  assert: "DirectoryExists",
   with: {
     path: "/path/to/dir"
   }
 }
 */
 
-class DirectoryExists {
+class DirectoryExistsAsserter {
+  constructor(container) {
+    this.fs = container.fs || fs
+  }
+
   async assert(args) {
     try {
+      console.log(` assert is dir: ${args.path}`)
       return (await fs.lstat(args.path)).isDirectory()
     } catch (error) {
+      console.log(`assert failed`)
       return false
     }
   }
 
-  async actualize(args) {
-    const home = process.env.HOME
+  async run(args) {
     try {
-      // NOTE: probably should use ensureDir()
+      console.log(`mkdir ${args.path}`)
       await fs.mkdir(args.path)
       return true
     } catch (error) {
+      console.log(`Error creating dir: ${JSON.stringify(error)}`)
       return false
     }
   }
 }
 
-module.exports.DirectoryExists = DirectoryExists
+module.exports = DirectoryExistsAsserter
