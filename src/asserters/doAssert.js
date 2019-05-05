@@ -27,7 +27,7 @@ class DoAssert {
         //   `Running asserter ${constName} with ${JSON.stringify(data)}`
         // )
         try {
-          const success = await asserter.run(data)
+        const success = await asserter.run(data)
           console.log(`Asserter Run. Success: ${success}`)
         } catch (ex) {
           console.error(`Error executing assertion action: ${ex.message}`)

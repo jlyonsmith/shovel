@@ -63,7 +63,7 @@ node --version > node_version.txt`
       this.log.info("STDERR: " + result.stderr)
     }
     this.log.info("BOOTSTRAP: Creating /opt/octopus directory")
-    const result = await ssh.execCommand("sudo mkdir -p /opt/octopus", {
+    let result = await ssh.execCommand("sudo mkdir -p /opt/octopus", {
       options: { pty: !!password },
       stdin: password + "\n",
     })
@@ -72,7 +72,7 @@ node --version > node_version.txt`
     }
 
     this.log.info("BOOTSTRAP: Creating /opt/octopus/bootstrap.sh script")
-    await ssh.execCommand(
+    result = await ssh.execCommand(
       `sudo bash -c 'echo "${OctopusTool.bootstrapScript}" > ./bootstrap.sh'`,
       {
         options: { pty: !!password },
@@ -270,5 +270,9 @@ Options:
     }
 
     return 0
+  }
+
+  printObj(object) {
+    return JSON.stringify(object, null, 2)
   }
 }
