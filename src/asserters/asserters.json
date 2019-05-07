@@ -44,6 +44,16 @@
       "fs-extra":"^7.0.1",
       "request": "^2.0.0"
     }
+  },
+  "FileUnzipped": {
+    "module": "FileUnzippedAsserter",
+    "arguments": ["zipFile!", "toDir!"],
+    "remotable": true,
+    "description": "Asserts that a file has been unzipped. ",
+    "dependencies": {
+      "fs-extra":"^7.0.1",
+      "unzip": "^0.1.11"
+    }
   }
 
 }

@@ -24,7 +24,8 @@
       assert: "FileUnzipped",
       with: {
         zipFile: "${consulZipFile}",
-        dirDir: "${zipDir}",
+        toDir: "${consulUnzipDir}",
+        expectFile: "consul"
       },
     },
     {
@@ -37,7 +38,7 @@
     {
       assert: "commandOutputs",
       with: {
-        programName: "consul",
+        command: "consul --version",
         regex: "^Consul\\sv${consuleVersion}$",
         occurance: 1,
       },
