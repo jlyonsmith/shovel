@@ -32,3 +32,4 @@ export class UserDisabled {
     }
   }
 }
+module.exports = UserDisabled

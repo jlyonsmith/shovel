@@ -29,7 +29,7 @@ class FileExistsAsserter {
     }
   }
 
-  async run(args) {
+  async actualize(args) {
     try {
       const success = await this.unzipFile(args.zipFile, args.toDir)
       return true

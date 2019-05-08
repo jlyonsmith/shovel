@@ -33,4 +33,4 @@ class FileExists {
   }
 }
 
-module.exports.FileExists = FileExists
+module.exports = FileExists

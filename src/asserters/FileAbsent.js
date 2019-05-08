@@ -32,4 +32,4 @@ class FileAbsent {
   }
 }
 
-module.exports.FileAbsent = FileAbsent
+module.exports = FileAbsent

@@ -7,6 +7,7 @@ import autobind from "autobind-decorator"
 import validate from "./Validator"
 import JSON5 from "json5"
 import fs from "fs-extra"
+import chalk from "chalk"
 
 @autobind
 export class OctopusTool {
@@ -104,16 +105,16 @@ node --version > node_version.txt`
     let nodeVersion = "unknown"
 
     if (!forceBootstrap) {
-    this.log.info("BOOTSTRAP: Check if boostrap needs to be run")
-    result = await ssh.execCommand("cat node_version.txt", {
-      options: { pty: !!password },
-      cwd: "/opt/octopus",
-      stdin: password + "\n",
-    })
-    if (result.code == 0) {
-      nodeVersion = result.stdout.split("\n")[1]
-      runBootstrap = !(nodeVersion == OctopusTool.targetNodeVersion)
-    }
+      this.log.info("BOOTSTRAP: Check if boostrap needs to be run")
+      result = await ssh.execCommand("cat node_version.txt", {
+        options: { pty: !!password },
+        cwd: "/opt/octopus",
+        stdin: password + "\n",
+      })
+      if (result.code == 0) {
+        nodeVersion = result.stdout.split("\n")[1]
+        runBootstrap = !(nodeVersion == OctopusTool.targetNodeVersion)
+      }
     }
 
     if (runBootstrap) {
@@ -136,14 +137,17 @@ node --version > node_version.txt`
 
   async processAssertions(ssh, username, password, assertScript) {
     assertScript = this.expandAssertVariables(assertScript)
-    this.log.info(`Run assertions: ${this.printObj(assertScript)}`)
+    // this.log.info(`Run assertions: ${this.printObj(assertScript)}`)
     const vars = assertScript.vars || {}
     const asserts = assertScript.assertions || []
-    for (let an = 0; an < asserts.length; an++) {
+    let scriptSuccess = true
+    let an
+    let description
+    for (an = 0; an < asserts.length; an++) {
       const assertionSpec = asserts[an]
 
       const assertionName = assertionSpec.assert
-      const description =
+      description =
         assertionSpec.description || `Step ${an + 1}: (${assertionName})`
       const runAs = assertionSpec.runAs || ""
 
@@ -158,8 +162,35 @@ node --version > node_version.txt`
       )
       this.log.info(`>>> ${description}\n -------------------------------`)
       //this.log.info(`Run assertion ${command} \n --------------------------`)
-      const result = await this.runAssertion(ssh, username, password, command)
+      const assertSuccess = await this.runAssertion(
+        ssh,
+        username,
+        password,
+        command
+      )
+      if (!assertSuccess) {
+        scriptSuccess = false
+        break
+      }
     }
+
+    this.log.info(
+      chalk.blue(
+        `=============================================================`
+      )
+    )
+    if (scriptSuccess) {
+      this.log.info(chalk.green(">>> Script Completed Successfully"))
+    } else {
+      this.log.info(
+        chalk.red(`>>> Script Failed at step ${an} (${description})`)
+      )
+    }
+    this.log.info(
+      chalk.blue(
+        `=============================================================`
+      )
+    )
   }
 
   async runAssertion(ssh, username, password, command) {
@@ -170,7 +201,16 @@ node --version > node_version.txt`
     })
     const success = result.code == 0
     const response = result.stdout
-    this.log.info(`Assertion Success: ${success}\nResponse:\n${response}`)
+    if (success) {
+      this.log.info(
+        chalk.green(`Assertion Success: ${success}\nResponse:\n${response}`)
+      )
+    } else {
+      this.log.info(
+        chalk.red(`Assertion Success: ${success}\nResponse:\n${response}`)
+      )
+    }
+
     return success
   }
 

@@ -27,8 +27,9 @@ class DoAssert {
         //   `Running asserter ${constName} with ${JSON.stringify(data)}`
         // )
         try {
-        const success = await asserter.run(data)
+          const success = await asserter.actualize(data)
           console.log(`Asserter Run. Success: ${success}`)
+          return !success
         } catch (ex) {
           console.error(`Error executing assertion action: ${ex.message}`)
           return 1
@@ -72,10 +73,14 @@ class DoAssert {
     const info = await this.getAsserterInfo(asserterName)
     // console.log(`getAsserterInfo for ${asserterName} : ${JSON.stringify(info)}`)
     if (info) {
-      const asserterClass = require(`./${info.module}`)
-      const container = {} // pass in logger at least
-      const asserter = new asserterClass(container)
-      return asserter
+      try {
+        const asserterClass = require(`./${info.module}`)
+        const container = {} // pass in logger at least
+        const asserter = new asserterClass(container)
+        return asserter
+      } catch (ex) {
+        console.log(`Error creating asserter ${info.module}: ${ex.message}`)
+      }
     } else {
       return null
     }

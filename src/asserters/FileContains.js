@@ -34,4 +34,4 @@ class FileContains {
   }
 }
 
-module.exports.FileContains = FileContains
+module.exports = FileContains

@@ -28,7 +28,7 @@ class DirectoryExistsAsserter {
     }
   }
 
-  async run(args) {
+  async actualize(args) {
     try {
       console.log(`mkdir ${args.path}`)
       await fs.mkdir(args.path)

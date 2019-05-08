@@ -101,3 +101,5 @@ export class UserExists {
     }
   }
 }
+
+module.exports = UserExists

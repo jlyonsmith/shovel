@@ -32,3 +32,5 @@ export class UserAbsent {
     }
   }
 }
+
+module.exports = UserAbsent

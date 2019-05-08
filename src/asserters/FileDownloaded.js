@@ -98,7 +98,7 @@ class FileDownloadedAsserter {
     })
   }
 
-  async run(args) {
+  async actualize(args) {
     const url = args.url || ""
     const toFile = args.toFile || ""
     try {

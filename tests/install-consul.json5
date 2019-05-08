@@ -6,12 +6,14 @@
   },
   assertions: [
     {
+      description: "Ensure downloads directory exists",
       assert: "DirectoryExists",
       with: {
         path: "{{HOME}}/downloads",
       },
     },
     {
+      description: "Download consul zip file",
       assert: "FileDownloaded",
       with: {
         url: "https://releases.hashicorp.com/consul/${consulVersion}/consul_${consulVersion}_linux_amd64.zip",
@@ -21,25 +23,39 @@
       },
     },
     {
+      description: "Unzip consul",
       assert: "FileUnzipped",
       with: {
         zipFile: "${consulZipFile}",
-        dirDir: "${consulUnzipDir}"
+        toDir: "${consulUnzipDir}",
+        expectFile: "consul"
       },
     },
     {
-      assert: "fileCopied",
+      description: "move binaries into bin dir",
+      assert: "FileCopied",
+      runAs: "sudo",
       with: {
-        fromFile: "${consulUnzipDir}/consul",
-        toDir: "/usr/local/bin",
+        fromPath: "${consulUnzipDir}/consul",
+        toDir: "/usr/local/bin/consul",
       },
     },
     {
-      assert: "commandOutputs",
+      description: "make consul executable",
+      assert: "FileModeSet",
+      runAs: "sudo",
+      with: {
+        path: "/usr/local/bin/consul",
+        mode: "777"
+      },
+    },
+    {
+      description: "Verify expected version (${consulVersion})" ,
+      assert: "CommandOutputs",
       with: {
         command: "consul --version",
-        regex: "^Consul\\sv${consuleVersion}$",
-        occurance: 1,
+        regex: "^Consul\\sv${consulVersion}",
+        occurrence: 1,
       },
     },
   ],

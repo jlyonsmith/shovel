@@ -32,3 +32,5 @@ export class UserEnabled {
     }
   }
 }
+
+module.exports = UserEnabled
