@@ -1,17 +1,48 @@
-const FileAbsent = require("../FileAbsent")
+import { FileAbsent } from "./FileAbsent"
 
-test("assert", async (done) => {
-  const asserter = new FileAbsent()
+let container = null
 
-  expect(await asserter.assert({ path: "/notthere" })).toBe(true)
-  expect(await asserter.assert({ path: "/somefile" })).toBe(false)
-  done()
+beforeAll(() => {
+  container = {
+    fs: {
+      lstat: jest.fn(async (fileName) => {
+        if (fileName === "/somedir") {
+          return {
+            isDirectory: jest.fn(() => true),
+            isFile: jest.fn(() => false),
+          }
+        } else if (fileName === "/somefile") {
+          return {
+            isDirectory: jest.fn(() => false),
+            isFile: jest.fn(() => true),
+          }
+        } else {
+          throw new Error("ENOENT")
+        }
+      }),
+      unlink: jest.fn(async (fileName) => null),
+    },
+  }
 })
 
-test("actualize", async (done) => {
-  const asserter = new FileAbsent()
-  const result = await asserter.actualize({ path: "/notthere" })
+test("FileAbsent with no dir or file existing", async () => {
+  const asserter = new FileAbsent(container)
 
-  expect(result).toBe(true)
-  done()
+  await expect(asserter.assert({ path: "/notthere" })).resolves.toBe(true)
+})
+
+test("FileAbsent with file existing", async () => {
+  const asserter = new FileAbsent(container)
+
+  await expect(asserter.assert({ path: "/somefile" })).resolves.toBe(false)
+  await expect(
+    asserter.actualize({ path: "/somefile" })
+  ).resolves.toBeUndefined()
+})
+
+test("FileAbsent with dir instead of file existing", async () => {
+  const asserter = new FileAbsent(container)
+
+  await expect(asserter.assert({ path: "/somedir" })).resolves.toBe(true)
+  await expect(asserter.actualize({ path: "/somedir" })).rejects.toThrow(Error)
 })

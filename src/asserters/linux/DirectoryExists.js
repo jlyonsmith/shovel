@@ -13,6 +13,9 @@ Example:
 }
 */
 
+// TODO: Add directory ownership. Must be sudo?
+// TODO: Add directory permissions.
+
 export class DirectoryExists {
   constructor(container) {
     this.fs = container.fs || fs
@@ -30,9 +33,9 @@ export class DirectoryExists {
 
   async actualize(args) {
     if (this.stat && this.stat.isFile()) {
-      throw new Error(`A file with the name '${args.path}' exists`)
+      throw new Error(`A file with the name as '${args.path}' exists`)
     }
 
-    await this.fs.mkdir(args.path)
+    await this.fs.mkdirp(args.path)
   }
 }

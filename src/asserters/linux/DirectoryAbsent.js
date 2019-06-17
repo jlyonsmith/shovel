@@ -30,7 +30,7 @@ export class DirectoryAbsent {
 
   async actualize(args) {
     if (this.stats && this.stats.isFile()) {
-      throw new Error(`Not removing file with the same name '${args.path}'`)
+      throw new Error(`Not removing existing file with the name '${args.path}'`)
     }
 
     await this.fs.remove(args.path)

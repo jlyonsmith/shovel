@@ -20,7 +20,7 @@ beforeAll(() => {
           throw new Error("ENOENT")
         }
       }),
-      mkdir: jest.fn(async (dirName) => null),
+      mkdirp: jest.fn(async (dirName) => null),
     },
   }
 })
@@ -41,8 +41,6 @@ test("DirectoryExists with no dir or file existing", async () => {
 })
 
 test("DirectoryExists with file instead of dir existing", async () => {
-  expect.assertions(2)
-
   const asserter = new DirectoryExists(container)
 
   await expect(asserter.assert({ path: "/somefile" })).resolves.toBe(false)
