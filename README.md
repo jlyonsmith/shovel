@@ -17,9 +17,14 @@ Or use `npx` to run the latest version:
 npx @johnls/octopus --help
 ```
 
-## Assertions
+## Scripts and Asserters
 
-Assertions *assert* machine state, i.e. whether it is true or false that the machine is in certain state. If true, then nothing then nothing needs to be done, and we move on to the next assertion.  If it is false, then the state is *actualized*, i.e. the machine state is made to be such that the assertion will succeed next time.
+Octopus scripts are made up of a collections of assertions about a machines state.  Assertions are run one at a time, from the top of the script to the bottom.  Each assertion invokes an *asserter* class to assert some particular type of machine state.  There are asserters for files, directories, users, groups, file downsloads, file contents, and so on.
 
-Assertions make use of *asserters* that perform the assertion and actualization. An asserter is a Javascript object that performs the needed checks and actions.  In the script it is referred to by name.  That name is a noun + verb, e.g. `directoryExists`, `fileUnzipped`, etc.
+Asserters are the core of Octopus.  They are simple Javascript objects that contain two methods, `assert` and `actualize`. The `assert` method confirms the machine state. If an `assert` returns `false`, then the machine is not in the correct state and the `actualize` method is called to make `assert` succeed.  If `actualize` cannot put the machine in the correct state then it throws an exception and the script ends. If `assert` returns `true` then the script proceeds.
 
+## Writing an Asserter class
+
+Each script assertions runs with a new instance of the specified asserter. `assert` will always be called before `actualize`.
+
+`assert(args)` gets the args from the script.  It must return `true` or `false`.  It must not `throw`.  State can be saved in `this`.

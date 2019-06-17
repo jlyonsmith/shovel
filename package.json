@@ -45,26 +45,27 @@
   "homepage": "https://github.com/jlyonsmith/octopus#readme",
   "devDependencies": {
     "@babel/cli": "^7.4.4",
-    "@babel/core": "^7.4.4",
-    "@babel/node": "^7.2.2",
+    "@babel/core": "^7.4.5",
+    "@babel/node": "^7.4.5",
     "@babel/plugin-proposal-class-properties": "^7.4.4",
     "@babel/plugin-proposal-decorators": "^7.4.4",
     "@babel/plugin-proposal-optional-chaining": "^7.2.0",
     "@babel/plugin-syntax-object-rest-spread": "^7.2.0",
-    "@babel/preset-env": "^7.4.4",
-    "jest-cli": "^24.7.1"
+    "@babel/preset-env": "^7.4.5",
+    "jest-cli": "^24.8.0"
   },
   "dependencies": {
     "@johnls/readline-password": "^1.1.0",
     "autobind-decorator": "^2.4.0",
     "chalk": "^2.4.2",
     "command-exists": "^1.2.8",
-    "fs-extra": "^7.0.1",
-    "glob": "^7.1.3",
+    "fs-extra": "^8.0.1",
+    "glob": "^7.1.4",
     "json5": "^2.1.0",
     "minimist": "^1.2.0",
     "node-ssh": "^6.0.0",
-    "tmp-promise": "^1.0.5",
+    "ssh2-promise": "jlyonsmith/ssh2-promise",
+    "tmp-promise": "^2.0.1",
     "validate.js": "^0.12.0"
   }
 }

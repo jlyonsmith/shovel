@@ -1,10 +1,9 @@
 import parseArgs from "minimist"
 import { fullVersion } from "./version"
 import readlinePassword from "@johnls/readline-password"
-import NodeSSH from "node-ssh"
+import SSH2Promise from "ssh2-promise"
 import os from "os"
 import autobind from "autobind-decorator"
-import validate from "./Validator"
 import JSON5 from "json5"
 import fs from "fs-extra"
 import chalk from "chalk"
@@ -16,76 +15,96 @@ export class OctopusTool {
     this.toolName = toolName
     this.log = log
     this.debug = options.debug
-    this.validationConstraints = {
-      description: {
-        isString: true,
-      },
-      vars: {
-        isObject: true,
-      },
-      assertions: {
-        presence: true,
-        isArray: true,
-        isAssertion: true, // an assertion contains an "assert" object and a "with" object
-      },
-    }
   }
 
-  static bootstrapScript = `#!/bin/bash
+  static installNodeScript = `#!/bin/bash
 curl -sL https://deb.nodesource.com/setup_10.x -o ./nodesource_setup.sh
 sudo bash ./nodesource_setup.sh
-sudo apt -y -q install nodejs
-node --version > node_version.txt`
+sudo apt -y -q install nodejs`
 
-  async createConnection(options) {
-    let ssh = new NodeSSH()
+  // Assert the remote system has Node 10 installed
+  async assertHasNode(ssh) {
+    let output = null
 
-    await ssh.connect({
-      username: options.username,
-      host: options.host,
-      port: options.port,
-      password: options.password,
-      agent: options.agent,
-      tryKeyboard: !!options.onKeyboardInteractive,
-      onKeyboardInteractive: options.onKeyboardInteractive,
-      debug: this.debug ? (detail) => this.log.info(detail) : null,
-    })
+    try {
+      output = await ssh.exec("node --version")
+    } catch (error) {
+      return false
+    }
 
-    this.log.info(
-      `CONNECTED: ${options.username}@${options.host}:${options.port}`
-    )
+    return output.trim().startsWith("v10")
+  }
 
-    return ssh
+  async rectifyHasNode(ssh) {
+    const password = ssh.config[0].password
+    let stream = null
+    const commandComplete = (socket) => {
+      return new Promise((resolve, reject) => {
+        let buffer = ""
+        socket
+          .on("close", () => resolve(buffer))
+          .on("error", reject)
+          .on("data", (data) => {
+            buffer += data
+          }) // We have to read any data or the socket will block
+          .stderr.on("data", (data) => {
+            reject(data)
+          })
+
+        if (password) {
+          socket.write(password + "\n")
+          socket.end()
+        }
+      })
+    }
+
+    try {
+      this.log.info("Creating /opt/octopus directory")
+      stream = await ssh.spawn("sudo mkdir -p /opt/octopus", null, {
+        pty: !!password,
+      })
+      await commandComplete(stream)
+    } catch (error) {
+      throw new Error("Unable to create /opt/octopus directory on remote")
+    }
+
+    try {
+      this.log.info("Creating /opt/octopus/install_node.sh script")
+      stream = await ssh.spawn(
+        `cd /opt/octopus 1> /dev/null 2> /dev/null; sudo bash -c 'echo "${
+          OctopusTool.installNodeScript
+        }" > ./install_node.sh'`,
+        null,
+        {
+          pty: !!password,
+        }
+      )
+      await commandComplete(stream)
+    } catch (error) {
+      throw new Error("Unable to create install_node.sh file")
+    }
+
+    try {
+      this.log.info("Running /opt/octopus/install_node.sh script")
+      stream = await ssh.spawn(
+        "cd /opt/octopus 1> /dev/null 2> /dev/null; sudo bash ./install_node.sh",
+        null,
+        { pty: !!password }
+      )
+      await commandComplete(stream)
+    } catch (error) {
+      throw new Error("Unsuccessful running install_node.sh")
+    }
+
+    if (!this.assertHasNode(ssh)) {
+      throw new Error("Node installation failed")
+    }
   }
 
   async bootstrapRemote(ssh, username, password, forceBootstrap) {
     const logResult = (result) => {
       this.log.info("STDOUT: " + result.stdout)
       this.log.info("STDERR: " + result.stderr)
-    }
-    this.log.info("BOOTSTRAP: Creating /opt/octopus directory")
-    let result = await ssh.execCommand(
-      `sudo mkdir -p /opt/octopus/asserters; sudo chown ${username}:${username} /opt/octopus/asserters`,
-      {
-        options: { pty: !!password },
-        stdin: password + "\n",
-      }
-    )
-    if (result.code !== 0) {
-      logResult(result)
-    }
-
-    this.log.info("BOOTSTRAP: Creating /opt/octopus/bootstrap.sh script")
-    result = await ssh.execCommand(
-      `sudo bash -c 'echo "${OctopusTool.bootstrapScript}" > ./bootstrap.sh'`,
-      {
-        options: { pty: !!password },
-        cwd: "/opt/octopus",
-        stdin: password + "\n",
-      }
-    )
-    if (result.code !== 0) {
-      logResult(result)
     }
 
     this.log.info(`BOOTSTRAP: Moving Asserters to: /opt/octopus/asserters `)
@@ -95,10 +114,8 @@ node --version > node_version.txt`
         "/opt/octopus/asserters",
         { recursive: true }
       )
-    } catch (ex) {
-      this.log.info(
-        `Error copying: ${this.printObj(ex)}  ${ex.constructor.name}`
-      )
+    } catch (e) {
+      this.log.info(`Error copying: ${e}  ${ex.constructor.name}`)
     }
 
     let runBootstrap = true
@@ -116,28 +133,10 @@ node --version > node_version.txt`
         runBootstrap = !(nodeVersion == OctopusTool.targetNodeVersion)
       }
     }
-
-    if (runBootstrap) {
-      this.log.info("BOOTSTRAP: Running /opt/octopus/bootstrap.sh script")
-      result = await ssh.execCommand("sudo bash ./bootstrap.sh", {
-        options: { pty: !!password },
-        cwd: "/opt/octopus",
-        stdin: password + "\n",
-      })
-      // this.log.info(result)
-      if (result.code !== 0) {
-        logResult(result)
-      }
-    } else {
-      this.log.info(
-        `BOOTSTRAP: Node is up to date: ${nodeVersion}.  Bootstrap skipped`
-      )
-    }
   }
 
   async processAssertions(ssh, username, password, assertScript) {
     assertScript = this.expandAssertVariables(assertScript)
-    // this.log.info(`Run assertions: ${this.printObj(assertScript)}`)
     const vars = assertScript.vars || {}
     const asserts = assertScript.assertions || []
     let scriptSuccess = true
@@ -161,7 +160,6 @@ node --version > node_version.txt`
         `=============================================================`
       )
       this.log.info(`>>> ${description}\n -------------------------------`)
-      //this.log.info(`Run assertion ${command} \n --------------------------`)
       const assertSuccess = await this.runAssertion(
         ssh,
         username,
@@ -224,13 +222,9 @@ node --version > node_version.txt`
     return { vars: variables, assertions: JSON.parse(expanded) }
   }
 
-  printObj(obj) {
-    return JSON.stringify(obj, null, 2)
-  }
-
   async run(argv) {
     const options = {
-      boolean: ["help", "version", "force-bootstrap"],
+      boolean: ["help", "version", "force-bootstrap", "debug"],
       string: ["host", "hosts-file", "user", "port", "password"],
       alias: {
         h: "host",
@@ -271,30 +265,26 @@ Options:
       return 0
     }
 
-    const assertFile = args._[0]
+    const scriptFile = args._[0]
 
-    if (!assertFile) {
+    if (!scriptFile) {
       throw new Error("Please specify a script file")
     }
 
-    const forceBootstrap = args["force-bootstrap"]
-
-    const assertScript = JSON5.parse(await fs.readFile(assertFile))
-    const validityCheck = validate(assertScript, this.validationConstraints)
-
-    let validationMessage =
-      validityCheck || "Validation complete: no errors found."
+    //const forceBootstrap = args["force-bootstrap"]
+    //const script = JSON5.parse(await fs.readFile(scriptFile))
+    let isConnected = false
     let ssh = null
 
     try {
       const userInfo = os.userInfo()
-
-      ssh = await this.createConnection({
+      const sshConfig = {
         username: args.user || userInfo.username,
         host: args.host || "localhost",
         port: args.port ? parseInt(args.port) : 22,
         password: args.password,
         agent: process.env["SSH_AUTH_SOCK"],
+        tryKeyboard: true,
         onKeyboardInteractive: async (
           name,
           instructions,
@@ -314,23 +304,41 @@ Options:
           rl.close()
           finish(responses)
         },
-      })
+        debug: this.debug ? (detail) => this.log.info(detail) : null,
+      }
 
-      await this.bootstrapRemote(ssh, args.user, args.password, forceBootstrap)
-      await this.processAssertions(ssh, args.user, args.password, assertScript)
+      ssh = new SSH2Promise(sshConfig)
+      await ssh.connect()
+
+      isConnected = true
+
+      this.log.info(
+        `Connected to '${sshConfig.username}@${sshConfig.host}:${
+          sshConfig.port
+        }'`
+      )
+
+      if (!(await this.assertHasNode(ssh))) {
+        this.log.warning(
+          `Node not found on '${sshConfig.host}'; attempting to rectify.`
+        )
+        await this.rectifyHasNode(ssh)
+      } else {
+        this.log.info(`Node is installed on '${sshConfig.host}'`)
+      }
+      //await this.bootstrapRemote(ssh, args.user, args.password, forceBootstrap)
+      //await this.processAssertions(ssh, args.user, args.password, assertScript)
     } finally {
-      if (ssh) {
-        ssh.dispose()
-        this.log.info("DISCONNECTED")
+      if (isConnected) {
+        ssh.close()
+        this.log.info(
+          `Disconnected from '${ssh.config[0].host}:${ssh.config[0].port}'`
+        )
       }
 
       process.stdin.unref() // To free the Node event loop
     }
 
     return 0
-  }
-
-  printObj(object) {
-    return JSON.stringify(object, null, 2)
   }
 }
