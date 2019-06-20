@@ -24,6 +24,9 @@ export class FileCopied {
       const fromDigest = await generateDigestFromFile(this.fs, args.fromPath)
       const toDigest = await generateDigestFromFile(this.fs, args.toPath)
 
+      console.log(fromDigest)
+      console.log(toDigest)
+
       return fromDigest === toDigest
     } catch (e) {
       return false
@@ -31,6 +34,6 @@ export class FileCopied {
   }
 
   async actualize(args) {
-    await this.fs.copy(args.fromPath, args.toDir)
+    await this.fs.copy(args.fromPath, args.toPath)
   }
 }

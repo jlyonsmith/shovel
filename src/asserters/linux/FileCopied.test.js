@@ -1,33 +1,48 @@
-import { FileContains } from "./FileContains"
+import { FileCopied } from "./FileCopied"
+import stream from "stream"
 
 let container = null
 
 beforeAll(() => {
   container = {
     fs: {
-      copy: jest.fn(async (fileName) => null),
+      createReadStream: jest.fn((fileName) => {
+        expect(typeof fileName).toBe("string")
+
+        return new stream.Readable({
+          read(size) {
+            if (fileName === "/badfile") {
+              this.push("not the test string")
+            } else {
+              this.push("The quick brown fox jumps over the lazy dog\n")
+            }
+            this.push(null)
+          },
+        })
+      }),
+      copy: jest.fn(async (fromFileName, toFileName) => {
+        expect(typeof fromFileName).toBe("string")
+        expect(typeof toFileName).toBe("string")
+      }),
     },
   }
 })
 
-test("FileContains with file existing", async () => {
-  const asserter = new FileContains(container)
+test("FileCopied with files the same", async () => {
+  const asserter = new FileCopied(container)
 
-  await expect(asserter.assert({ path: "/somefile" })).resolves.toBe(true)
-})
-
-test("FileContains with no file or dir existing", async () => {
-  const asserter = new FileContains(container)
-
-  await expect(asserter.assert({ path: "/notthere" })).resolves.toBe(false)
   await expect(
-    asserter.actualize({ path: "/notthere" })
-  ).resolves.toBeUndefined()
+    asserter.assert({ fromPath: "/somefile", toPath: "/otherfile" })
+  ).resolves.toBe(true)
 })
 
-test("FileContains with dir instead of file existing", async () => {
-  const asserter = new FileContains(container)
+test("FileCopied with different files", async () => {
+  const asserter = new FileCopied(container)
 
-  await expect(asserter.assert({ path: "/somedir" })).resolves.toBe(false)
-  await expect(asserter.actualize({ path: "/somedir" })).rejects.toThrow(Error)
+  await expect(
+    asserter.assert({ fromPath: "/somefile", toPath: "/badfile" })
+  ).resolves.toBe(false)
+  await expect(
+    asserter.actualize({ fromPath: "/notthere", toPath: "/badFile" })
+  ).resolves.toBeUndefined()
 })
