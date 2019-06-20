@@ -1,37 +1,37 @@
-const fs = require("fs-extra")
+import fs from "fs-extra"
+import { generateDigestFromFile, generateDigest } from "./util"
 
 /*
-Checks and ensures that a file contains some specific data.
+Ensures that a text file contains specific contents.
 
 Example:
 
 {
-  assert: "fileContains",
+  assert: "FileContains",
   with: {
-    data: "dataToCheck"
+    path: <string>,
+    contents: <string>
   }
 }
 */
 
-class FileContains {
+export class FileContains {
+  constructor(container) {
+    this.fs = container.fs || fs
+  }
+
   async assert(args) {
     try {
-      // TODO : check if file contains relevant info
-      return false
-    } catch (error) {
+      const pathDigest = await generateDigestFromFile(this.fs, args.path)
+      const contentsDigest = generateDigest(args.contents)
+
+      return pathDigest === contentsDigest
+    } catch (e) {
       return false
     }
   }
 
   async actualize(args) {
-    try {
-      // await fs.writeFile(args.path)
-      // TODO : modify the file
-      return true
-    } catch (error) {
-      return false
-    }
+    await this.fs.outputFile(args.path, args.contents)
   }
 }
-
-module.exports = FileContains

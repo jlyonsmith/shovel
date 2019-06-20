@@ -1,5 +1,6 @@
 const fs = require("fs")
 const registryPath = "./asserters.json"
+
 class DoAssert {
   constructor() {
     this.registry = null

@@ -1,4 +1,4 @@
-import { UserDisabled } from "../UserDisabled"
+import { FileUnzipped } from "../FileUnzipped"
 
 test("assert", async () => {})
 

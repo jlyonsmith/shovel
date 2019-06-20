@@ -2,13 +2,16 @@ const fs = require("fs")
 const unzip = require("unzip")
 
 /*
-Checks and ensures that a file is unzipped to a directory.
+Checks and ensures that a file is unzipped to a directory. If `exact` is specified,
+then the directory will be made to _exactly_ match the contents of the zip file,
+otherwise just the contents of the zip file will be checked.
 
 Example:
 
     {
       assert: "FileUnzipped",
       with: {
+        exact: <boolean>,
         zipFile: "${consulZipFile}",
         toDir: "${zipDir}",
       },

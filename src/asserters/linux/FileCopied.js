@@ -1,42 +1,36 @@
-const fs = require("fs-extra")
+import fs from "fs-extra"
+import { generateDigestFromFile } from "./util"
 
 /*
-Checks and ensures that a file or files was moved from one directory to another.
+That a file was copied from one location to another.
 
 Example:
     {
       assert: "FileCopied",
       with: {
-        fromPath: "${consulUnzipDir}/consul",
-        toPath: "/usr/local/bin/consul",
+        fromPath: <string>,
+        toPath: <string>,
       },
     },
 */
 
-class FileCopied {
+export class FileCopied {
+  constructor(container) {
+    this.fs = container.fs || fs
+  }
+
   async assert(args) {
-    return false // always copy
+    try {
+      const fromDigest = await generateDigestFromFile(this.fs, args.fromPath)
+      const toDigest = await generateDigestFromFile(this.fs, args.toPath)
+
+      return fromDigest === toDigest
+    } catch (e) {
+      return false
+    }
   }
 
   async actualize(args) {
-    try {
-      console.log(`Copy: ${args.fromPath} => ${args.toDir}`)
-      await fs.copy(args.fromPath, args.toDir)
-      console.log(`copied complete `)
-      return true
-    } catch (error) {
-      console.log(`Error copying: ${error.message}`)
-      return false
-    }
-  }
-
-  async fileExists(filePath) {
-    try {
-      return (await fs.lstat(filePath)).isFile()
-    } catch (error) {
-      return false
-    }
+    await this.fs.copy(args.fromPath, args.toDir)
   }
 }
-
-module.exports = FileCopied
