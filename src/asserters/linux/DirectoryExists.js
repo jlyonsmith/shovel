@@ -36,6 +36,6 @@ export class DirectoryExists {
       throw new Error(`A file with the name as '${args.path}' exists`)
     }
 
-    await this.fs.mkdirp(args.path)
+    await this.fs.ensureDir(args.path)
   }
 }

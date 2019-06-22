@@ -1,5 +1,6 @@
 import fs from "fs-extra"
-import { generateDigestFromFile } from "./util"
+import path from "path"
+import * as util from "./util"
 
 /*
 That a file was copied from one location to another.
@@ -21,11 +22,18 @@ export class FileCopied {
 
   async assert(args) {
     try {
-      const fromDigest = await generateDigestFromFile(this.fs, args.fromPath)
-      const toDigest = await generateDigestFromFile(this.fs, args.toPath)
+      if (
+        !(await util.fileExists(this.fs, args.fromPath)) ||
+        !(await util.fileExists(this.fs, args.toPath))
+      ) {
+        return false
+      }
 
-      console.log(fromDigest)
-      console.log(toDigest)
+      const fromDigest = await util.generateDigestFromFile(
+        this.fs,
+        args.fromPath
+      )
+      const toDigest = await util.generateDigestFromFile(this.fs, args.toPath)
 
       return fromDigest === toDigest
     } catch (e) {
@@ -34,6 +42,12 @@ export class FileCopied {
   }
 
   async actualize(args) {
+    const toPathDir = path.dirname(args.toPath)
+
+    if (!(await util.dirExists(this.fs, toPathDir))) {
+      await this.fs.ensureDir(toPathDir)
+    }
+
     await this.fs.copy(args.fromPath, args.toPath)
   }
 }

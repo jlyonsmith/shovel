@@ -20,7 +20,7 @@ beforeAll(() => {
           throw new Error("ENOENT")
         }
       }),
-      mkdirp: jest.fn(async (dirName) => null),
+      ensureDir: jest.fn(async (dirName) => null),
     },
   }
 })

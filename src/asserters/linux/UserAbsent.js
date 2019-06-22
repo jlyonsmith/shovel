@@ -1,37 +1,42 @@
-const fs = require("fs-extra")
+import fs from "fs-extra"
+import childProcess from "child_process"
+import os from "os"
+import * as util from "./util"
 
 /*
-Checks and ensures that a user is absent.
+Asserts and ensures that a user is absent.
 
 Example:
 
 {
-  assert: "userAbsent",
+  assert: "UserAbsent",
   with: {
-    name: "userName"
+    name: "string",
   }
 }
 */
 
 export class UserAbsent {
+  constructor(container) {
+    this.fs = container.fs || fs
+    this.childProcess = container.childProcess || childProcess
+    this.os = container.os || os
+  }
+
   async assert(args) {
+    this.args = args
     try {
-      // TODO : check if user is absent using something from https://stackoverflow.com/questions/14810684/check-whether-a-user-exists
-      return false
-    } catch (error) {
+      return !(await this.fs.readFile("/etc/passwd")).includes(args.name + ":")
+    } catch (e) {
       return false
     }
   }
 
-  async actualize(args) {
-    // TODO: Check if root
-    try {
-      // TODO : remove the user
-      return true
-    } catch (error) {
-      return false
+  async actualize() {
+    if (!util.runningAsRoot(this.os)) {
+      throw new Error("Only root user can delete users")
     }
+
+    await this.childProcess.exec(`userdel ${this.args.name}`)
   }
 }
-
-module.exports = UserAbsent

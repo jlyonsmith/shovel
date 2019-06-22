@@ -1,4 +1,4 @@
-import { FileUnzipped } from "../FileUnzipped"
+import { FileUnzipped } from "./FileUnzipped"
 
 test("assert", async () => {})
 

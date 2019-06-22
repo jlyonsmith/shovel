@@ -15,3 +15,37 @@ export const generateDigest = (data) => {
   hash.update(data)
   return hash.digest("hex")
 }
+
+export const fileExists = async (fs, path) => {
+  try {
+    return (await fs.lstat(path)).isFile()
+  } catch (e) {
+    return false
+  }
+}
+
+export const dirExists = async (fs, path) => {
+  try {
+    return (await fs.lstat(path)).isDirectory()
+  } catch (e) {
+    return false
+  }
+}
+
+export const pipeToPromise = (readable, writeable) => {
+  const promise = new Promise((resolve, reject) => {
+    readable.on("error", (error) => {
+      reject(error)
+    })
+    writeable.on("error", (error) => {
+      reject(error)
+    })
+    writeable.on("finish", (file) => {
+      resolve(file)
+    })
+  })
+  readable.pipe(writeable)
+  return promise
+}
+
+export const runningAsRoot = (os) => os.userInfo().uid === 0

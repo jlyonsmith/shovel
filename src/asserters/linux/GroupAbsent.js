@@ -1,51 +1,42 @@
-const util = require("util")
-const exec = util.promisify(require("child_process").exec)
-const os = require("os")
+import fs from "fs-extra"
+import childProcess from "child_process"
+import * as util from "./util"
+import os from "os"
 
 /*
-Checks and ensures that a group is absent.
+Asserts and ensures that a group is absent.
 
 Example:
 
 {
-  assert: "groupAbsent",
+  assert: "GroupAbsent",
   with: {
-    name: "nonExistentGroup"
+    name: "string",
   }
 }
 */
 
-class GroupAbsent {
-  async assert(args) {
-    const osPlatform = os.platform()
+export class GroupAbsent {
+  constructor(container) {
+    this.fs = container.fs || fs
+    this.childProcess = container.childProcess || childProcess
+    this.os = container.os || os
+  }
 
+  async assert(args) {
+    this.args = args
     try {
-      if (osPlatform === "darwin") {
-        let result = await exec("dscl . -list /Groups", args)
-        return !result.stdout.includes(args.name)
-      } else {
-        let result = !(await exec("groups", args))
-        return result.includes(args.name)
-      }
-    } catch (error) {
+      return !(await this.fs.readFile("/etc/groups")).includes(args.name + ":")
+    } catch (e) {
       return false
     }
   }
 
-  async actualize(args) {
-    // TODO: Must be root
-    try {
-      if (osPlatform === "darwin") {
-        await exec(`dscl . delete /Groups/${args.name}`, args)
-        return true
-      } else {
-        await exec(`groupdel ${args.name}`, args)
-        return true
-      }
-    } catch (error) {
-      return false
+  async actualize() {
+    if (!util.runningAsRoot(this.os)) {
+      throw new Error("Only root user can delete groups")
     }
+
+    await this.childProcess.exec(`groupdel ${this.args.name}`)
   }
 }
-
-module.exports = GroupAbsent
