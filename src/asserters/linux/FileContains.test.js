@@ -4,7 +4,7 @@ import stream from "stream"
 let container = null
 const testString = "The quick brown fox jumps over the lazy dog\n"
 
-beforeAll(() => {
+beforeEach(() => {
   container = {
     fs: {
       createReadStream: jest.fn((fileName) => {
@@ -44,7 +44,5 @@ test("FileContains with different contents", async () => {
       contents: "anything but the test string",
     })
   ).resolves.toBe(false)
-  await expect(
-    asserter.actualize({ path: "/somefile", contents: testString })
-  ).resolves.toBeUndefined()
+  await expect(asserter.actualize()).resolves.toBeUndefined()
 })

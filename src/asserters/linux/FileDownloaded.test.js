@@ -74,24 +74,28 @@ test("With correct file already in place", async () => {
 
 test("With no file in place", async () => {
   const asserter = new FileDownloaded(container)
-  const args = {
-    url: testUrl,
-    digest: "c03905fcdab297513a620ec81ed46ca44ddb62d41cbbd83eb4a5a3592be26a69",
-    toPath: "./def/somefile.txt",
-  }
 
-  await expect(asserter.assert(args)).resolves.toBe(false)
-  await expect(asserter.actualize(args)).resolves.toBeUndefined()
+  await expect(
+    asserter.assert({
+      url: testUrl,
+      digest:
+        "c03905fcdab297513a620ec81ed46ca44ddb62d41cbbd83eb4a5a3592be26a69",
+      toPath: "./def/somefile.txt",
+    })
+  ).resolves.toBe(false)
+  await expect(asserter.actualize()).resolves.toBeUndefined()
 })
 
 test("With incorrect file already in place", async () => {
   const asserter = new FileDownloaded(container)
-  const args = {
-    url: testUrl,
-    digest: "c03905fcdab297513a620ec81ed46ca44ddb62d41cbbd83eb4a5a3592be26a69",
-    toPath: "./abc/badfile.txt",
-  }
 
-  await expect(asserter.assert(args)).resolves.toBe(false)
-  await expect(asserter.actualize(args)).resolves.toBeUndefined()
+  await expect(
+    asserter.assert({
+      url: testUrl,
+      digest:
+        "c03905fcdab297513a620ec81ed46ca44ddb62d41cbbd83eb4a5a3592be26a69",
+      toPath: "./abc/badfile.txt",
+    })
+  ).resolves.toBe(false)
+  await expect(asserter.actualize()).resolves.toBeUndefined()
 })

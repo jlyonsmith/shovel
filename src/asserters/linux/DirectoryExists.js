@@ -23,6 +23,8 @@ export class DirectoryExists {
   }
 
   async assert(args) {
+    this.args = args
+
     try {
       this.stat = await this.fs.lstat(args.path)
       return this.stat.isDirectory()
@@ -31,11 +33,11 @@ export class DirectoryExists {
     }
   }
 
-  async actualize(args) {
+  async actualize() {
     if (this.stat && this.stat.isFile()) {
-      throw new Error(`A file with the name as '${args.path}' exists`)
+      throw new Error(`A file with the name as '${this.args.path}' exists`)
     }
 
-    await this.fs.ensureDir(args.path)
+    await this.fs.ensureDir(this.args.path)
   }
 }

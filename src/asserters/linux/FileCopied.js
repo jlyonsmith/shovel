@@ -21,6 +21,8 @@ export class FileCopied {
   }
 
   async assert(args) {
+    this.args = args
+
     try {
       if (
         !(await util.fileExists(this.fs, args.fromPath)) ||
@@ -41,13 +43,13 @@ export class FileCopied {
     }
   }
 
-  async actualize(args) {
-    const toPathDir = path.dirname(args.toPath)
+  async actualize() {
+    const toPathDir = path.dirname(this.args.toPath)
 
     if (!(await util.dirExists(this.fs, toPathDir))) {
       await this.fs.ensureDir(toPathDir)
     }
 
-    await this.fs.copy(args.fromPath, args.toPath)
+    await this.fs.copy(this.args.fromPath, this.args.toPath)
   }
 }

@@ -64,9 +64,7 @@ test("FileCopied with to file non-existent", async () => {
   await expect(
     asserter.assert({ fromPath: "/somefile", toPath: "/notthere" })
   ).resolves.toBe(false)
-  await expect(
-    asserter.actualize({ fromPath: "/somefile", toPath: "/notthere" })
-  ).resolves.toBeUndefined()
+  await expect(asserter.actualize()).resolves.toBeUndefined()
 })
 
 test("FileCopied with different files", async () => {
@@ -75,7 +73,5 @@ test("FileCopied with different files", async () => {
   await expect(
     asserter.assert({ fromPath: "/somefile", toPath: "/badfile" })
   ).resolves.toBe(false)
-  await expect(
-    asserter.actualize({ fromPath: "/notthere", toPath: "/badFile" })
-  ).resolves.toBeUndefined()
+  await expect(asserter.actualize()).resolves.toBeUndefined()
 })

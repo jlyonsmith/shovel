@@ -18,12 +18,18 @@ Example:
 export class FileUnzipped {
   constructor(container) {
     this.fs = container.fs || fs
-    this.yauzl = container.yauzl || youzl
+    this.yauzl = container.yauzl || yauzl
   }
 
   async assert(args) {
-    return true
+    this.args = args
+
+    try {
+      return true
+    } catch (e) {
+      return false
+    }
   }
 
-  async actualize(args) {}
+  async actualize() {}
 }

@@ -1,5 +1,5 @@
 import fs from "fs-extra"
-import { generateDigestFromFile, generateDigest } from "./util"
+import * as util from "./util"
 
 /*
 Ensures that a text file contains specific contents.
@@ -15,15 +15,19 @@ Example:
 }
 */
 
+// TODO: Add ability not replace whole file
+
 export class FileContains {
   constructor(container) {
     this.fs = container.fs || fs
   }
 
   async assert(args) {
+    this.args = args
+
     try {
-      const pathDigest = await generateDigestFromFile(this.fs, args.path)
-      const contentsDigest = generateDigest(args.contents)
+      const pathDigest = await util.generateDigestFromFile(this.fs, args.path)
+      const contentsDigest = util.generateDigest(args.contents)
 
       return pathDigest === contentsDigest
     } catch (e) {
@@ -31,7 +35,7 @@ export class FileContains {
     }
   }
 
-  async actualize(args) {
-    await this.fs.outputFile(args.path, args.contents)
+  async actualize() {
+    await this.fs.outputFile(this.args.path, this.args.contents)
   }
 }

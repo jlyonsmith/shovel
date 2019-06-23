@@ -1,50 +1,44 @@
-const util = require("util")
-const exec = util.promisify(require("child_process").exec)
-const os = require("os")
+import fs from "fs-extra"
+import childProcess from "child_process"
+import * as util from "./util"
+import os from "os"
 
 /*
-Checks and ensures that a group exists.
+Asserts and ensures that a group exists.
 
 Example:
 
 {
-  assert: "groupExists",
+  assert: "GroupExists",
   with: {
-    name: "groupName"
+    name: "string",
   }
 }
 */
 
-const osPlatform = os.platform()
+// TODO: Support {gid: "number"}
 
-class GroupExists {
+export class GroupExists {
+  constructor(container) {
+    this.fs = container.fs || fs
+    this.childProcess = container.childProcess || childProcess
+    this.os = container.os || os
+  }
+
   async assert(args) {
+    this.args = args
     try {
-      if (osPlatform === "darwin") {
-        let result = await exec("dscl . -list /Groups", args)
-        return result.stdout.includes(args.name)
-      } else {
-        let result = await exec("groups")
-        return result.includes(args.name)
-      }
-    } catch (error) {
+      return (await this.fs.readFile("/etc/groups")).includes(args.name + ":")
+    } catch (e) {
       return false
     }
   }
 
-  async actualize(args) {
-    // TODO: Must be root
-    try {
-      if (osPlatform === "darwin") {
-        await exec(`dscl . create /Groups/${args.name}`, args)
-        return true
-      } else {
-        await exec(`groupadd ${args.name}`)
-        return true
-      }
-    } catch (error) {
-      return false
+  async actualize() {
+    if (!util.runningAsRoot(this.os)) {
+      throw new Error("Only root user can add or modify groups")
     }
+
+    await this.childProcess.exec(`groupadd ${this.args.name}`)
   }
 }
-module.exports = GroupExists

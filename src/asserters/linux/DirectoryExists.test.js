@@ -2,7 +2,7 @@ import { DirectoryExists } from "./DirectoryExists"
 
 let container = null
 
-beforeAll(() => {
+beforeEach(() => {
   container = {
     fs: {
       lstat: jest.fn(async (dirName) => {
@@ -35,14 +35,12 @@ test("DirectoryExists with no dir or file existing", async () => {
   const asserter = new DirectoryExists(container)
 
   await expect(asserter.assert({ path: "/notthere" })).resolves.toBe(false)
-  await expect(
-    asserter.actualize({ path: "/notthere" })
-  ).resolves.toBeUndefined()
+  await expect(asserter.actualize()).resolves.toBeUndefined()
 })
 
 test("DirectoryExists with file instead of dir existing", async () => {
   const asserter = new DirectoryExists(container)
 
   await expect(asserter.assert({ path: "/somefile" })).resolves.toBe(false)
-  await expect(asserter.actualize({ path: "/somefile" })).rejects.toThrow(Error)
+  await expect(asserter.actualize()).rejects.toThrow(Error)
 })

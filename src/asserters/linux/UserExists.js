@@ -1,99 +1,48 @@
-const fs = require("fs-extra")
-const childProcess = require("child_process")
-const os = require("os")
+import fs from "fs-extra"
+import childProcess from "child_process"
+import os from "os"
+import * as util from "./util"
+
 /*
-Checks and ensures that a user exists.
+Asserts and ensures that a user exists with UID, GID, shell and/or system priveges.
 
 Example:
 
 {
-  assert: "userExists",
+  assert: "UserExists",
   with: {
-    name: "userName"
+    name: "string",
   }
 }
 */
 
-export class UserExists {
-  async assert(args) {
-    try {
-      // TODO : check if user exists using something from https://stackoverflow.com/questions/14810684/check-whether-a-user-exists
-      const platform = await os.platform()
-      switch (platform) {
-        // MAC OS
-        case "darwin":
-          await childProcess.exec(
-            `dscl . read /Users/${args.name}`,
-            async (err, stdout, stderr) => {
-              if (err) {
-                return false
-              }
-              return true
-            }
-          )
-          break
-        // LINUX OS
-        case "linux":
-          console.log("LINUX BOX DETECTED")
-          await childProcess.exec(
-            `id -u ${args.name}`,
-            async (err, stdout, stderr) => {
-              console.log("EXEC RUN")
-              if (err) {
-                console.log("ERROR CHECKING USER", err)
-                return false
-              }
+// TODO: Support {uid: "number",}
+// TODO: Support {gid: "number",}
+// TODO: Support {system: "boolean",}
+// TODO: Support {shell: "string"}
+// TODO: Support {locked: "boolean"}.  See https://www.thegeekdiary.com/unix-linux-how-to-lock-or-disable-an-user-account/
 
-              console.log("STDOUT : ", stdout)
-              console.log("STDERR : ", stderr)
-              return true
-            }
-          )
-          break
-        default:
-          break
-      }
-      return false
-    } catch (error) {
+export class UserExists {
+  constructor(container) {
+    this.fs = container.fs || fs
+    this.childProcess = container.childProcess || childProcess
+    this.os = container.os || os
+  }
+
+  async assert(args) {
+    this.args = args
+    try {
+      return (await this.fs.readFile("/etc/passwd")).includes(args.name + ":")
+    } catch (e) {
       return false
     }
   }
 
-  async actualize(args) {
-    try {
-      // TODO : create the user
-      switch (platform) {
-        // MAC OS
-        case "darwin":
-          console.log("MAC BOX DETECTED")
-          await childProcess.exec(
-            `dscl . -create /Users/${args.name}`,
-            async (err, stdout, stderr) => {
-              console.log("EXEC RUN TO CREATE USER")
-              if (err) {
-                console.log("ERROR CREATING USER", err)
-                return false
-              }
-
-              console.log("STDOUT : ", stdout)
-              console.log("STDERR : ", stderr)
-              return true
-            }
-          )
-          break
-        // LINUX OS
-        case "linux":
-          console.log("LINUX BOX DETECTED")
-
-          break
-        default:
-          break
-      }
-      return true
-    } catch (error) {
-      return false
+  async actualize() {
+    if (!util.runningAsRoot(this.os)) {
+      throw new Error("Only root user can add or modify users")
     }
+
+    await this.childProcess.exec(`useradd ${this.args.name}`)
   }
 }
-
-module.exports = UserExists

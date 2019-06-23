@@ -20,6 +20,8 @@ export class FileAbsent {
   }
 
   async assert(args) {
+    this.args = args
+
     try {
       this.stat = await this.fs.lstat(args.path)
       return !this.stat.isFile()
@@ -28,13 +30,13 @@ export class FileAbsent {
     }
   }
 
-  async actualize(args) {
+  async actualize() {
     if (this.stat && this.stat.isDirectory()) {
       throw new Error(
-        `Not removing existing directory with the name '${args.path}'`
+        `Not removing existing directory with the name '${this.args.path}'`
       )
     }
 
-    await this.fs.unlink(args.path)
+    await this.fs.unlink(this.args.path)
   }
 }

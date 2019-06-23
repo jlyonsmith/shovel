@@ -25,6 +25,8 @@ export class FileDownloaded {
   }
 
   async assert(args) {
+    this.args = args
+
     try {
       this.toFileExists = await util.fileExists(this.fs, args.toPath)
 
@@ -43,21 +45,21 @@ export class FileDownloaded {
     }
   }
 
-  async actualize(args) {
+  async actualize() {
     if (!this.toFileExists) {
       {
-        const toDirPath = path.dirname(args.toPath)
+        const toDirPath = path.dirname(this.args.toPath)
 
         if (!(await util.dirExists(this.fs, toDirPath))) {
           await this.fs.ensureDir(toDirPath)
         }
       }
     } else {
-      await this.fs.remove(args.toPath)
+      await this.fs.remove(this.args.toPath)
     }
 
-    const result = await this.fetch(args.url)
-    const writeable = this.fs.createWriteStream(args.toPath)
+    const result = await this.fetch(this.args.url)
+    const writeable = this.fs.createWriteStream(this.args.toPath)
 
     await util.pipeToPromise(result.body, writeable)
   }

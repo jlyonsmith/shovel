@@ -1,19 +1,6 @@
 import { OctopusTool } from "./OctopusTool"
-import tmp from "tmp-promise"
 
 const toolName = "octopus"
-let tmpDirObj = null
-
-beforeAll(async (done) => {
-  tmpDirObj = await tmp.dir()
-  done()
-})
-
-afterAll(() => {
-  if (tmpDirObj) {
-    tmpDirObj.cleanup()
-  }
-})
 
 function getMockLog() {
   return {
@@ -32,22 +19,20 @@ function getOutput(fn) {
   }
 }
 
-test("--help", async (done) => {
+test("--help", async () => {
   const mockLog = getMockLog()
   const tool = new OctopusTool(toolName, mockLog)
   const exitCode = await tool.run(["--help"])
 
   expect(exitCode).toBe(0)
   expect(getOutput(mockLog.info)).toEqual(expect.stringContaining("--help"))
-  done()
 })
 
-test("--version", async (done) => {
+test("--version", async () => {
   const mockLog = getMockLog()
   const tool = new OctopusTool(toolName, mockLog)
   const exitCode = await tool.run(["--version"])
 
   expect(exitCode).toBe(0)
   expect(getOutput(mockLog.info)).toEqual(expect.stringMatching(/\d\.\d\.\d/))
-  done()
 })
