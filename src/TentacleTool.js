@@ -1,51 +1,86 @@
-const fs = require("fs")
-const registryPath = "./asserters.json"
+import parseArgs from "minimist"
+import { fullVersion } from "./version"
+import autobind from "autobind-decorator"
 
-class DoAssert {
-  constructor() {
-    this.registry = null
+@autobind
+export class TentacleTool {
+  constructor(toolName, log, options) {
+    options = options || {}
+    this.toolName = toolName
+    this.log = log
+    this.debug = options.debug
   }
 
-  async run(args) {
-    //console.log(`Run assertion args:${JSON.stringify(args)}`)
+  async processAssertions(ssh, username, password, assertScript) {
+    assertScript = this.expandAssertVariables(assertScript)
+    const vars = assertScript.vars || {}
+    const asserts = assertScript.assertions || []
+    let scriptSuccess = true
+    let an
+    let description
+    for (an = 0; an < asserts.length; an++) {
+      const assertionSpec = asserts[an]
 
-    const asserterName = args[0]
-    let data
-    try {
-      data = this.getArgData(args)
-    } catch (ex) {
-      return 1
-    }
-    // console.log(`Data: ${JSON.stringify(data)}`)
-    const asserter = await this.getAsserter(asserterName)
-    if (asserter) {
-      const constName = asserter.constructor.name
-      // console.log(`Asserter: ${constName} (${JSON.stringify(data)})`)
+      const assertionName = assertionSpec.assert
+      description =
+        assertionSpec.description || `Step ${an + 1}: (${assertionName})`
+      const runAs = assertionSpec.runAs || ""
 
-      const assertionTrue = await asserter.assert(data)
-      if (!assertionTrue) {
-        // console.log(
-        //   `Running asserter ${constName} with ${JSON.stringify(data)}`
-        // )
-        try {
-          const success = await asserter.actualize(data)
-          console.log(`Asserter Run. Success: ${success}`)
-          return !success
-        } catch (ex) {
-          console.error(`Error executing assertion action: ${ex.message}`)
-          return 1
-        }
-      } else {
-        console.log(`Assertion true. No action requred`)
-      }
-
-      return 0
-    } else {
-      process.stderr.write(
-        `Error: asserter \"${asserterName}\" does not exist\n`
+      const args = assertionSpec.with || {}
+      const argsString = JSON.stringify(args)
+      const args64 = Buffer.from(argsString).toString("base64")
+      const sudo = runAs == "sudo" ? "sudo" : ""
+      const command = `${sudo} node doAssert.js ${assertionName} base64 ${args64}`
+      const assertSuccess = await this.runAssertion(
+        ssh,
+        username,
+        password,
+        command
       )
-      return 1
+      if (!assertSuccess) {
+        scriptSuccess = false
+        break
+      }
     }
+
+    if (scriptSuccess) {
+      this.log.info(chalk.green(">>> Script Completed Successfully"))
+    } else {
+      this.log.info(
+        chalk.red(`>>> Script Failed at step ${an} (${description})`)
+      )
+    }
+  }
+
+  async runAssertion(ssh, username, password, command) {
+    const result = await ssh.execCommand(command, {
+      options: { pty: !!password },
+      cwd: "/opt/octopus/asserters",
+      stdin: password + "\n",
+    })
+    const success = result.code == 0
+    const response = result.stdout
+    if (success) {
+      this.log.info(
+        chalk.green(`Assertion Success: ${success}\nResponse:\n${response}`)
+      )
+    } else {
+      this.log.info(
+        chalk.red(`Assertion Success: ${success}\nResponse:\n${response}`)
+      )
+    }
+
+    return success
+  }
+
+  expandAssertVariables(assertionScript) {
+    const varExpander = (tpl, args) =>
+      tpl.replace(/\${(\w+)}/g, (_, v) => args[v])
+    const variables = assertionScript.vars || {}
+    const assertions = assertionScript.assertions || {}
+    const assertionsString = JSON.stringify(assertions)
+    const expanded = varExpander(assertionsString, variables)
+    return { vars: variables, assertions: JSON.parse(expanded) }
   }
 
   getArgData(args) {
@@ -87,37 +122,48 @@ class DoAssert {
     }
   }
 
-  async getRegistry() {
-    if (!this.registry) {
-      this.registry = await this.loadRegistry()
+  async run(argv) {
+    const options = {
+      boolean: ["help", "version", "debug"],
+      string: [],
+      alias: {},
     }
-    return this.registry
-  }
+    const args = parseArgs(argv, options)
 
-  async loadRegistry() {
-    return new Promise(function(resolve, reject) {
-      fs.readFile(registryPath, function(err, content) {
-        if (err) {
-          reject("Cannot read registry file")
-        } else {
-          const data = JSON.parse(content)
-          resolve(data)
-        }
-      })
-    })
+    this.debug = args.debug
+
+    if (args.version) {
+      this.log.info(`${fullVersion}`)
+      return 0
+    }
+
+    if (args.help) {
+      this.log.info(`
+Usage: ${this.toolName} [<options>] [<script-file>]
+
+Description:
+
+Runs an Octopus configuration script on localhost. Can take input from
+the command line or through an HTTP service running on localhost.
+
+Options:
+  --help              Shows this help
+  --version           Shows the tool version
+`)
+      return 0
+    }
+
+    const scriptFile = args._[0]
+
+    // TODO: Parse the script
+    // TODO: Add JSON5 source in directly and output line number information for issues
+    // TODO: Run the asserters in order, calling ensure if needed
+    // TODO: Ensure that errors in assert/ensure throw line number information
+    // TODO: Parse variable section of script
+    // TODO: Fill in variables is args
+    // TODO: Test out all the asserters without mocks
+    // TODO: Add a --server flag that starts an HTTP server and waits for requests
+
+    return 0
   }
 }
-
-const runner = new DoAssert()
-const result = runner
-  .run(process.argv.slice(2))
-  .then((exitCode) => {
-    process.exitCode = exitCode
-  })
-  .catch((error) => {
-    process.exitCode = 200
-
-    if (error) {
-      console.error(error.message)
-    }
-  })

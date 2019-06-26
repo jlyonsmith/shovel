@@ -4,9 +4,6 @@ import readlinePassword from "@johnls/readline-password"
 import SSH2Promise from "ssh2-promise"
 import os from "os"
 import autobind from "autobind-decorator"
-import JSON5 from "json5"
-import fs from "fs-extra"
-import chalk from "chalk"
 
 @autobind
 export class OctopusTool {
@@ -35,7 +32,7 @@ sudo apt -y -q install nodejs`
     return output.trim().startsWith("v10")
   }
 
-  async rectifyHasNode(ssh) {
+  async ensureHasNode(ssh) {
     const password = ssh.config[0].password
     let stream = null
     const commandComplete = (socket) => {
@@ -101,130 +98,9 @@ sudo apt -y -q install nodejs`
     }
   }
 
-  async bootstrapRemote(ssh, username, password, forceBootstrap) {
-    const logResult = (result) => {
-      this.log.info("STDOUT: " + result.stdout)
-      this.log.info("STDERR: " + result.stderr)
-    }
-
-    this.log.info(`BOOTSTRAP: Moving Asserters to: /opt/octopus/asserters `)
-    try {
-      await ssh.putDirectory(
-        `${__dirname}/asserters`,
-        "/opt/octopus/asserters",
-        { recursive: true }
-      )
-    } catch (e) {
-      this.log.info(`Error copying: ${e}  ${ex.constructor.name}`)
-    }
-
-    let runBootstrap = true
-    let nodeVersion = "unknown"
-
-    if (!forceBootstrap) {
-      this.log.info("BOOTSTRAP: Check if boostrap needs to be run")
-      result = await ssh.execCommand("cat node_version.txt", {
-        options: { pty: !!password },
-        cwd: "/opt/octopus",
-        stdin: password + "\n",
-      })
-      if (result.code == 0) {
-        nodeVersion = result.stdout.split("\n")[1]
-        runBootstrap = !(nodeVersion == OctopusTool.targetNodeVersion)
-      }
-    }
-  }
-
-  async processAssertions(ssh, username, password, assertScript) {
-    assertScript = this.expandAssertVariables(assertScript)
-    const vars = assertScript.vars || {}
-    const asserts = assertScript.assertions || []
-    let scriptSuccess = true
-    let an
-    let description
-    for (an = 0; an < asserts.length; an++) {
-      const assertionSpec = asserts[an]
-
-      const assertionName = assertionSpec.assert
-      description =
-        assertionSpec.description || `Step ${an + 1}: (${assertionName})`
-      const runAs = assertionSpec.runAs || ""
-
-      const args = assertionSpec.with || {}
-      const argsString = JSON.stringify(args)
-      const args64 = Buffer.from(argsString).toString("base64")
-      const sudo = runAs == "sudo" ? "sudo" : ""
-      const command = `${sudo} node doAssert.js ${assertionName} base64 ${args64}`
-
-      this.log.info(
-        `=============================================================`
-      )
-      this.log.info(`>>> ${description}\n -------------------------------`)
-      const assertSuccess = await this.runAssertion(
-        ssh,
-        username,
-        password,
-        command
-      )
-      if (!assertSuccess) {
-        scriptSuccess = false
-        break
-      }
-    }
-
-    this.log.info(
-      chalk.blue(
-        `=============================================================`
-      )
-    )
-    if (scriptSuccess) {
-      this.log.info(chalk.green(">>> Script Completed Successfully"))
-    } else {
-      this.log.info(
-        chalk.red(`>>> Script Failed at step ${an} (${description})`)
-      )
-    }
-    this.log.info(
-      chalk.blue(
-        `=============================================================`
-      )
-    )
-  }
-
-  async runAssertion(ssh, username, password, command) {
-    const result = await ssh.execCommand(command, {
-      options: { pty: !!password },
-      cwd: "/opt/octopus/asserters",
-      stdin: password + "\n",
-    })
-    const success = result.code == 0
-    const response = result.stdout
-    if (success) {
-      this.log.info(
-        chalk.green(`Assertion Success: ${success}\nResponse:\n${response}`)
-      )
-    } else {
-      this.log.info(
-        chalk.red(`Assertion Success: ${success}\nResponse:\n${response}`)
-      )
-    }
-
-    return success
-  }
-
-  expandAssertVariables(assertionScript) {
-    const varExpander = (tpl, args) =>
-      tpl.replace(/\${(\w+)}/g, (_, v) => args[v])
-    const variables = assertionScript.vars || {}
-    const assertions = assertionScript.assertions || {}
-    const assertionsString = JSON.stringify(assertions)
-    const expanded = varExpander(assertionsString, variables)
-    return { vars: variables, assertions: JSON.parse(expanded) }
-  }
-
   async run(argv) {
     const options = {
-      boolean: ["help", "version", "force-bootstrap", "debug"],
+      boolean: ["help", "version", "debug"],
       string: ["host", "hosts-file", "user", "port", "password"],
       alias: {
         h: "host",
@@ -232,7 +108,6 @@ sudo apt -y -q install nodejs`
         p: "port",
         f: "hosts-file",
         P: "password",
-        F: "force-bootstrap",
       },
     }
     const args = parseArgs(argv, options)
@@ -255,12 +130,11 @@ Runs an Octopus configuration script on one or more hosts over SSH.
 Options:
   --help              Shows this help
   --version           Shows the tool version
-  --host, -h          The SSH host name
-  --user, -u          The SSH user name
-  --port, -p          The SSH port number
-  --password, -P      SSH password
+  --host, -h          Host name
+  --port, -p          Port number
+  --user, -u          User name
+  --password, -P      Password
   --hosts-file, -f    JSON5 file containing multiple host names
-  --force-bootstrap, -F Force execution of node bootstrap
 `)
       return 0
     }
@@ -271,8 +145,6 @@ Options:
       throw new Error("Please specify a script file")
     }
 
-    //const forceBootstrap = args["force-bootstrap"]
-    //const script = JSON5.parse(await fs.readFile(scriptFile))
     let isConnected = false
     let ssh = null
 
@@ -322,12 +194,17 @@ Options:
         this.log.warning(
           `Node not found on '${sshConfig.host}'; attempting to rectify.`
         )
-        await this.rectifyHasNode(ssh)
+        await this.ensureHasNode(ssh)
       } else {
         this.log.info(`Node is installed on '${sshConfig.host}'`)
       }
-      //await this.bootstrapRemote(ssh, args.user, args.password, forceBootstrap)
-      //await this.processAssertions(ssh, args.user, args.password, assertScript)
+
+      // TODO: Iterate through all the hosts
+      // TODO: Ensure that the host has Octopus installed to the same version as us
+      // TODO: Run tentacle on the host
+      // TODO: Create a SOCKS tunnel to the host
+      // TODO: Send HTTP request passing the script to the host
+      // TODO: Capture output from remote and display
     } finally {
       if (isConnected) {
         ssh.close()

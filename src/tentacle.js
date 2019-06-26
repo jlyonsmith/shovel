@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { OctopusTool } from "./OctopusTool"
+import { TentacleTool } from "./TentacleTool"
 import chalk from "chalk"
 import path from "path"
 
@@ -16,7 +16,7 @@ const log = {
   },
 }
 
-const tool = new OctopusTool(path.basename(process.argv[1], ".js"), log)
+const tool = new TentacleTool(path.basename(process.argv[1], ".js"), log)
 
 tool
   .run(process.argv.slice(2))
@@ -27,7 +27,6 @@ tool
     process.exitCode = 200
 
     if (error) {
-      // ssh2-promise throws strings!
       log.error(error.message || error)
 
       if (tool.debug) {
