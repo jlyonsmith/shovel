@@ -1,32 +1,30 @@
 {
   options: {
-    runAsRoot: true,
+    description: "A basic script",
   },
-  vars: {
-    consulVersion: "1.2.3",
-    secondDirectory: "second",
+  variables: {
+    TEST_DIR_1: "octo-test-1",
+    TEST_DIR_2: "octo-test-2",
   },
   assertions: [
     {
       description: "Create Test Directory",
-      runAs: "root",
       assert: "DirectoryExists",
       with: {
-        path: "${HOME}/octo-test2",
-        owner: "vagrant:vagrant",
+        path: "scratch/${TEST_DIR_1}",
       },
     },
     {
       description: "Create A Second Directory",
       assert: "DirectoryExists",
       with: {
-        path: "${HOME}/${secondDirectory}",
+        path: "scratch/${TEST_DIR_2}",
       },
     },
     {
       assert: "FileExists",
       with: {
-        path: "${HOME}/octo-test/testfile.txt",
+        path: "scratch/${TEST_DIR_2}/testfile.txt",
       },
     },
   ],

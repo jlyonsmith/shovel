@@ -16,13 +16,21 @@ Example:
 export class FileExists {
   constructor(container) {
     this.fs = container.fs || fs
+    this.makeError = container.makeError
     this.stat = null
   }
 
   async assert(args) {
     this.args = args
+
+    const { path: pathNode } = args
+
+    if (!pathNode || !pathNode.type === "string") {
+      throw this.makeError("'path' must be supplied and be a string", pathNode)
+    }
+
     try {
-      this.stat = await this.fs.lstat(args.path)
+      this.stat = await this.fs.lstat(pathNode.value)
       return this.stat.isFile()
     } catch (e) {
       return false
@@ -30,10 +38,15 @@ export class FileExists {
   }
 
   async actualize() {
+    const { path: pathNode } = this.args
+
     if (this.stat && this.stat.isDirectory()) {
-      throw new Error(`A directory with the name as '${this.args.path}' exists`)
+      this.makeError(
+        `A directory with the name as '${pathNode.value}' exists`,
+        pathNode
+      )
     }
 
-    this.fs.ensureFile(this.args.path)
+    this.fs.ensureFile(pathNode.value)
   }
 }

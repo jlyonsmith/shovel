@@ -19,14 +19,21 @@ Example:
 export class DirectoryExists {
   constructor(container) {
     this.fs = container.fs || fs
+    this.makeError = container.makeError
     this.stat = null
   }
 
   async assert(args) {
     this.args = args
 
+    const { path: pathNode } = args
+
+    if (!pathNode || !pathNode.type === "string") {
+      throw this.makeError("'path' must be supplied and be a string", pathNode)
+    }
+
     try {
-      this.stat = await this.fs.lstat(args.path)
+      this.stat = await this.fs.lstat(pathNode.value)
       return this.stat.isDirectory()
     } catch (e) {
       return false
@@ -34,10 +41,15 @@ export class DirectoryExists {
   }
 
   async actualize() {
+    const { path: pathNode } = this.args
+
     if (this.stat && this.stat.isFile()) {
-      throw new Error(`A file with the name as '${this.args.path}' exists`)
+      this.makeError(
+        `A file with the name as '${pathNode.value}' exists`,
+        pathNode
+      )
     }
 
-    await this.fs.ensureDir(this.args.path)
+    await this.fs.ensureDir(pathNode.value)
   }
 }
