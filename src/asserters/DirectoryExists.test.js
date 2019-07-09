@@ -9,6 +9,7 @@ beforeEach(() => {
       expect(typeof node).toBe("string")
       return new Error(message)
     },
+    expandString: (s) => s,
     fs: {
       lstat: jest.fn(async (dirName) => {
         if (dirName === "/somedir") {

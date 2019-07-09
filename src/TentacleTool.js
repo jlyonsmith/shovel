@@ -1,6 +1,7 @@
 import parseArgs from "minimist"
 import JSON5 from "@johnls/JSON5"
 import fs from "fs-extra"
+import vm from "vm"
 import { fullVersion } from "./version"
 import autobind from "autobind-decorator"
 import * as asserters from "./asserters"
@@ -114,7 +115,7 @@ Options:
         }
 
         context.description = descriptionNode.value
-        this.log.info(`${context.description}`)
+        this.log.info(`Script: ${context.description}`)
       }
     }
 
@@ -204,11 +205,17 @@ Options:
       context.assertions.push(assertion)
     }
 
+    const scriptContext = vm.createContext(context.vars)
+    const expandString = (s) =>
+      new vm.Script("`" + s + "`").runInContext(scriptContext)
+
     for (const assertion of context.assertions) {
       const asserter = new asserters[assertion.name]({
         newScriptError,
+        expandString,
       })
-      let ok = false
+
+      let ok = null
 
       try {
         ok = await asserter.assert(assertion.args)
@@ -222,15 +229,10 @@ Options:
         } catch (e) {
           throw e
         }
-        this.log.info(`Actualized '${assertion.name}'`)
+        this.log.actualized(assertion.name, asserter.result())
       } else {
-        this.log.info(`Asserted '${assertion.name}'`)
+        this.log.asserted(assertion.name, asserter.result())
       }
-
-      // TODO: Put makeError on the context object
-      // TODO: Pass context to the asserters
-      // TODO: Add a method to expand a string to context
-      //
     }
   }
 }

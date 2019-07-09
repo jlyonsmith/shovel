@@ -9,6 +9,7 @@ beforeEach(() => {
       expect(typeof node).toBe("string")
       return new Error(message)
     },
+    expandString: (s) => s,
     fs: {
       readFile: jest.fn(async (filePath) => {
         expect(typeof filePath).toBe("string")

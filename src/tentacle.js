@@ -2,11 +2,15 @@
 import { TentacleTool } from "./TentacleTool"
 import chalk from "chalk"
 import path from "path"
+import JSON5 from "@johnls/json5"
 
 const log = {
-  info: console.log,
-  confirm: function() {
-    console.error(chalk.green([...arguments].join(" ")))
+  info: console.error,
+  asserted: function(name, result) {
+    console.log(chalk.green(JSON5.stringify({ asserted: name, result })))
+  },
+  actualized: function(name, result) {
+    console.log(chalk.yellow(JSON5.stringify({ actualized: name, result })))
   },
   error: function() {
     console.error(chalk.red("error:", [...arguments].join(" ")))

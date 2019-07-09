@@ -28,6 +28,7 @@ export class UserExists {
     this.childProcess = container.childProcess || childProcess
     this.os = container.os || os
     this.newScriptError = container.newScriptError
+    this.expandString = container.expandString
   }
 
   async assert(args) {
@@ -42,13 +43,11 @@ export class UserExists {
       )
     }
 
-    try {
-      return (await this.fs.readFile("/etc/passwd")).includes(
-        nameNode.value + ":"
-      )
-    } catch (e) {
-      return false
-    }
+    this.expandedName = this.expandString(nameNode.value)
+
+    return (await this.fs.readFile("/etc/passwd")).includes(
+      this.expandedName + ":"
+    )
   }
 
   async actualize() {
@@ -58,6 +57,10 @@ export class UserExists {
       throw new Error("Only root user can add or modify users")
     }
 
-    await this.childProcess.exec(`useradd ${nameNode.value}`)
+    await this.childProcess.exec(`useradd ${this.expandedName}`)
+  }
+
+  result() {
+    return { name: this.expandedName }
   }
 }

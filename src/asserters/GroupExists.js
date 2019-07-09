@@ -24,6 +24,7 @@ export class GroupExists {
     this.childProcess = container.childProcess || childProcess
     this.os = container.os || os
     this.newScriptError = container.newScriptError
+    this.expandString = container.expandString
   }
 
   async assert(args) {
@@ -38,22 +39,28 @@ export class GroupExists {
       )
     }
 
-    try {
-      return (await this.fs.readFile("/etc/groups")).includes(
-        nameNode.value + ":"
-      )
-    } catch (e) {
-      return false
-    }
+    this.expandedName = this.expandString(nameNode.value)
+
+    return (await this.fs.readFile("/etc/groups")).includes(
+      this.expandedName + ":"
+    )
   }
 
   async actualize() {
     const { name: nameNode } = this.args
 
     if (!util.runningAsRoot(this.os)) {
-      throw new Error("Only root user can add or modify groups")
+      // TODO: Should point to the parent node
+      throw this.newScriptError(
+        "Only root user can add or modify groups",
+        nameNode
+      )
     }
 
-    await this.childProcess.exec(`groupadd ${nameNode.value}`)
+    await this.childProcess.exec(`groupadd ${this.expandedName}`)
+  }
+
+  result() {
+    return { name: this.expandedName }
   }
 }

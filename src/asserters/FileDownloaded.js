@@ -23,6 +23,7 @@ export class FileDownloaded {
     this.fs = container.fs || fs
     this.fetch = container.fetch || fetch
     this.newScriptError = container.newScriptError
+    this.expandString = container.expandString
   }
 
   async assert(args) {
@@ -51,42 +52,42 @@ export class FileDownloaded {
       )
     }
 
-    try {
-      this.toFileExists = await util.fileExists(this.fs, toPathNode.value)
+    this.expandedUrl = this.expandString(urlNode.value)
+    this.expandedToPath = this.expandString(toPathNode.value)
+    this.toFileExists = await util.fileExists(this.fs, this.expandedToPath)
 
-      if (!this.toFileExists) {
-        return false
-      }
-
-      const toFileDigest = await util.generateDigestFromFile(
-        this.fs,
-        toPathNode.value
-      )
-
-      return toFileDigest === digestNode.value
-    } catch (error) {
+    if (!this.toFileExists) {
       return false
     }
+
+    const toFileDigest = await util.generateDigestFromFile(
+      this.fs,
+      this.expandedToPath
+    )
+
+    return toFileDigest === digestNode.value
   }
 
   async actualize() {
-    const { url: urlNode, toPath: toPathNode } = this.args
-
     if (!this.toFileExists) {
       {
-        const toDirPath = path.dirname(toPathNode.value)
+        const toDirPath = path.dirname(this.expandedToPath)
 
         if (!(await util.dirExists(this.fs, toDirPath))) {
           await this.fs.ensureDir(toDirPath)
         }
       }
     } else {
-      await this.fs.remove(toPathNode.value)
+      await this.fs.remove(this.expandedToPath)
     }
 
-    const result = await this.fetch(urlNode.value)
-    const writeable = this.fs.createWriteStream(toPathNode.value)
+    const result = await this.fetch(this.expandedUrl)
+    const writeable = this.fs.createWriteStream(this.expandedToPath)
 
     await util.pipeToPromise(result.body, writeable)
+  }
+
+  result() {
+    return { toPath: this.expandedToPath }
   }
 }

@@ -10,6 +10,7 @@ beforeEach(() => {
       expect(typeof node).toBe("string")
       return new Error(message)
     },
+    expandString: (s) => s,
     fs: {
       createReadStream: jest.fn((fileName) => {
         expect(typeof fileName).toBe("string")

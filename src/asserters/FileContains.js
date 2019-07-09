@@ -21,6 +21,7 @@ export class FileContains {
   constructor(container) {
     this.fs = container.fs || fs
     this.newScriptError = container.newScriptError
+    this.expandString = container.expandString
   }
 
   async assert(args) {
@@ -42,22 +43,23 @@ export class FileContains {
       )
     }
 
-    try {
-      const pathDigest = await util.generateDigestFromFile(
-        this.fs,
-        pathNode.value
-      )
-      const contentsDigest = util.generateDigest(contentsNode.value)
+    this.expandedPath = this.expandString(pathNode.value)
+    this.expandedContents = this.expandString(contentsNode.value)
 
-      return pathDigest === contentsDigest
-    } catch (e) {
-      return false
-    }
+    const pathDigest = await util.generateDigestFromFile(
+      this.fs,
+      this.expandedPath
+    )
+    const contentsDigest = util.generateDigest(this.expandedContents)
+
+    return pathDigest === contentsDigest
   }
 
   async actualize() {
-    const { path: pathNode, contents: contentsNode } = this.args
+    await this.fs.outputFile(this.expandedPath, this.expandedContents)
+  }
 
-    await this.fs.outputFile(pathNode.value, contentsNode.value)
+  result() {
+    return { path: this.expandedPath, contents: this.expandedContents }
   }
 }

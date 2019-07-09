@@ -19,6 +19,7 @@ export class FileCopied {
   constructor(container) {
     this.fs = container.fs || fs
     this.newScriptError = container.newScriptError
+    this.expandString = container.expandString
   }
 
   async assert(args) {
@@ -40,37 +41,39 @@ export class FileCopied {
       )
     }
 
-    try {
-      if (
-        !(await util.fileExists(this.fs, fromPathNode.value)) ||
-        !(await util.fileExists(this.fs, toPathNode.value))
-      ) {
-        return false
-      }
+    this.expandedToPath = this.expandString(toPathNode.value)
+    this.expandedFromPath = this.expandString(fromPathNode.value)
 
-      const fromDigest = await util.generateDigestFromFile(
-        this.fs,
-        fromPathNode.value
-      )
-      const toDigest = await util.generateDigestFromFile(
-        this.fs,
-        toPathNode.value
-      )
-
-      return fromDigest === toDigest
-    } catch (e) {
+    if (
+      !(await util.fileExists(this.fs, this.expandedFromPath)) ||
+      !(await util.fileExists(this.fs, this.expandedToPath))
+    ) {
       return false
     }
+
+    const fromDigest = await util.generateDigestFromFile(
+      this.fs,
+      this.expandedFromPath
+    )
+    const toDigest = await util.generateDigestFromFile(
+      this.fs,
+      this.expandedToPath
+    )
+
+    return fromDigest === toDigest
   }
 
   async actualize() {
-    const { fromPath: fromPathNode, toPath: toPathNode } = this.args
-    const toPathDir = path.dirname(toPathNode.value)
+    const toPathDir = path.dirname(this.expandedToPath)
 
     if (!(await util.dirExists(this.fs, toPathDir))) {
       await this.fs.ensureDir(toPathDir)
     }
 
-    await this.fs.copy(fromPathNode.value, toPathNode.value)
+    await this.fs.copy(this.expandedFromPath, this.expandedToPath)
+  }
+
+  result() {
+    return { fromPath: this.expandedFromPath, toPath: this.expandedToPath }
   }
 }

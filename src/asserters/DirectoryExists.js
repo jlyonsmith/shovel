@@ -20,6 +20,7 @@ export class DirectoryExists {
   constructor(container) {
     this.fs = container.fs || fs
     this.newScriptError = container.newScriptError
+    this.expandString = container.expandString
     this.stat = null
   }
 
@@ -35,8 +36,10 @@ export class DirectoryExists {
       )
     }
 
+    this.expandedPath = this.expandString(pathNode.value)
+
     try {
-      this.stat = await this.fs.lstat(pathNode.value)
+      this.stat = await this.fs.lstat(this.expandedPath)
       return this.stat.isDirectory()
     } catch (e) {
       return false
@@ -48,11 +51,15 @@ export class DirectoryExists {
 
     if (this.stat && this.stat.isFile()) {
       throw this.newScriptError(
-        `A file with the name as '${pathNode.value}' exists`,
+        `A file with the name as '${this.expandedPath}' exists`,
         pathNode
       )
     }
 
-    await this.fs.ensureDir(pathNode.value)
+    await this.fs.ensureDir(this.expandedPath)
+  }
+
+  result() {
+    return { path: this.expandedPath }
   }
 }

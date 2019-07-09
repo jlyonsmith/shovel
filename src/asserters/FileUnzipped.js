@@ -22,6 +22,7 @@ export class FileUnzipped {
     this.fs = container.fs || fs
     this.yauzl = container.yauzl || yauzl
     this.newScriptError = container.newScriptError
+    this.expandString = container.expandString
   }
 
   async assert(args) {
@@ -43,20 +44,23 @@ export class FileUnzipped {
       )
     }
 
-    if (!(await util.fileExists(this.fs, zipPathNode.value))) {
+    this.expandedZipPath = this.expandString(zipPathNode.value)
+    this.expandedToDirPath = this.expandString(toDirPathNode.value)
+
+    if (!(await util.fileExists(this.fs, this.expandedZipPath))) {
       return false
     }
 
-    if (!(await util.dirExists(this.fs, toDirPathNode.value))) {
+    if (!(await util.dirExists(this.fs, this.expandedToDirPath))) {
       return false
     }
 
     let zipFile = null
 
     try {
-      zipFile = await this.yauzl.open(zipPathNode.value)
+      zipFile = await this.yauzl.open(this.expandedZipPath)
       await zipFile.walkEntries(async (entry) => {
-        const targetPath = path.join(toDirPathNode.value, entry.fileName)
+        const targetPath = path.join(this.expandedToDirPath, entry.fileName)
         // This will throw if the file or directory is not present
         const stat = await this.fs.lstat(targetPath)
 
@@ -66,7 +70,11 @@ export class FileUnzipped {
           )
         } else if (entry.uncompressedSize !== stat.size) {
           throw new Error(
-            `File size of '${targetPath} does not match zip file entry`
+            `File size ${
+              stat.size
+            } of '${targetPath} does not match zip file entry of ${
+              entry.uncompressedSize
+            }`
           )
         }
       })
@@ -82,8 +90,10 @@ export class FileUnzipped {
   }
 
   async actualize() {
-    const { zipPath: zipPathNode, toDirPath: toDirPathNode } = this.args
-
     // TODO: Unzip the file!
+  }
+
+  result() {
+    return { zipPath: this.expandedZipPath, toDirPath: this.expandedToDirPath }
   }
 }

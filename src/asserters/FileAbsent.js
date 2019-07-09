@@ -17,6 +17,7 @@ export class FileAbsent {
   constructor(container) {
     this.fs = container.fs || fs
     this.newScriptError = container.newScriptError
+    this.expandString = container.expandString
     this.stat = null
   }
 
@@ -32,8 +33,10 @@ export class FileAbsent {
       )
     }
 
+    this.expandedPath = this.expandString(pathNode.value)
+
     try {
-      this.stat = await this.fs.lstat(pathNode.value)
+      this.stat = await this.fs.lstat(this.expandedPath)
       return !this.stat.isFile()
     } catch (e) {
       return true
@@ -45,11 +48,15 @@ export class FileAbsent {
 
     if (this.stat && this.stat.isDirectory()) {
       throw this.newScriptError(
-        `Not removing existing directory with the name '${pathNode.value}'`,
+        `Not removing existing directory with the name '${this.expandedPath}'`,
         pathNode
       )
     }
 
-    await this.fs.unlink(pathNode.value)
+    await this.fs.unlink(this.expandedPath)
+  }
+
+  result() {
+    return { path: this.expandedPath }
   }
 }

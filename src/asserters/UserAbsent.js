@@ -22,6 +22,7 @@ export class UserAbsent {
     this.childProcess = container.childProcess || childProcess
     this.os = container.os || os
     this.newScriptError = container.newScriptError
+    this.expandString = container.expandString
   }
 
   async assert(args) {
@@ -36,22 +37,25 @@ export class UserAbsent {
       )
     }
 
-    try {
-      return !(await this.fs.readFile("/etc/passwd")).includes(
-        nameNode.value + ":"
-      )
-    } catch (e) {
-      return false
-    }
+    this.expandedName = this.expandString(nameNode.value)
+
+    return !(await this.fs.readFile("/etc/passwd")).includes(
+      this.expandedName + ":"
+    )
   }
 
   async actualize() {
     const { name: nameNode } = this.args
 
     if (!util.runningAsRoot(this.os)) {
-      throw new Error("Only root user can delete users")
+      // TODO: Should point to the parent node
+      throw this.newScriptError("Only root user can delete users", nameNode)
     }
 
-    await this.childProcess.exec(`userdel ${nameNode.value}`)
+    await this.childProcess.exec(`userdel ${this.expandedName}`)
+  }
+
+  result() {
+    return { name: this.expandedName }
   }
 }

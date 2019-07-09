@@ -1,4 +1,5 @@
 import fs from "fs-extra"
+import JSON5 from "@johnls/json5"
 
 /*
 Checks and ensures that a file exists.
@@ -17,6 +18,7 @@ export class FileExists {
   constructor(container) {
     this.fs = container.fs || fs
     this.newScriptError = container.newScriptError
+    this.expandString = container.expandString
     this.stat = null
   }
 
@@ -32,8 +34,10 @@ export class FileExists {
       )
     }
 
+    this.expandedPath = this.expandString(pathNode.value)
+
     try {
-      this.stat = await this.fs.lstat(pathNode.value)
+      this.stat = await this.fs.lstat(this.expandedPath)
       return this.stat.isFile()
     } catch (e) {
       return false
@@ -45,11 +49,15 @@ export class FileExists {
 
     if (this.stat && this.stat.isDirectory()) {
       throw this.newScriptError(
-        `A directory with the name as '${pathNode.value}' exists`,
+        `A directory with the name as '${this.expandedPath}' exists`,
         pathNode
       )
     }
 
-    this.fs.ensureFile(pathNode.value)
+    this.fs.ensureFile(this.expandedPath)
+  }
+
+  result() {
+    return { path: this.expandedPath }
   }
 }
