@@ -16,7 +16,7 @@ Example:
 export class FileExists {
   constructor(container) {
     this.fs = container.fs || fs
-    this.makeError = container.makeError
+    this.newScriptError = container.newScriptError
     this.stat = null
   }
 
@@ -25,8 +25,11 @@ export class FileExists {
 
     const { path: pathNode } = args
 
-    if (!pathNode || !pathNode.type === "string") {
-      throw this.makeError("'path' must be supplied and be a string", pathNode)
+    if (!pathNode || pathNode.type !== "string") {
+      throw this.newScriptError(
+        "'path' must be supplied and be a string",
+        pathNode
+      )
     }
 
     try {
@@ -41,7 +44,7 @@ export class FileExists {
     const { path: pathNode } = this.args
 
     if (this.stat && this.stat.isDirectory()) {
-      this.makeError(
+      throw this.newScriptError(
         `A directory with the name as '${pathNode.value}' exists`,
         pathNode
       )

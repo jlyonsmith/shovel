@@ -5,6 +5,11 @@ let container = null
 
 beforeEach(() => {
   container = {
+    newScriptError: (message, node) => {
+      expect(typeof message).toBe("string")
+      expect(typeof node).toBe("string")
+      return new Error(message)
+    },
     fs: {
       createReadStream: jest.fn((fileName) => {
         expect(typeof fileName).toBe("string")
@@ -45,7 +50,10 @@ test("FileCopied with files the same", async () => {
   const asserter = new FileCopied(container)
 
   await expect(
-    asserter.assert({ fromPath: "/somefile", toPath: "/otherfile" })
+    asserter.assert({
+      fromPath: { type: "string", value: "/somefile" },
+      toPath: { type: "string", value: "/otherfile" },
+    })
   ).resolves.toBe(true)
   expect(container.fs.createReadStream).toHaveBeenCalledTimes(2)
 })
@@ -54,7 +62,10 @@ test("FileCopied with from file non-existent", async () => {
   const asserter = new FileCopied(container)
 
   await expect(
-    asserter.assert({ fromPath: "/notthere", toPath: "/otherfile" })
+    asserter.assert({
+      fromPath: { type: "string", value: "/notthere" },
+      toPath: { type: "string", value: "/otherfile" },
+    })
   ).resolves.toBe(false)
 })
 
@@ -62,7 +73,10 @@ test("FileCopied with to file non-existent", async () => {
   const asserter = new FileCopied(container)
 
   await expect(
-    asserter.assert({ fromPath: "/somefile", toPath: "/notthere" })
+    asserter.assert({
+      fromPath: { type: "string", value: "/somefile" },
+      toPath: { type: "string", value: "/notthere" },
+    })
   ).resolves.toBe(false)
   await expect(asserter.actualize()).resolves.toBeUndefined()
 })
@@ -71,7 +85,10 @@ test("FileCopied with different files", async () => {
   const asserter = new FileCopied(container)
 
   await expect(
-    asserter.assert({ fromPath: "/somefile", toPath: "/badfile" })
+    asserter.assert({
+      fromPath: { type: "string", value: "/somefile" },
+      toPath: { type: "string", value: "/badfile" },
+    })
   ).resolves.toBe(false)
   await expect(asserter.actualize()).resolves.toBeUndefined()
 })

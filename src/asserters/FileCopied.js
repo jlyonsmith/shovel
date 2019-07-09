@@ -18,24 +18,44 @@ Example:
 export class FileCopied {
   constructor(container) {
     this.fs = container.fs || fs
+    this.newScriptError = container.newScriptError
   }
 
   async assert(args) {
     this.args = args
 
+    const { fromPath: fromPathNode, toPath: toPathNode } = args
+
+    if (!fromPathNode || fromPathNode.type !== "string") {
+      throw this.newScriptError(
+        "'fromPath' must be supplied and be a string",
+        fromPathNode
+      )
+    }
+
+    if (!toPathNode || toPathNode.type !== "string") {
+      throw this.newScriptError(
+        "'toPath' must be supplied and be a string",
+        toPathNode
+      )
+    }
+
     try {
       if (
-        !(await util.fileExists(this.fs, args.fromPath)) ||
-        !(await util.fileExists(this.fs, args.toPath))
+        !(await util.fileExists(this.fs, fromPathNode.value)) ||
+        !(await util.fileExists(this.fs, toPathNode.value))
       ) {
         return false
       }
 
       const fromDigest = await util.generateDigestFromFile(
         this.fs,
-        args.fromPath
+        fromPathNode.value
       )
-      const toDigest = await util.generateDigestFromFile(this.fs, args.toPath)
+      const toDigest = await util.generateDigestFromFile(
+        this.fs,
+        toPathNode.value
+      )
 
       return fromDigest === toDigest
     } catch (e) {
@@ -44,12 +64,13 @@ export class FileCopied {
   }
 
   async actualize() {
-    const toPathDir = path.dirname(this.args.toPath)
+    const { fromPath: fromPathNode, toPath: toPathNode } = this.args
+    const toPathDir = path.dirname(toPathNode.value)
 
     if (!(await util.dirExists(this.fs, toPathDir))) {
       await this.fs.ensureDir(toPathDir)
     }
 
-    await this.fs.copy(this.args.fromPath, this.args.toPath)
+    await this.fs.copy(fromPathNode.value, toPathNode.value)
   }
 }

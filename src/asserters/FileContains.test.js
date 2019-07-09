@@ -6,6 +6,11 @@ const testString = "The quick brown fox jumps over the lazy dog\n"
 
 beforeEach(() => {
   container = {
+    newScriptError: (message, node) => {
+      expect(typeof message).toBe("string")
+      expect(typeof node).toBe("string")
+      return new Error(message)
+    },
     fs: {
       createReadStream: jest.fn((fileName) => {
         expect(typeof fileName).toBe("string")
@@ -29,8 +34,11 @@ test("FileContains with same contents", async () => {
 
   await expect(
     asserter.assert({
-      path: "/somefile",
-      contents: testString,
+      path: {
+        type: "string",
+        value: "/somefile",
+      },
+      contents: { type: "string", value: testString },
     })
   ).resolves.toBe(true)
 })
@@ -40,8 +48,8 @@ test("FileContains with different contents", async () => {
 
   await expect(
     asserter.assert({
-      path: "/somefile",
-      contents: "anything but the test string",
+      path: { type: "string", value: "/somefile" },
+      contents: { type: "string", value: "anything but the test string" },
     })
   ).resolves.toBe(false)
   await expect(asserter.actualize()).resolves.toBeUndefined()

@@ -21,35 +21,42 @@ export class FileUnzipped {
   constructor(container) {
     this.fs = container.fs || fs
     this.yauzl = container.yauzl || yauzl
+    this.newScriptError = container.newScriptError
   }
 
   async assert(args) {
     this.args = args
 
-    if (!args.hasOwnProperty("zipPath")) {
-      throw new Error("Must specify 'zipPath'")
+    const { zipPath: zipPathNode, toDirPath: toDirPathNode } = args
+
+    if (!zipPathNode || zipPathNode.type !== "string") {
+      throw this.newScriptError(
+        "'zipPath' must be supplied and be a string",
+        zipPathNode
+      )
     }
 
-    if (!args.hasOwnProperty("toDirPath")) {
-      throw new Error("Must specify 'toDirPath'")
+    if (!toDirPathNode || toDirPathNode.type !== "string") {
+      throw this.newScriptError(
+        "'toDirPath' must be supplied and be a string",
+        toDirPathNode
+      )
     }
 
-    if (!(await util.fileExists(this.fs, args.zipPath))) {
+    if (!(await util.fileExists(this.fs, zipPathNode.value))) {
       return false
     }
 
-    if (!(await util.dirExists(this.fs, args.toDirPath))) {
+    if (!(await util.dirExists(this.fs, toDirPathNode.value))) {
       return false
     }
 
     let zipFile = null
 
-    // yauzl.open("scratch.zip").then((zf)=>{ zf.walkEntries((entry)=>{console.log(entry)}).then(() => zf.close())})
-
     try {
-      zipFile = await this.yauzl.open(args.zipPath)
+      zipFile = await this.yauzl.open(zipPathNode.value)
       await zipFile.walkEntries(async (entry) => {
-        const targetPath = path.join(args.toDirPath, entry.fileName)
+        const targetPath = path.join(toDirPathNode.value, entry.fileName)
         // This will throw if the file or directory is not present
         const stat = await this.fs.lstat(targetPath)
 
@@ -74,5 +81,9 @@ export class FileUnzipped {
     return true
   }
 
-  async actualize() {}
+  async actualize() {
+    const { zipPath: zipPathNode, toDirPath: toDirPathNode } = this.args
+
+    // TODO: Unzip the file!
+  }
 }

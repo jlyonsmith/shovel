@@ -20,14 +20,34 @@ Example:
 export class FileContains {
   constructor(container) {
     this.fs = container.fs || fs
+    this.newScriptError = container.newScriptError
   }
 
   async assert(args) {
     this.args = args
 
+    const { path: pathNode, contents: contentsNode } = args
+
+    if (!pathNode || pathNode.type !== "string") {
+      throw this.newScriptError(
+        "'path' must be supplied and be a string",
+        pathNode
+      )
+    }
+
+    if (!contentsNode || contentsNode.type !== "string") {
+      throw this.newScriptError(
+        "'contents' must be supplied and be a string",
+        pathNode
+      )
+    }
+
     try {
-      const pathDigest = await util.generateDigestFromFile(this.fs, args.path)
-      const contentsDigest = util.generateDigest(args.contents)
+      const pathDigest = await util.generateDigestFromFile(
+        this.fs,
+        pathNode.value
+      )
+      const contentsDigest = util.generateDigest(contentsNode.value)
 
       return pathDigest === contentsDigest
     } catch (e) {
@@ -36,6 +56,8 @@ export class FileContains {
   }
 
   async actualize() {
-    await this.fs.outputFile(this.args.path, this.args.contents)
+    const { path: pathNode, contents: contentsNode } = this.args
+
+    await this.fs.outputFile(pathNode.value, contentsNode.value)
   }
 }

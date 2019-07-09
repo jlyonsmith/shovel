@@ -4,6 +4,11 @@ let container = null
 
 beforeEach(() => {
   container = {
+    newScriptError: (message, node) => {
+      expect(typeof message).toBe("string")
+      expect(typeof node).toBe("string")
+      return new Error(message)
+    },
     fs: {
       readFile: jest.fn(async (filePath) => {
         expect(typeof filePath).toBe("string")
@@ -35,12 +40,16 @@ news:x:9:`
 test("With group absent", async () => {
   const asserter = new GroupAbsent(container)
 
-  await expect(asserter.assert({ name: "notthere" })).resolves.toBe(true)
+  await expect(
+    asserter.assert({ name: { type: "string", value: "notthere" } })
+  ).resolves.toBe(true)
 })
 
 test("With group present", async () => {
   const asserter = new GroupAbsent(container)
 
-  await expect(asserter.assert({ name: "news" })).resolves.toBe(false)
+  await expect(
+    asserter.assert({ name: { type: "string", value: "news" } })
+  ).resolves.toBe(false)
   await expect(asserter.actualize()).resolves.toBeUndefined()
 })

@@ -76,10 +76,13 @@ Options:
   }
 
   async processScriptFile(scriptFileName, scriptNodes, verbose) {
+    const newScriptError = (message, node) => {
+      return new ScriptError(message, scriptFileName, node)
+    }
+
     if (scriptNodes.type !== "object") {
-      throw new ScriptError(
+      throw newScriptError(
         "Script must have an object as the root",
-        scriptFileName,
         scriptNodes
       )
     }
@@ -97,20 +100,15 @@ Options:
 
     if (optionsNode) {
       if (optionsNode.type !== "object") {
-        throw new ScriptError(
-          "'options' must be an object",
-          scriptFileName,
-          optionsNode
-        )
+        throw newScriptError("'options' must be an object", optionsNode)
       }
 
       const { description: descriptionNode } = optionsNode.value
 
       if (descriptionNode) {
         if (descriptionNode.type !== "string") {
-          throw new ScriptError(
+          throw newScriptError(
             "'options.description' must be a string",
-            scriptFileName,
             descriptionNode
           )
         }
@@ -122,11 +120,7 @@ Options:
 
     if (varsNode) {
       if (varsNode.type !== "object") {
-        throw new ScriptError(
-          "'variables' must be an object",
-          scriptFileName,
-          varsNode
-        )
+        throw newScriptError("'variables' must be an object", varsNode)
       }
 
       for (const [key, value] of Object.entries(varsNode.value)) {
@@ -142,9 +136,8 @@ Options:
             context.vars[key] = value.value
             break
           default:
-            throw new ScriptError(
+            throw newScriptError(
               `Variable of type ${value.type} is invalid`,
-              scriptFileName,
               value
             )
         }
@@ -161,22 +154,14 @@ Options:
     }
 
     if (assertionsNode.type !== "array") {
-      throw new ScriptError(
-        "'assertions' must be an array",
-        scriptFileName,
-        assertionsNode
-      )
+      throw newScriptError("'assertions' must be an array", assertionsNode)
     }
 
     context.assertions = []
 
     for (const assertionNode of assertionsNode.value) {
       if (assertionNode.type !== "object") {
-        throw new ScriptError(
-          "Assertion must be an object",
-          scriptFileName,
-          assertionNode
-        )
+        throw newScriptError("Assertion must be an object", assertionNode)
       }
 
       const assertion = {}
@@ -188,26 +173,20 @@ Options:
 
       if (assertNode) {
         if (assertNode.type !== "string") {
-          throw new ScriptError(
+          throw newScriptError(
             "Assertion 'assert' must be a string",
-            scriptFileName,
             assertNode
           )
         }
         assertion.name = assertNode.value
       } else {
-        throw new ScriptError(
-          "Assertion has no 'assert' value",
-          scriptFileName,
-          assertNode
-        )
+        throw newScriptError("Assertion has no 'assert' value", assertNode)
       }
 
       if (descriptionNode) {
         if (descriptionNode.type !== "string") {
-          throw new ScriptError(
+          throw newScriptError(
             "Assertion 'description' must be a string",
-            scriptFileName,
             descriptionNode
           )
         }
@@ -216,11 +195,7 @@ Options:
 
       if (withNode) {
         if (withNode.type !== "object") {
-          throw new ScriptError(
-            "Assertion 'with' must be an object",
-            scriptFileName,
-            withNode
-          )
+          throw newScriptError("Assertion 'with' must be an object", withNode)
         }
 
         assertion.args = withNode.value
@@ -231,9 +206,7 @@ Options:
 
     for (const assertion of context.assertions) {
       const asserter = new asserters[assertion.name]({
-        makeError: (message, node) => {
-          return new ScriptError(message, scriptFileName, node)
-        },
+        newScriptError,
       })
       let ok = false
 
@@ -253,6 +226,11 @@ Options:
       } else {
         this.log.info(`Asserted '${assertion.name}'`)
       }
+
+      // TODO: Put makeError on the context object
+      // TODO: Pass context to the asserters
+      // TODO: Add a method to expand a string to context
+      //
     }
   }
 }

@@ -22,13 +22,37 @@ export class FileDownloaded {
   constructor(container) {
     this.fs = container.fs || fs
     this.fetch = container.fetch || fetch
+    this.newScriptError = container.newScriptError
   }
 
   async assert(args) {
     this.args = args
 
+    const { url: urlNode, digest: digestNode, toPath: toPathNode } = args
+
+    if (!urlNode || urlNode.type !== "string") {
+      throw this.newScriptError(
+        "'fromPath' must be supplied and be a string",
+        urlNode
+      )
+    }
+
+    if (!digestNode || digestNode.type !== "string") {
+      throw this.newScriptError(
+        "'digest' must be supplied and be a string containing the SHA256 hash of the string in hexadecimal",
+        digestNode
+      )
+    }
+
+    if (!toPathNode || toPathNode.type !== "string") {
+      throw this.newScriptError(
+        "'toPath' must be supplied and be a string",
+        toPathNode
+      )
+    }
+
     try {
-      this.toFileExists = await util.fileExists(this.fs, args.toPath)
+      this.toFileExists = await util.fileExists(this.fs, toPathNode.value)
 
       if (!this.toFileExists) {
         return false
@@ -36,30 +60,32 @@ export class FileDownloaded {
 
       const toFileDigest = await util.generateDigestFromFile(
         this.fs,
-        args.toPath
+        toPathNode.value
       )
 
-      return toFileDigest === args.digest
+      return toFileDigest === digestNode.value
     } catch (error) {
       return false
     }
   }
 
   async actualize() {
+    const { url: urlNode, toPath: toPathNode } = this.args
+
     if (!this.toFileExists) {
       {
-        const toDirPath = path.dirname(this.args.toPath)
+        const toDirPath = path.dirname(toPathNode.value)
 
         if (!(await util.dirExists(this.fs, toDirPath))) {
           await this.fs.ensureDir(toDirPath)
         }
       }
     } else {
-      await this.fs.remove(this.args.toPath)
+      await this.fs.remove(toPathNode.value)
     }
 
-    const result = await this.fetch(this.args.url)
-    const writeable = this.fs.createWriteStream(this.args.toPath)
+    const result = await this.fetch(urlNode.value)
+    const writeable = this.fs.createWriteStream(toPathNode.value)
 
     await util.pipeToPromise(result.body, writeable)
   }

@@ -4,6 +4,11 @@ let container = null
 
 beforeEach(() => {
   container = {
+    newScriptError: (message, node) => {
+      expect(typeof message).toBe("string")
+      expect(typeof node).toBe("string")
+      return new Error(message)
+    },
     fs: {
       lstat: jest.fn(async (fileName) => {
         if (fileName === "/somedir") {
@@ -30,19 +35,25 @@ beforeEach(() => {
 test("FileExists with file existing", async () => {
   const asserter = new FileExists(container)
 
-  await expect(asserter.assert({ path: "/somefile" })).resolves.toBe(true)
+  await expect(
+    asserter.assert({ path: { type: "string", value: "/somefile" } })
+  ).resolves.toBe(true)
 })
 
 test("FileExists with no file or dir existing", async () => {
   const asserter = new FileExists(container)
 
-  await expect(asserter.assert({ path: "/notthere" })).resolves.toBe(false)
+  await expect(
+    asserter.assert({ path: { type: "string", value: "/notthere" } })
+  ).resolves.toBe(false)
   await expect(asserter.actualize()).resolves.toBeUndefined()
 })
 
 test("FileExists with dir instead of file existing", async () => {
   const asserter = new FileExists(container)
 
-  await expect(asserter.assert({ path: "/somedir" })).resolves.toBe(false)
+  await expect(
+    asserter.assert({ path: { type: "string", value: "/somedir" } })
+  ).resolves.toBe(false)
   await expect(asserter.actualize()).rejects.toThrow(Error)
 })

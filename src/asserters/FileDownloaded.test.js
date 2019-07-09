@@ -7,6 +7,11 @@ const testString = "The quick brown fox jumps over the lazy dog\n"
 
 beforeEach(() => {
   container = {
+    newScriptError: (message, node) => {
+      expect(typeof message).toBe("string")
+      expect(typeof node).toBe("string")
+      return new Error(message)
+    },
     fs: {
       createReadStream: jest.fn((fileName) => {
         expect(typeof fileName).toBe("string")
@@ -64,10 +69,13 @@ test("With correct file already in place", async () => {
 
   await expect(
     asserter.assert({
-      url: testUrl,
-      digest:
-        "c03905fcdab297513a620ec81ed46ca44ddb62d41cbbd83eb4a5a3592be26a69",
-      toPath: "./abc/somefile.txt",
+      url: { type: "string", value: testUrl },
+      digest: {
+        type: "string",
+        value:
+          "c03905fcdab297513a620ec81ed46ca44ddb62d41cbbd83eb4a5a3592be26a69",
+      },
+      toPath: { type: "string", value: "./abc/somefile.txt" },
     })
   ).resolves.toBe(true)
 })
@@ -77,10 +85,13 @@ test("With no file in place", async () => {
 
   await expect(
     asserter.assert({
-      url: testUrl,
-      digest:
-        "c03905fcdab297513a620ec81ed46ca44ddb62d41cbbd83eb4a5a3592be26a69",
-      toPath: "./def/somefile.txt",
+      url: { type: "string", value: testUrl },
+      digest: {
+        type: "string",
+        value:
+          "c03905fcdab297513a620ec81ed46ca44ddb62d41cbbd83eb4a5a3592be26a69",
+      },
+      toPath: { type: "string", value: "./def/somefile.txt" },
     })
   ).resolves.toBe(false)
   await expect(asserter.actualize()).resolves.toBeUndefined()
@@ -91,10 +102,13 @@ test("With incorrect file already in place", async () => {
 
   await expect(
     asserter.assert({
-      url: testUrl,
-      digest:
-        "c03905fcdab297513a620ec81ed46ca44ddb62d41cbbd83eb4a5a3592be26a69",
-      toPath: "./abc/badfile.txt",
+      url: { type: "string", value: testUrl },
+      digest: {
+        type: "string",
+        value:
+          "c03905fcdab297513a620ec81ed46ca44ddb62d41cbbd83eb4a5a3592be26a69",
+      },
+      toPath: { type: "string", value: "./abc/badfile.txt" },
     })
   ).resolves.toBe(false)
   await expect(asserter.actualize()).resolves.toBeUndefined()
