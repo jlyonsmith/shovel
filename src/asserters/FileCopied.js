@@ -20,6 +20,7 @@ export class FileCopied {
     this.fs = container.fs || fs
     this.newScriptError = container.newScriptError
     this.expandString = container.expandString
+    this.withNode = container.withNode
   }
 
   async assert(args) {
@@ -30,14 +31,14 @@ export class FileCopied {
     if (!fromPathNode || fromPathNode.type !== "string") {
       throw this.newScriptError(
         "'fromPath' must be supplied and be a string",
-        fromPathNode
+        fromPathNode || this.withNode
       )
     }
 
     if (!toPathNode || toPathNode.type !== "string") {
       throw this.newScriptError(
         "'toPath' must be supplied and be a string",
-        toPathNode
+        toPathNode || this.withNode
       )
     }
 

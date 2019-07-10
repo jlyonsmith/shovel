@@ -24,6 +24,7 @@ export class FileDownloaded {
     this.fetch = container.fetch || fetch
     this.newScriptError = container.newScriptError
     this.expandString = container.expandString
+    this.withNode = container.withNode
   }
 
   async assert(args) {
@@ -34,21 +35,21 @@ export class FileDownloaded {
     if (!urlNode || urlNode.type !== "string") {
       throw this.newScriptError(
         "'fromPath' must be supplied and be a string",
-        urlNode
+        urlNode || this.withNode
       )
     }
 
     if (!digestNode || digestNode.type !== "string") {
       throw this.newScriptError(
         "'digest' must be supplied and be a string containing the SHA256 hash of the string in hexadecimal",
-        digestNode
+        digestNode || this.withNode
       )
     }
 
     if (!toPathNode || toPathNode.type !== "string") {
       throw this.newScriptError(
         "'toPath' must be supplied and be a string",
-        toPathNode
+        toPathNode || this.withNode
       )
     }
 

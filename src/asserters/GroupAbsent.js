@@ -23,6 +23,8 @@ export class GroupAbsent {
     this.os = container.os || os
     this.newScriptError = container.newScriptError
     this.expandString = container.expandString
+    this.withNode = container.withNode
+    this.assertNode = container.assertNode
   }
 
   async assert(args) {
@@ -33,7 +35,7 @@ export class GroupAbsent {
     if (!nameNode || nameNode.type !== "string") {
       throw this.newScriptError(
         "'name' must be supplied and be a string",
-        nameNode
+        nameNode || this.withNode
       )
     }
 
@@ -48,7 +50,10 @@ export class GroupAbsent {
     const { name: nameNode } = this.args
 
     if (!util.runningAsRoot(this.os)) {
-      throw this.newScriptError("Only root user can delete groups", nameNode)
+      throw this.newScriptError(
+        "Only root user can delete groups",
+        this.assertNode
+      )
     }
 
     await this.childProcess.exec(`groupdel ${this.expandedName}`)

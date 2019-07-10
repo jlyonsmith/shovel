@@ -8,11 +8,16 @@ import * as asserters from "./asserters"
 
 class ScriptError extends Error {
   constructor(message, fileName, node) {
-    const lineNumber = node.line
-    const columnNumber = node.column
+    const lineNumber = node.line || 0
+    const columnNumber = node.column || 0
 
     super(message, fileName, lineNumber, columnNumber)
-    this.message = `(${fileName}:${lineNumber}:${columnNumber}) ${message}`
+    this.message += ` (${fileName}:${lineNumber}:${columnNumber})`
+  }
+
+  // Otherwise "Error: " is prefixed
+  toString() {
+    return this.message
   }
 }
 
@@ -71,9 +76,7 @@ Options:
       wantNodes: true,
     })
 
-    this.processScriptFile(scriptFileName, scriptNodes, args.verbose)
-
-    return 0
+    return this.processScriptFile(scriptFileName, scriptNodes, args.verbose)
   }
 
   async processScriptFile(scriptFileName, scriptNodes, verbose) {
@@ -172,6 +175,9 @@ Options:
         with: withNode,
       } = assertionNode.value
 
+      assertion.assertNode = assertNode
+      assertion.withNode = withNode
+
       if (assertNode) {
         if (assertNode.type !== "string") {
           throw newScriptError(
@@ -213,6 +219,8 @@ Options:
       const asserter = new asserters[assertion.name]({
         newScriptError,
         expandString,
+        assertNode: assertion.assertNode,
+        withNode: assertion.withNode,
       })
 
       let ok = null
@@ -220,19 +228,23 @@ Options:
       try {
         ok = await asserter.assert(assertion.args)
       } catch (e) {
-        throw e
+        this.log.error(e)
+        return 1
       }
 
       if (!ok) {
         try {
           await asserter.actualize()
         } catch (e) {
-          throw e
+          this.log.error(e)
+          return 1
         }
         this.log.actualized(assertion.name, asserter.result())
       } else {
         this.log.asserted(assertion.name, asserter.result())
       }
     }
+
+    return 0
   }
 }

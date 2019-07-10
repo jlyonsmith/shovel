@@ -23,6 +23,8 @@ export class UserAbsent {
     this.os = container.os || os
     this.newScriptError = container.newScriptError
     this.expandString = container.expandString
+    this.withNode = container.withNode
+    this.assertNode = container.assertNode
   }
 
   async assert(args) {
@@ -33,7 +35,7 @@ export class UserAbsent {
     if (!nameNode || nameNode.type !== "string") {
       throw this.newScriptError(
         "'name' must be supplied and be a string",
-        nameNode
+        nameNode || this.withNode
       )
     }
 
@@ -48,8 +50,10 @@ export class UserAbsent {
     const { name: nameNode } = this.args
 
     if (!util.runningAsRoot(this.os)) {
-      // TODO: Should point to the parent node
-      throw this.newScriptError("Only root user can delete users", nameNode)
+      throw this.newScriptError(
+        "Only root user can delete users",
+        this.assertNode
+      )
     }
 
     await this.childProcess.exec(`userdel ${this.expandedName}`)

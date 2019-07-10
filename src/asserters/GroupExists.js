@@ -25,6 +25,8 @@ export class GroupExists {
     this.os = container.os || os
     this.newScriptError = container.newScriptError
     this.expandString = container.expandString
+    this.withNode = container.withNode
+    this.assertNode = container.assertNode
   }
 
   async assert(args) {
@@ -35,7 +37,7 @@ export class GroupExists {
     if (!nameNode || nameNode.type !== "string") {
       throw this.newScriptError(
         "'name' must be supplied and be a string",
-        nameNode
+        nameNode || this.withNode
       )
     }
 
@@ -50,10 +52,9 @@ export class GroupExists {
     const { name: nameNode } = this.args
 
     if (!util.runningAsRoot(this.os)) {
-      // TODO: Should point to the parent node
       throw this.newScriptError(
         "Only root user can add or modify groups",
-        nameNode
+        this.assertNode
       )
     }
 

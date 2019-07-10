@@ -19,6 +19,7 @@ export class FileExists {
     this.fs = container.fs || fs
     this.newScriptError = container.newScriptError
     this.expandString = container.expandString
+    this.withNode = container.withNode
     this.stat = null
   }
 
@@ -30,7 +31,7 @@ export class FileExists {
     if (!pathNode || pathNode.type !== "string") {
       throw this.newScriptError(
         "'path' must be supplied and be a string",
-        pathNode
+        pathNode || this.withNode
       )
     }
 

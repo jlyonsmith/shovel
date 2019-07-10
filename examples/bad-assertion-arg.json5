@@ -1,0 +1,11 @@
+{
+  assertions: [
+    {
+      description: "Create Test Directory",
+      assert: "DirectoryExists",
+      with: {
+        badArg: "scratch/${TEST_DIR_1}",
+      },
+    },
+  ],
+}

@@ -12,6 +12,8 @@ beforeEach(() => {
       return new Error(message)
     },
     expandString: (s) => s,
+    withNode: { line: 0, column: 0 },
+    assertNode: { line: 0, column: 0 },
     fs: {
       createReadStream: jest.fn((fileName) => {
         expect(typeof fileName).toBe("string")

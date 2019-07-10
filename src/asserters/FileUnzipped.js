@@ -23,6 +23,7 @@ export class FileUnzipped {
     this.yauzl = container.yauzl || yauzl
     this.newScriptError = container.newScriptError
     this.expandString = container.expandString
+    this.withNode = container.withNode
   }
 
   async assert(args) {
@@ -33,14 +34,14 @@ export class FileUnzipped {
     if (!zipPathNode || zipPathNode.type !== "string") {
       throw this.newScriptError(
         "'zipPath' must be supplied and be a string",
-        zipPathNode
+        zipPathNode || this.withNode
       )
     }
 
     if (!toDirPathNode || toDirPathNode.type !== "string") {
       throw this.newScriptError(
         "'toDirPath' must be supplied and be a string",
-        toDirPathNode
+        toDirPathNode || this.withNode
       )
     }
 

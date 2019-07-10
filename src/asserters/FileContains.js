@@ -22,6 +22,7 @@ export class FileContains {
     this.fs = container.fs || fs
     this.newScriptError = container.newScriptError
     this.expandString = container.expandString
+    this.withNode = container.withNode
   }
 
   async assert(args) {
@@ -32,14 +33,14 @@ export class FileContains {
     if (!pathNode || pathNode.type !== "string") {
       throw this.newScriptError(
         "'path' must be supplied and be a string",
-        pathNode
+        pathNode || this.withNode
       )
     }
 
     if (!contentsNode || contentsNode.type !== "string") {
       throw this.newScriptError(
         "'contents' must be supplied and be a string",
-        pathNode
+        contentsNode || this.withNode
       )
     }
 

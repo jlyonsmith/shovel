@@ -29,6 +29,8 @@ export class UserExists {
     this.os = container.os || os
     this.newScriptError = container.newScriptError
     this.expandString = container.expandString
+    this.withNode = container.withNode
+    this.assertNode = container.assertNode
   }
 
   async assert(args) {
@@ -39,7 +41,7 @@ export class UserExists {
     if (!nameNode || nameNode.type !== "string") {
       throw this.newScriptError(
         "'name' must be supplied and be a string",
-        nameNode
+        nameNode || this.withNode
       )
     }
 
@@ -54,7 +56,10 @@ export class UserExists {
     const { name: nameNode } = this.args
 
     if (!util.runningAsRoot(this.os)) {
-      throw new Error("Only root user can add or modify users")
+      throw this.newScriptError(
+        "Only root user can add or modify users",
+        this.assertNode
+      )
     }
 
     await this.childProcess.exec(`useradd ${this.expandedName}`)
