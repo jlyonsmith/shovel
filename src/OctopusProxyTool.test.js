@@ -1,6 +1,6 @@
-import { TentacleTool } from "./TentacleTool"
+import { OctopusProxyTool } from "./OctopusProxyTool"
 
-const toolName = "tentacle"
+const toolName = "octopus-proxy"
 
 function getMockLog() {
   return {
@@ -21,7 +21,7 @@ function getOutput(fn) {
 
 test("--help", async () => {
   const mockLog = getMockLog()
-  const tool = new TentacleTool(toolName, mockLog)
+  const tool = new OctopusProxyTool(toolName, mockLog)
   const exitCode = await tool.run(["--help"])
 
   expect(exitCode).toBe(0)
@@ -30,7 +30,7 @@ test("--help", async () => {
 
 test("--version", async () => {
   const mockLog = getMockLog()
-  const tool = new TentacleTool(toolName, mockLog)
+  const tool = new OctopusProxyTool(toolName, mockLog)
   const exitCode = await tool.run(["--version"])
 
   expect(exitCode).toBe(0)

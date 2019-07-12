@@ -4,9 +4,10 @@
   "version": "1.0.0",
   "description": "Simple, agentless IT automation",
   "bin": {
-    "octopus": "dist/octopus.js"
+    "octopus": "dist/octopus.js",
+    "octopus-proxy": "dist/octopus-proxy.js"
   },
-  "main": "dist/OctopusTool.js",
+  "main": "dist/index.js",
   "files": [
     "dist/**"
   ],

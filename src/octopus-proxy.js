@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { TentacleTool } from "./TentacleTool"
+import { OctopusProxyTool } from "./OctopusProxyTool"
 import chalk from "chalk"
 import path from "path"
 import JSON5 from "@johnls/json5"
@@ -20,7 +20,7 @@ const log = {
   },
 }
 
-const tool = new TentacleTool(path.basename(process.argv[1], ".js"), log)
+const tool = new OctopusProxyTool(path.basename(process.argv[1], ".js"), log)
 
 tool
   .run(process.argv.slice(2))
