@@ -32,10 +32,10 @@ sudo apt -y -q install nodejs`
     return output.trim().startsWith("v10")
   }
 
-  async ensureHasNode(ssh) {
+  async actualizeHasNode(ssh) {
     const password = ssh.config[0].password
     let stream = null
-    const commandComplete = (socket) => {
+    const sudoCommandComplete = (socket) => {
       return new Promise((resolve, reject) => {
         let buffer = ""
         socket
@@ -60,7 +60,7 @@ sudo apt -y -q install nodejs`
       stream = await ssh.spawn("sudo mkdir -p /opt/octopus", null, {
         pty: !!password,
       })
-      await commandComplete(stream)
+      await sudoCommandComplete(stream)
     } catch (error) {
       throw new Error("Unable to create /opt/octopus directory on remote")
     }
@@ -72,11 +72,9 @@ sudo apt -y -q install nodejs`
           OctopusTool.installNodeScript
         }" > ./install_node.sh'`,
         null,
-        {
-          pty: !!password,
-        }
+        { pty: !!password }
       )
-      await commandComplete(stream)
+      await sudoCommandComplete(stream)
     } catch (error) {
       throw new Error("Unable to create install_node.sh file")
     }
@@ -88,7 +86,7 @@ sudo apt -y -q install nodejs`
         null,
         { pty: !!password }
       )
-      await commandComplete(stream)
+      await sudoCommandComplete(stream)
     } catch (error) {
       throw new Error("Unsuccessful running install_node.sh")
     }
@@ -97,6 +95,20 @@ sudo apt -y -q install nodejs`
       throw new Error("Node installation failed")
     }
   }
+
+  assertHasOctopus() {
+    let output = null
+
+    try {
+      output = await ssh.exec("octopus --version")
+    } catch (error) {
+      return false
+    }
+
+    return output.trim().startsWith(version.fullVersion)
+  }
+
+  actualizeHasOctopus() {}
 
   async runScriptOnHost(options) {
     let isConnected = false
@@ -153,11 +165,9 @@ sudo apt -y -q install nodejs`
         this.log.info(`Node is installed on '${sshConfig.host}'`)
       }
 
-      // TODO: Ensure that the host has Octopus installed to the same version as us
-      // TODO: Run octopus-proxy remotely
-      // TODO: Create a SOCKS tunnel to the host
-      // TODO: Send HTTP request passing the script to the proxy
-      // TODO: Capture output from the proxy and display
+      // TODO: Run mktemp remotely and capture file name
+      // TODO: Copy script to remote temp file
+      // TODO: Run Octopus remotely and capture output
     } finally {
       if (isConnected) {
         ssh.close()
