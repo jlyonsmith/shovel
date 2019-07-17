@@ -3,8 +3,9 @@
     description: "A basic script",
   },
   variables: {
-    TEST_DIR_1: "octo-test-1",
-    TEST_DIR_2: "octo-test-2",
+    TEST_DIR_1: "octo-dir-1",
+    TEST_DIR_2: "octo-dir-2",
+    TEST_FILE_1: "octo-file-1",
   },
   assertions: [
     {
@@ -24,7 +25,7 @@
     {
       assert: "FileExists",
       with: {
-        path: "scratch/${TEST_DIR_2}/testfile.txt",
+        path: "scratch/${TEST_FILE_1}",
       },
     },
   ],

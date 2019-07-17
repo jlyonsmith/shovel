@@ -5,6 +5,7 @@
   variables: {
     TEST_DIR_1: "octo-test-1",
     TEST_DIR_2: "octo-test-2",
+    TEST_FILE_1: "octo-file-1",
   },
   assertions: [
     {
@@ -19,6 +20,12 @@
       description: "The second directory",
       with: {
         path: "scratch/${TEST_DIR_2}",
+      },
+    },
+    {
+      assert: "FileAbsent",
+      with: {
+        path: "scratch/${TEST_FILE_1}",
       },
     },
   ],
