@@ -1,8 +1,10 @@
 import parseArgs from "minimist"
-import { fullVersion } from "./version"
+import * as version from "./version"
 import readlinePassword from "@johnls/readline-password"
 import SSH2Promise from "ssh2-promise"
 import os from "os"
+import { Readable } from "stream"
+import JSON5 from "@johnls/json5"
 import autobind from "autobind-decorator"
 
 const commandComplete = (socket, password) => {
@@ -24,6 +26,22 @@ const commandComplete = (socket, password) => {
       socket.end()
     }
   })
+}
+
+const pipeToPromise = (readable, writeable) => {
+  const promise = new Promise((resolve, reject) => {
+    readable.on("error", (error) => {
+      reject(error)
+    })
+    writeable.on("error", (error) => {
+      reject(error)
+    })
+    writeable.on("finish", (file) => {
+      resolve(file)
+    })
+  })
+  readable.pipe(writeable)
+  return promise
 }
 
 @autobind
@@ -92,13 +110,9 @@ sudo apt -y -q install nodejs`
     } catch (error) {
       throw new Error("Unsuccessful running install_node.sh")
     }
-
-    if (!this.assertHasNode(ssh)) {
-      throw new Error("Node installation failed")
-    }
   }
 
-  async assertHasOctopus() {
+  async assertHasOctopus(ssh) {
     let output = null
 
     try {
@@ -110,11 +124,26 @@ sudo apt -y -q install nodejs`
     return output.trim().startsWith(version.fullVersion)
   }
 
-  async rectifyHasOctopus() {}
+  async rectifyHasOctopus(ssh) {
+    const password = ssh.config[0].password
+    let stream = null
+
+    try {
+      this.log.info("Installing Octopus")
+      stream = await ssh.spawn("sudo npm install -g @johnls/octopus", null, {
+        pty: !!password,
+      })
+      await commandComplete(stream, password)
+    } catch (error) {
+      throw new Error("Unable to install @johnls/octopus on remote")
+    }
+  }
 
   async runScriptOnHost(options) {
     let isConnected = false
     let ssh = null
+    let remoteTempFile = null
+
     const showPrompts = async (name, instructions, lang, prompts) => {
       const rl = readlinePassword.createInstance(process.stdin, process.stdout)
       let responses = []
@@ -135,7 +164,7 @@ sudo apt -y -q install nodejs`
         password: options.password,
         agent: process.env["SSH_AUTH_SOCK"],
         showPrompts,
-        // debug: this.debug ? (detail) => this.log.info(detail) : null,
+        //debug: this.debug ? (detail) => this.log.info(detail) : null,
       }
 
       this.log.info(
@@ -172,16 +201,71 @@ sudo apt -y -q install nodejs`
           `Node not found on '${sshConfig.host}'; attempting to rectify.`
         )
         await this.rectifyHasNode(ssh)
-      } else {
-        this.log.info(`Node is installed on '${sshConfig.host}'`)
+        await this.rectifyHasOctopus(ssh)
+      } else if (options.verbose) {
+        this.log.info(
+          `Node.js is installed on '${sshConfig.host}:${sshConfig.port}'`
+        )
       }
 
-      // TODO: Run mktemp remotely and capture file name
-      // TODO: Create SFTP connection
-      // TODO: Copy script to remote temp file
-      // TODO: Run Octopus remotely and capture output
+      if (!(await this.assertHasOctopus(ssh))) {
+        this.log.warning(
+          `Octopus not found on '${sshConfig.host}'; attempting to rectify`
+        )
+        await this.rectifyHasOctopus(ssh)
+      } else if (options.verbose) {
+        this.log.info(
+          `Octopus is installed on '${sshConfig.host}:${sshConfig.port}'`
+        )
+      }
+
+      const password = sshConfig.password
+
+      try {
+        this.log.info("Creating remote temp file")
+        remoteTempFile = await ssh.exec("mktemp")
+      } catch (error) {
+        throw new Error("Unable to create remote temporary file")
+      }
+
+      const scriptData = fs.readFile(options.scriptFile)
+      const script = JSON5.parse(scriptData)
+      let readStream = new Readable({
+        read(size) {
+          this.push(scriptData)
+          this.push(null)
+        },
+      })
+      const sftp = ssh.sftp()
+      let writeStream = await sftp.createWriteStream(remoteTempFile)
+
+      await pipeToPromise(readStream, writeStream)
+
+      const needsSudo =
+        script.assertions &&
+        script.assertions.find((assertion) =>
+          assertion.hasOwnProperty("runAs")
+        ) !== null
+
+      try {
+        this.log.info("Running script on remote")
+        readStream = await ssh.spawn(
+          `${needsSudo ? "sudo " : ""}octopus ${remoteTempFile}`
+        )
+        await commandComplete(readStream, password)
+      } catch (error) {
+        throw new Error("Unable to create remote temporary file")
+      }
     } finally {
-      // TODO: Close SFTP connection if necessary
+      if (remoteTempFile) {
+        try {
+          this.log.info("Deleting remote temp file")
+          await ssh.exec(`rm ${remoteTempFile}`)
+        } catch (error) {
+          this.log.warning("Unable to delete remote temporary file")
+        }
+      }
+
       if (isConnected) {
         ssh.close()
         this.log.info(
@@ -381,7 +465,7 @@ sudo apt -y -q install nodejs`
     this.debug = args.debug
 
     if (args.version) {
-      this.log.info(`${fullVersion}`)
+      this.log.info(`${version.fullVersion}`)
       return 0
     }
 
@@ -403,7 +487,6 @@ Options:
   --host, -h          Remote host name. Default is to run the script
                       directly, without a remote proxy
   --port, -p          Remote port number. Default is 22
-  --proxy-port, -pp   Remote proxy port. Defaults to 9000
   --user, -u          Remote user name. Defaults to current user.
   --password, -P      Remote user password. Defaults is to just use PPK.
   --host-file, -f     JSON5 file containing multiple remote host names
@@ -419,33 +502,54 @@ Options:
       throw new Error("Please specify a script file")
     }
 
-    const port = parseInt(args.port)
+    const parsePort = (s) => {
+      const port = parseInt(args.port)
 
-    if (args.port && (port < 0 || port > 65535)) {
-      throw new Error("Port must be a number between 0 and 65535")
+      if (args.port && (port < 0 || port > 65535)) {
+        throw new Error("Port must be a number between 0 and 65535")
+      }
+
+      return port
     }
 
     if (args.host || args["host-file"]) {
-      // TODO: Iterate through all the host in host-file
-      return this.runScriptOnHost({
-        scriptFile,
-        host: args.host,
-        user: args.user,
-        password: args.password,
-        port: port,
-        proxyPort: args.proxyPort,
-        verbose: args.verbose,
-      })
+      let hosts = []
+
+      if (args["host-file"]) {
+        hosts = hosts.concat(JSON5.parse(fs.readFile(args["host-file"])))
+      }
+
+      if (args.host) {
+        hosts.push({
+          host: args.host,
+          user: args.user,
+          password: args.password,
+          port: parsePort(args.port),
+        })
+      }
+
+      let result = 0
+
+      for (const host of hosts) {
+        result += await this.runScriptOnHost({
+          scriptFile,
+          host: host.host,
+          user: host.user,
+          password: host.password,
+          port: parsePort(host.port),
+          verbose: args.verbose,
+        })
+      }
     } else {
       const scriptNodes = JSON5.parse(await fs.readFile(scriptFile), {
         wantNodes: true,
       })
 
-      // return this.processScriptFile({
-      //   scriptFileName,
-      //   scriptNodes,
-      //   verbose: args.verbose,
-      // })
+      return await this.processScriptFile({
+        scriptFileName,
+        scriptNodes,
+        verbose: args.verbose,
+      })
     }
   }
 }

@@ -1,0 +1,8 @@
+[
+  {
+    host: "localhost",
+    port: "2022",
+    user: "jlyonsmith",
+    password: "Passw0rd!",
+  },
+]
