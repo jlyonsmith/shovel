@@ -49,7 +49,7 @@ test("FileExists with no file or dir existing", async () => {
   await expect(
     asserter.assert({ path: { type: "string", value: "/notthere" } })
   ).resolves.toBe(false)
-  await expect(asserter.actualize()).resolves.toBeUndefined()
+  await expect(asserter.rectify()).resolves.toBeUndefined()
 })
 
 test("FileExists with dir instead of file existing", async () => {
@@ -58,5 +58,5 @@ test("FileExists with dir instead of file existing", async () => {
   await expect(
     asserter.assert({ path: { type: "string", value: "/somedir" } })
   ).resolves.toBe(false)
-  await expect(asserter.actualize()).rejects.toThrow(Error)
+  await expect(asserter.rectify()).rejects.toThrow(Error)
 })

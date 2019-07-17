@@ -90,7 +90,7 @@ export class FileUnzipped {
     return true
   }
 
-  async actualize() {
+  async rectify() {
     // TODO: Unzip the file!
   }
 

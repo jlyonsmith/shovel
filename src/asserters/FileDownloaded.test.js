@@ -97,7 +97,7 @@ test("With no file in place", async () => {
       toPath: { type: "string", value: "./def/somefile.txt" },
     })
   ).resolves.toBe(false)
-  await expect(asserter.actualize()).resolves.toBeUndefined()
+  await expect(asserter.rectify()).resolves.toBeUndefined()
 })
 
 test("With incorrect file already in place", async () => {
@@ -114,5 +114,5 @@ test("With incorrect file already in place", async () => {
       toPath: { type: "string", value: "./abc/badfile.txt" },
     })
   ).resolves.toBe(false)
-  await expect(asserter.actualize()).resolves.toBeUndefined()
+  await expect(asserter.rectify()).resolves.toBeUndefined()
 })

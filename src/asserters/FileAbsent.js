@@ -44,7 +44,7 @@ export class FileAbsent {
     }
   }
 
-  async actualize() {
+  async rectify() {
     const { path: pathNode } = this.args
 
     if (this.stat && this.stat.isDirectory()) {

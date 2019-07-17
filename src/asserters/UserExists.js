@@ -52,7 +52,7 @@ export class UserExists {
     )
   }
 
-  async actualize() {
+  async rectify() {
     const { name: nameNode } = this.args
 
     if (!util.runningAsRoot(this.os)) {

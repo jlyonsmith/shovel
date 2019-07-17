@@ -56,7 +56,7 @@ export class FileContains {
     return pathDigest === contentsDigest
   }
 
-  async actualize() {
+  async rectify() {
     await this.fs.outputFile(this.expandedPath, this.expandedContents)
   }
 

@@ -64,7 +64,7 @@ export class FileCopied {
     return fromDigest === toDigest
   }
 
-  async actualize() {
+  async rectify() {
     const toPathDir = path.dirname(this.expandedToPath)
 
     if (!(await util.dirExists(this.fs, toPathDir))) {

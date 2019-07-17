@@ -112,7 +112,7 @@ test("With zip file not present", async () => {
       toDirPath: { type: "string", value: "./outdir" },
     })
   ).resolves.toBe(false)
-  await expect(asserter.actualize()).rejects
+  await expect(asserter.rectify()).rejects
 })
 
 test("With all files unzipped and the same", async () => {
@@ -135,7 +135,7 @@ test("With output directory missing", async () => {
       toDirPath: { type: "string", value: "./notthere" },
     })
   ).resolves.toBe(false)
-  await expect(asserter.actualize()).resolves.toBeUndefined()
+  await expect(asserter.rectify()).resolves.toBeUndefined()
 })
 
 test("With a file missing", async () => {
@@ -147,7 +147,7 @@ test("With a file missing", async () => {
       toDirPath: { type: "string", value: "./outdir" },
     })
   ).resolves.toBe(false)
-  await expect(asserter.actualize()).resolves.toBeUndefined()
+  await expect(asserter.rectify()).resolves.toBeUndefined()
 })
 
 test("With a file as different size", async () => {
@@ -159,7 +159,7 @@ test("With a file as different size", async () => {
       toDirPath: { type: "string", value: "./outdir" },
     })
   ).resolves.toBe(false)
-  await expect(asserter.actualize()).resolves.toBeUndefined()
+  await expect(asserter.rectify()).resolves.toBeUndefined()
 })
 
 test("With a file as a directory", async () => {
@@ -171,5 +171,5 @@ test("With a file as a directory", async () => {
       toDirPath: { type: "string", value: "./outdir" },
     })
   ).resolves.toBe(false)
-  await expect(asserter.actualize()).resolves.toBeUndefined()
+  await expect(asserter.rectify()).resolves.toBeUndefined()
 })

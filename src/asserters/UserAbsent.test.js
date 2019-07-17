@@ -52,5 +52,5 @@ test("With user present", async () => {
   await expect(
     asserter.assert({ name: { type: "string", value: "games" } })
   ).resolves.toBe(false)
-  await expect(asserter.actualize()).resolves.toBeUndefined()
+  await expect(asserter.rectify()).resolves.toBeUndefined()
 })

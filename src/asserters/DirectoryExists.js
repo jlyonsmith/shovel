@@ -47,7 +47,7 @@ export class DirectoryExists {
     }
   }
 
-  async actualize() {
+  async rectify() {
     const { path: pathNode } = this.args
 
     if (this.stat && this.stat.isFile()) {

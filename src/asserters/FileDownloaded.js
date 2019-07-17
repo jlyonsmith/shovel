@@ -69,7 +69,7 @@ export class FileDownloaded {
     return toFileDigest === digestNode.value
   }
 
-  async actualize() {
+  async rectify() {
     if (!this.toFileExists) {
       {
         const toDirPath = path.dirname(this.expandedToPath)

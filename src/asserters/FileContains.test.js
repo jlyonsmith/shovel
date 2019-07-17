@@ -55,5 +55,5 @@ test("FileContains with different contents", async () => {
       contents: { type: "string", value: "anything but the test string" },
     })
   ).resolves.toBe(false)
-  await expect(asserter.actualize()).resolves.toBeUndefined()
+  await expect(asserter.rectify()).resolves.toBeUndefined()
 })

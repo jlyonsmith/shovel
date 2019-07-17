@@ -9,8 +9,8 @@ const log = {
   asserted: function(name, result) {
     console.log(chalk.green(JSON5.stringify({ asserted: name, result })))
   },
-  actualized: function(name, result) {
-    console.log(chalk.yellow(JSON5.stringify({ actualized: name, result })))
+  rectified: function(name, result) {
+    console.log(chalk.yellow(JSON5.stringify({ rectified: name, result })))
   },
   error: function() {
     console.error(chalk.red("error:", [...arguments].join(" ")))

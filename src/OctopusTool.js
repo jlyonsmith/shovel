@@ -5,6 +5,27 @@ import SSH2Promise from "ssh2-promise"
 import os from "os"
 import autobind from "autobind-decorator"
 
+const commandComplete = (socket, password) => {
+  return new Promise((resolve, reject) => {
+    let err = ""
+    let out = ""
+    socket
+      .on("close", () => resolve({ out, err }))
+      .on("error", reject)
+      .on("data", (data) => {
+        out += data
+      }) // We have to read any data or the socket will block
+      .stderr.on("data", (data) => {
+        err += data
+      })
+
+    if (password) {
+      socket.write(password + "\n")
+      socket.end()
+    }
+  })
+}
+
 @autobind
 export class OctopusTool {
   constructor(toolName, log, options) {
@@ -32,35 +53,16 @@ sudo apt -y -q install nodejs`
     return output.trim().startsWith("v10")
   }
 
-  async actualizeHasNode(ssh) {
+  async rectifyHasNode(ssh) {
     const password = ssh.config[0].password
     let stream = null
-    const sudoCommandComplete = (socket) => {
-      return new Promise((resolve, reject) => {
-        let buffer = ""
-        socket
-          .on("close", () => resolve(buffer))
-          .on("error", reject)
-          .on("data", (data) => {
-            buffer += data
-          }) // We have to read any data or the socket will block
-          .stderr.on("data", (data) => {
-            reject(data)
-          })
-
-        if (password) {
-          socket.write(password + "\n")
-          socket.end()
-        }
-      })
-    }
 
     try {
       this.log.info("Creating /opt/octopus directory")
       stream = await ssh.spawn("sudo mkdir -p /opt/octopus", null, {
         pty: !!password,
       })
-      await sudoCommandComplete(stream)
+      await commandComplete(stream, password)
     } catch (error) {
       throw new Error("Unable to create /opt/octopus directory on remote")
     }
@@ -74,7 +76,7 @@ sudo apt -y -q install nodejs`
         null,
         { pty: !!password }
       )
-      await sudoCommandComplete(stream)
+      await commandComplete(stream, password)
     } catch (error) {
       throw new Error("Unable to create install_node.sh file")
     }
@@ -86,7 +88,7 @@ sudo apt -y -q install nodejs`
         null,
         { pty: !!password }
       )
-      await sudoCommandComplete(stream)
+      await commandComplete(stream, password)
     } catch (error) {
       throw new Error("Unsuccessful running install_node.sh")
     }
@@ -96,7 +98,7 @@ sudo apt -y -q install nodejs`
     }
   }
 
-  assertHasOctopus() {
+  async assertHasOctopus() {
     let output = null
 
     try {
@@ -108,44 +110,53 @@ sudo apt -y -q install nodejs`
     return output.trim().startsWith(version.fullVersion)
   }
 
-  actualizeHasOctopus() {}
+  async rectifyHasOctopus() {}
 
   async runScriptOnHost(options) {
     let isConnected = false
     let ssh = null
+    const showPrompts = async (name, instructions, lang, prompts) => {
+      const rl = readlinePassword.createInstance(process.stdin, process.stdout)
+      let responses = []
+
+      for (const prompt of prompts) {
+        responses.push(await rl.passwordAsync(prompt))
+      }
+      rl.close()
+      return responses
+    }
 
     try {
       const userInfo = os.userInfo()
       const sshConfig = {
         username: options.user || userInfo.username,
         host: options.host || "localhost",
-        port: options.port ? parseInt(options.port) : 22,
+        port: options.port || 22,
         password: options.password,
         agent: process.env["SSH_AUTH_SOCK"],
-        tryKeyboard: true,
-        onKeyboardInteractive: async (
-          name,
-          instructions,
-          instructionsLang,
-          prompts,
-          finish
-        ) => {
-          const rl = readlinePassword.createInstance(
-            process.stdin,
-            process.stdout
-          )
-          let responses = []
+        showPrompts,
+        // debug: this.debug ? (detail) => this.log.info(detail) : null,
+      }
 
-          for (const prompt of prompts) {
-            responses.push(await rl.passwordAsync(prompt))
-          }
-          rl.close()
-          finish(responses)
-        },
-        debug: this.debug ? (detail) => this.log.info(detail) : null,
+      this.log.info(
+        `Connecting to ${sshConfig.host}:${sshConfig.port} as ${
+          sshConfig.username
+        }`
+      )
+
+      if (!sshConfig.password) {
+        const answers = await showPrompts("", "", "en-us", [
+          {
+            prompt: `${sshConfig.username}:${sshConfig.host}'s password:`,
+            echo: false,
+          },
+        ])
+
+        sshConfig.password = answers[0]
       }
 
       ssh = new SSH2Promise(sshConfig)
+
       await ssh.connect()
 
       isConnected = true
@@ -158,17 +169,19 @@ sudo apt -y -q install nodejs`
 
       if (!(await this.assertHasNode(ssh))) {
         this.log.warning(
-          `Node not found on '${sshConfig.host}'; attempting to actualize.`
+          `Node not found on '${sshConfig.host}'; attempting to rectify.`
         )
-        await this.actualizeHasNode(ssh)
+        await this.rectifyHasNode(ssh)
       } else {
         this.log.info(`Node is installed on '${sshConfig.host}'`)
       }
 
       // TODO: Run mktemp remotely and capture file name
+      // TODO: Create SFTP connection
       // TODO: Copy script to remote temp file
       // TODO: Run Octopus remotely and capture output
     } finally {
+      // TODO: Close SFTP connection if necessary
       if (isConnected) {
         ssh.close()
         this.log.info(
@@ -336,12 +349,12 @@ sudo apt -y -q install nodejs`
 
       if (!ok) {
         try {
-          await asserter.actualize()
+          await asserter.rectify()
         } catch (e) {
           this.log.error(e)
           return 1
         }
-        this.log.actualized(assertion.name, asserter.result())
+        this.log.rectified(assertion.name, asserter.result())
       } else {
         this.log.asserted(assertion.name, asserter.result())
       }
@@ -406,26 +419,33 @@ Options:
       throw new Error("Please specify a script file")
     }
 
+    const port = parseInt(args.port)
+
+    if (args.port && (port < 0 || port > 65535)) {
+      throw new Error("Port must be a number between 0 and 65535")
+    }
+
     if (args.host || args["host-file"]) {
       // TODO: Iterate through all the host in host-file
       return this.runScriptOnHost({
+        scriptFile,
         host: args.host,
         user: args.user,
         password: args.password,
-        port: args.port,
+        port: port,
         proxyPort: args.proxyPort,
         verbose: args.verbose,
       })
     } else {
-      const scriptNodes = JSON5.parse(await fs.readFile(scriptFileName), {
+      const scriptNodes = JSON5.parse(await fs.readFile(scriptFile), {
         wantNodes: true,
       })
 
-      return this.processScriptFile({
-        scriptFileName,
-        scriptNodes,
-        verbose: args.verbose,
-      })
+      // return this.processScriptFile({
+      //   scriptFileName,
+      //   scriptNodes,
+      //   verbose: args.verbose,
+      // })
     }
   }
 }
