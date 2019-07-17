@@ -12,16 +12,16 @@ import * as asserters from "./asserters"
 
 const commandComplete = (socket, password) => {
   return new Promise((resolve, reject) => {
-    let err = ""
-    let out = ""
+    let stderr = ""
+    let stdout = ""
     socket
-      .on("close", () => resolve({ out, err }))
+      .on("close", () => resolve({ stdout, stderr }))
       .on("error", reject)
       .on("data", (data) => {
-        out += data
+        stdout += data
       }) // We have to read any data or the socket will block
       .stderr.on("data", (data) => {
-        err += data
+        stderr += data
       })
 
     if (password) {
@@ -63,15 +63,15 @@ sudo apt -y -q install nodejs`
 
   // Assert the remote system has Node 10 installed
   async assertHasNode(ssh) {
-    let output = null
+    let result = null
 
     try {
-      output = await ssh.exec("node --version")
+      result = await ssh.exec("node --version")
     } catch (error) {
       return false
     }
 
-    return output.trim().startsWith("v10")
+    return result.stdout.trim().startsWith("v10")
   }
 
   async rectifyHasNode(ssh) {
@@ -116,15 +116,15 @@ sudo apt -y -q install nodejs`
   }
 
   async assertHasOctopus(ssh) {
-    let output = null
+    let result = null
 
     try {
-      output = await ssh.exec("octopus --version")
+      result = await ssh.exec("octopus --version")
     } catch (error) {
       return false
     }
 
-    return output.trim().startsWith(version.fullVersion)
+    return result.stderr.trim().startsWith(version.version)
   }
 
   async rectifyHasOctopus(ssh) {
@@ -136,9 +136,9 @@ sudo apt -y -q install nodejs`
       stream = await ssh.spawn("sudo npm install -g @johnls/octopus", null, {
         pty: !!password,
       })
-      await commandComplete(stream, password)
+      const output = await commandComplete(stream, password)
     } catch (error) {
-      throw new Error("Unable to install @johnls/octopus on remote")
+      throw new Error("Unable to run 'npm install @johnls/octopus' on remote")
     }
   }
 
@@ -193,45 +193,46 @@ sudo apt -y -q install nodejs`
 
       isConnected = true
 
-      this.log.info(
-        `Connected to '${sshConfig.username}@${sshConfig.host}:${
-          sshConfig.port
-        }'`
-      )
+      this.log.info(`Connected to ${sshConfig.host}:${sshConfig.port}`)
 
       if (!(await this.assertHasNode(ssh))) {
         this.log.warning(
-          `Node not found on '${sshConfig.host}'; attempting to rectify.`
+          `Node not found on ${sshConfig.host}; attempting to rectify.`
         )
         await this.rectifyHasNode(ssh)
         await this.rectifyHasOctopus(ssh)
       } else if (options.verbose) {
         this.log.info(
-          `Node.js is installed on '${sshConfig.host}:${sshConfig.port}'`
+          `Node.js is installed on ${sshConfig.host}:${sshConfig.port}`
         )
       }
 
       if (!(await this.assertHasOctopus(ssh))) {
         this.log.warning(
-          `Octopus not found on '${sshConfig.host}'; attempting to rectify`
+          `Octopus with version ${version.fullVersion} not found on ${
+            sshConfig.host
+          }:${sshConfig.port}; attempting to rectify`
         )
         await this.rectifyHasOctopus(ssh)
       } else if (options.verbose) {
         this.log.info(
-          `Octopus is installed on '${sshConfig.host}:${sshConfig.port}'`
+          `Octopus is installed on ${sshConfig.host}:${sshConfig.port}`
         )
       }
 
       const password = sshConfig.password
 
       try {
-        this.log.info("Creating remote temp file")
-        remoteTempFile = await ssh.exec("mktemp")
+        remoteTempFile = (await ssh.exec("mktemp")).stdout.trim()
       } catch (error) {
-        throw new Error("Unable to create remote temporary file")
+        throw new Error("Unable to create remote script file")
       }
 
-      const scriptData = fs.readFile(options.scriptFile)
+      this.log.info(
+        `Created remote script file${this.debug ? " - " + remoteTempFile : ""}`
+      )
+
+      const scriptData = await fs.readFile(options.scriptFile)
       const script = JSON5.parse(scriptData)
       let readStream = new Readable({
         read(size) {
@@ -246,21 +247,20 @@ sudo apt -y -q install nodejs`
 
       const needsSudo =
         script.assertions &&
-        script.assertions.find((assertion) =>
-          assertion.hasOwnProperty("runAs")
-        ) !== null
+        script.assertions.find((assertion) => assertion.hasOwnProperty("runAs"))
+      let socket = null
 
       try {
         this.log.info("Running script on remote")
-        readStream = await ssh.spawn(
+        socket = await ssh.spawn(
           `${needsSudo ? "sudo " : ""}octopus ${remoteTempFile}`
         )
-        await commandComplete(readStream, password)
+        await commandComplete(socket, password)
       } catch (error) {
-        throw new Error("Unable to create remote temporary file")
+        throw new Error("Unable to run script on remote")
       }
     } finally {
-      if (remoteTempFile) {
+      if (remoteTempFile && !this.debug) {
         try {
           this.log.info("Deleting remote temp file")
           await ssh.exec(`rm ${remoteTempFile}`)
@@ -272,7 +272,7 @@ sudo apt -y -q install nodejs`
       if (isConnected) {
         ssh.close()
         this.log.info(
-          `Disconnected from '${ssh.config[0].host}:${ssh.config[0].port}'`
+          `Disconnected from ${ssh.config[0].host}:${ssh.config[0].port}`
         )
       }
 
@@ -531,10 +531,10 @@ Options:
         })
       }
 
-      let result = 0
+      let exitCode = 0
 
       for (const host of hosts) {
-        result += await this.runScriptOnHost({
+        exitCode += await this.runScriptOnHost({
           scriptFile,
           host: host.host,
           user: host.user,
