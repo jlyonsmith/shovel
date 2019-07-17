@@ -3,9 +3,12 @@ import * as version from "./version"
 import readlinePassword from "@johnls/readline-password"
 import SSH2Promise from "ssh2-promise"
 import os from "os"
+import fs from "fs-extra"
+import vm from "vm"
 import { Readable } from "stream"
 import JSON5 from "@johnls/json5"
 import autobind from "autobind-decorator"
+import * as asserters from "./asserters"
 
 const commandComplete = (socket, password) => {
   return new Promise((resolve, reject) => {
@@ -278,9 +281,9 @@ sudo apt -y -q install nodejs`
   }
 
   async processScriptFile(options) {
-    const { scriptFileName, scriptNodes, verbose } = options
+    const { scriptFile, scriptNodes, verbose } = options
     const newScriptError = (message, node) => {
-      return new ScriptError(message, scriptFileName, node)
+      return new ScriptError(message, scriptFile, node)
     }
 
     if (scriptNodes.type !== "object") {
@@ -546,7 +549,7 @@ Options:
       })
 
       return await this.processScriptFile({
-        scriptFileName,
+        scriptFile,
         scriptNodes,
         verbose: args.verbose,
       })

@@ -1,0 +1,25 @@
+{
+  options: {
+    description: "A script to reverse the basic script",
+  },
+  variables: {
+    TEST_DIR_1: "octo-test-1",
+    TEST_DIR_2: "octo-test-2",
+  },
+  assertions: [
+    {
+      assert: "DirectoryAbsent",
+      description: "The first directory",
+      with: {
+        path: "scratch/${TEST_DIR_1}",
+      },
+    },
+    {
+      assert: "DirectoryAbsent",
+      description: "The second directory",
+      with: {
+        path: "scratch/${TEST_DIR_2}",
+      },
+    },
+  ],
+}
