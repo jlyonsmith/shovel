@@ -10,43 +10,6 @@ import JSON5 from "@johnls/json5"
 import autobind from "autobind-decorator"
 import * as asserters from "./asserters"
 
-const commandComplete = (socket, password) => {
-  return new Promise((resolve, reject) => {
-    let stderr = ""
-    let stdout = ""
-    socket
-      .on("close", () => resolve({ stdout, stderr }))
-      .on("error", reject)
-      .on("data", (data) => {
-        stdout += data
-      }) // We have to read any data or the socket will block
-      .stderr.on("data", (data) => {
-        stderr += data
-      })
-
-    if (password) {
-      socket.write(password + "\n")
-      socket.end()
-    }
-  })
-}
-
-const pipeToPromise = (readable, writeable) => {
-  const promise = new Promise((resolve, reject) => {
-    readable.on("error", (error) => {
-      reject(error)
-    })
-    writeable.on("error", (error) => {
-      reject(error)
-    })
-    writeable.on("finish", (file) => {
-      resolve(file)
-    })
-  })
-  readable.pipe(writeable)
-  return promise
-}
-
 @autobind
 export class OctopusTool {
   constructor(toolName, log, options) {
@@ -63,83 +26,59 @@ sudo apt -y -q install nodejs`
 
   // Assert the remote system has Node 10 installed
   async assertHasNode(ssh) {
-    let result = null
+    let result = await runRemoteCommand(ssh, "node --version", {
+      noThrow: true,
+    })
 
-    try {
-      result = await ssh.exec("node --version")
-    } catch (error) {
-      return false
-    }
-
-    return result.stdout.trim().startsWith("v10")
+    return result.exitCode === 0 && resurt.stdout.trim().startsWith("v10")
   }
 
   async rectifyHasNode(ssh) {
     const password = ssh.config[0].password
     let stream = null
 
-    try {
-      this.log.info("Creating /opt/octopus directory")
-      stream = await ssh.spawn("sudo mkdir -p /opt/octopus", null, {
-        pty: !!password,
-      })
-      await commandComplete(stream, password)
-    } catch (error) {
-      throw new Error("Unable to create /opt/octopus directory on remote")
-    }
+    this.log.info("Creating /opt/octopus directory")
+    await runRemoteCommand(ssh, "mkdir -p /opt/octopus", {
+      needsSudo: true,
+      password,
+    })
 
-    try {
-      this.log.info("Creating /opt/octopus/install_node.sh script")
-      stream = await ssh.spawn(
-        `cd /opt/octopus 1> /dev/null 2> /dev/null; sudo bash -c 'echo "${
-          OctopusTool.installNodeScript
-        }" > ./install_node.sh'`,
-        null,
-        { pty: !!password }
-      )
-      await commandComplete(stream, password)
-    } catch (error) {
-      throw new Error("Unable to create install_node.sh file")
-    }
+    this.log.info("Creating /opt/octopus/install_node.sh script")
+    await runRemoteCommand(
+      ssh,
+      `bash -c 'echo "${OctopusTool.installNodeScript}" > ./install_node.sh'`,
+      {
+        cwd: "/opt/octopus",
+        sudo: true,
+        password,
+      }
+    )
 
-    try {
-      this.log.info("Running /opt/octopus/install_node.sh script")
-      stream = await ssh.spawn(
-        "cd /opt/octopus 1> /dev/null 2> /dev/null; sudo bash ./install_node.sh",
-        null,
-        { pty: !!password }
-      )
-      await commandComplete(stream, password)
-    } catch (error) {
-      throw new Error("Unsuccessful running install_node.sh")
-    }
+    this.log.info("Running /opt/octopus/install_node.sh script")
+    await runRemoteCommand(ssh, "bash ./install_node.sh", {
+      cwd: "/opt/octopus",
+      sudo: true,
+      password,
+    })
   }
 
   async assertHasOctopus(ssh) {
-    let result = null
+    let result = await runRemoteCommand("octopus --version", { noThrow: true })
 
-    try {
-      result = await ssh.exec("octopus --version")
-    } catch (error) {
-      return false
-    }
-
-    return result.stderr.trim().startsWith(version.version)
+    return (
+      result.exitCode === 0 && result.stderr.trim().startsWith(version.version)
+    )
   }
 
   async rectifyHasOctopus(ssh) {
     const password = ssh.config[0].password
     let stream = null
 
-    try {
-      this.log.info("Installing Octopus")
-      stream = await ssh.spawn("sudo npm install -g @johnls/octopus", null, {
-        pty: !!password,
-      })
-      const output = await commandComplete(stream, password)
-    } catch (error) {
-      throw new Error("Unable to run 'npm install @johnls/octopus' on remote")
-    }
+    this.log.info("Installing Octopus")
+    await runRemoteCommand(ssh, "npm install -g @johnls/octopus", {
+      sudo: true,
+      password,
+    })
   }
 
   async runScriptOnHost(options) {
@@ -220,13 +159,7 @@ sudo apt -y -q install nodejs`
         )
       }
 
-      const password = sshConfig.password
-
-      try {
-        remoteTempFile = (await ssh.exec("mktemp")).stdout.trim()
-      } catch (error) {
-        throw new Error("Unable to create remote script file")
-      }
+      remoteTempFile = await runRemoteCommand(ssh, "mktemp").stdout.trim()
 
       this.log.info(
         `Created remote script file${this.debug ? " - " + remoteTempFile : ""}`
@@ -245,31 +178,24 @@ sudo apt -y -q install nodejs`
 
       await pipeToPromise(readStream, writeStream)
 
-      const needsSudo =
+      const sudo =
         script.assertions &&
         script.assertions.find((assertion) => assertion.hasOwnProperty("runAs"))
       let socket = null
 
-      try {
-        this.log.info("Running script on remote")
-        socket = await ssh.spawn(
-          `${needsSudo ? "sudo " : ""}octopus ${remoteTempFile}`
-        )
-        await commandComplete(socket, password)
-      } catch (error) {
-        throw new Error("Unable to run script on remote")
-      }
+      this.log.info("Running script on remote")
+      await runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
+        sudo,
+        password: sshConfig.password,
+        logOutput: true,
+      })
     } finally {
-      if (remoteTempFile && !this.debug) {
-        try {
-          this.log.info("Deleting remote temp file")
-          await ssh.exec(`rm ${remoteTempFile}`)
-        } catch (error) {
-          this.log.warning("Unable to delete remote temporary file")
-        }
-      }
-
       if (isConnected) {
+        if (remoteTempFile && !this.debug) {
+          this.log.info("Deleting remote temp file")
+          await runRemoteCommand(ssh, `rm ${remoteTempFile}`)
+        }
+
         ssh.close()
         this.log.info(
           `Disconnected from ${ssh.config[0].host}:${ssh.config[0].port}`
@@ -441,9 +367,19 @@ sudo apt -y -q install nodejs`
           this.log.error(e)
           return 1
         }
-        this.log.rectified(assertion.name, asserter.result())
+        this.log.rectified(
+          JSON5.stringify({
+            rectified: assertion.name,
+            result: asserter.result(),
+          })
+        )
       } else {
-        this.log.asserted(assertion.name, asserter.result())
+        this.log.asserted(
+          JSON5.stringify({
+            asserted: assertion.name,
+            result: asserter.result(),
+          })
+        )
       }
     }
 
@@ -555,4 +491,90 @@ Options:
       })
     }
   }
+}
+
+const pipeToPromise = (readable, writeable) => {
+  const promise = new Promise((resolve, reject) => {
+    readable.on("error", (error) => {
+      reject(error)
+    })
+    writeable.on("error", (error) => {
+      reject(error)
+    })
+    writeable.on("finish", (file) => {
+      resolve(file)
+    })
+  })
+  readable.pipe(writeable)
+  return promise
+}
+
+/*
+  Run a command on the remote system. Options are:
+
+ {
+    noThrow: boolean    // Do not throw on bad exit code
+    logOutput: boolean  // Send script output on STDOUT directly to this.log
+    sudo: boolean       // Run this command under sudo
+    password: string    // Password (if needed for sudo)
+ }
+*/
+const runRemoteCommand = async (ssh, command, options) => {
+  options = options || {}
+
+  let stderr = ""
+  let stdout = ""
+
+  try {
+    const socket = await ssh.spawn(
+      (options.cwd ? `cd ${options.cwd} 1> /dev/null 2> /dev/null;` : "") +
+        (options.sudo ? "sudo " : "") +
+        command +
+        "; echo $? >&2",
+      null,
+      {
+        pty: options.sudo && options.password,
+      }
+    )
+
+    if (options.sudo && options.password) {
+      socket.write(password + "\n")
+      socket.end()
+    }
+
+    await new Promise((resolve, reject) => {
+      socket
+        .on("close", () => resolve({ stdout, stderr }))
+        .on("error", reject)
+        .on("data", (data) => {
+          stdout += data
+
+          if (options.logOutput) {
+            for (const line of data.split("\n")) {
+              if (line.startsWith("{rectified:")) {
+                this.log.rectified(line)
+              } else if (line.startsWith("{asserted:")) {
+                this.log.asserted(line)
+              }
+            }
+          }
+        }) // We have to read any data or the socket will block
+        .stderr.on("data", (data) => {
+          stderr += data
+        })
+    })
+  } catch (error) {
+    throw new Error(`Failed to run command '${command}'`)
+  }
+
+  const index = stderr.lastIndexOf("\n", stderr.length - 2)
+  const exitCode = parseInt(stderr.slice(index + 1))
+
+  if (!options.noThrow && exitCode !== 0) {
+    throw new Error(`Command '${command}' returned exit code ${exitCode}`)
+  }
+
+  stderr = index <= 0 ? "" : stderr.slice(0, index)
+
+  return { exitCode, stdout, stderr }
 }
