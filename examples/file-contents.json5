@@ -1,0 +1,27 @@
+{
+  options: {
+    description: "Set file contents",
+  },
+  assertions: [
+    {
+      description: "Create Test Directory",
+      assert: "DirectoryExists",
+      with: {
+        path: "scratch/${TEST_DIR_1}",
+      },
+    },
+    {
+      description: "Create A Second Directory",
+      assert: "DirectoryExists",
+      with: {
+        path: "scratch/${TEST_DIR_2}",
+      },
+    },
+    {
+      assert: "FileExists",
+      with: {
+        path: "scratch/${TEST_FILE_1}",
+      },
+    },
+  ],
+}

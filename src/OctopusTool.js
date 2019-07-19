@@ -10,6 +10,21 @@ import JSON5 from "@johnls/json5"
 import autobind from "autobind-decorator"
 import * as asserters from "./asserters"
 
+class ScriptError extends Error {
+  constructor(message, fileName, node) {
+    const lineNumber = node.line || 0
+    const columnNumber = node.column || 0
+
+    super(message, fileName, lineNumber, columnNumber)
+    this.message += ` (${fileName}:${lineNumber}:${columnNumber})`
+  }
+
+  // Otherwise "Error: " is prefixed
+  toString() {
+    return this.message
+  }
+}
+
 @autobind
 export class OctopusTool {
   constructor(toolName, log, options) {
@@ -164,7 +179,9 @@ sudo apt -y -q install nodejs`
       remoteTempFile = (await runRemoteCommand(ssh, "mktemp")).stdout.trim()
 
       this.log.info(
-        `Created remote script file${this.debug ? " - " + remoteTempFile : ""}`
+        `Created remote host script file${
+          this.debug ? " - " + remoteTempFile : ""
+        }`
       )
 
       const scriptData = await fs.readFile(options.scriptFile)
@@ -185,7 +202,7 @@ sudo apt -y -q install nodejs`
         script.assertions.find((assertion) => assertion.hasOwnProperty("runAs"))
       let socket = null
 
-      this.log.info("Running script on remote")
+      this.log.info(`Running script on remote host`)
       await runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
         sudo,
         password: sshConfig.password,
