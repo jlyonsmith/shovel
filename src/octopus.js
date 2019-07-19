@@ -7,8 +7,14 @@ const log = {
   info: function() {
     console.error([...arguments].join(" "))
   },
-  asserted: function() {
-    console.log(chalk.green(...arguments))
+  output: function(line) {
+    if (line.startsWith("{rectified:")) {
+      console.log(chalk.yellow(line))
+    } else if (line.startsWith("{asserted:")) {
+      console.log(chalk.green(line))
+    } else {
+      console.log(line)
+    }
   },
   rectified: function(name, result) {
     console.log(chalk.yellow(...arguments))

@@ -246,7 +246,7 @@ sudo apt -y -q install nodejs`
         }
 
         context.description = descriptionNode.value
-        this.log.info(`Script: ${context.description}`)
+        this.log.output(JSON5.stringify({ description: context.description }))
       }
     }
 
@@ -351,39 +351,24 @@ sudo apt -y -q install nodejs`
         withNode: assertion.withNode,
       })
 
-      let ok = null
-
-      try {
-        ok = await asserter.assert(assertion.args)
-      } catch (e) {
-        this.log.error(e)
-        return 1
-      }
+      let ok = await asserter.assert(assertion.args)
+      let output = {}
 
       if (!ok) {
-        try {
-          await asserter.rectify()
-        } catch (e) {
-          this.log.error(e)
-          return 1
-        }
-        this.log.rectified(
-          JSON5.stringify({
-            rectified: assertion.name,
-            result: asserter.result(),
-          })
-        )
-      } else {
-        this.log.asserted(
-          JSON5.stringify({
-            asserted: assertion.name,
-            result: asserter.result(),
-          })
-        )
-      }
-    }
+        await asserter.rectify()
 
-    return 0
+        output.rectified = assertion.name
+      } else {
+        output.asserted = assertion.name
+      }
+
+      if (assertion.description) {
+        output.description = assertion.description
+      }
+
+      output.result = asserter.result()
+      this.log.output(JSON5.stringify(output))
+    }
   }
 
   async run(argv) {
@@ -484,12 +469,14 @@ Options:
         wantNodes: true,
       })
 
-      return await this.processScriptFile({
+      await this.processScriptFile({
         scriptFile,
         scriptNodes,
         verbose: args.verbose,
       })
     }
+
+    return 0
   }
 }
 
@@ -551,11 +538,7 @@ const runRemoteCommand = async (ssh, command, options) => {
 
           if (options.logOutput) {
             for (const line of data.split("\n")) {
-              if (line.startsWith("{rectified:")) {
-                this.log.rectified(line)
-              } else if (line.startsWith("{asserted:")) {
-                this.log.asserted(line)
-              }
+              this.log.output(line)
             }
           }
         }) // We have to read any data or the socket will block
