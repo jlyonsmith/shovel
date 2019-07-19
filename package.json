@@ -11,7 +11,7 @@
     "dist/**"
   ],
   "scripts": {
-    "build": "rm -rf dist/* && babel src -d dist -s --ignore **/*.test.js --ignore **/__mocks__/",
+    "build": "rm -rf dist/* && babel src -d dist -s --ignore **/*.test.js",
     "start": "babel-node src/octopus.js",
     "start:debug": "babel-node --inspect-brk src/octopus.js",
     "test": "jest --coverage -- ",

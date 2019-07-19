@@ -30,7 +30,7 @@ sudo apt -y -q install nodejs`
       noThrow: true,
     })
 
-    return result.exitCode === 0 && resurt.stdout.trim().startsWith("v10")
+    return result.exitCode === 0 && result.stdout.trim().startsWith("v10")
   }
 
   async rectifyHasNode(ssh) {
@@ -63,7 +63,9 @@ sudo apt -y -q install nodejs`
   }
 
   async assertHasOctopus(ssh) {
-    let result = await runRemoteCommand("octopus --version", { noThrow: true })
+    let result = await runRemoteCommand(ssh, "octopus --version", {
+      noThrow: true,
+    })
 
     return (
       result.exitCode === 0 && result.stderr.trim().startsWith(version.version)
@@ -159,7 +161,7 @@ sudo apt -y -q install nodejs`
         )
       }
 
-      remoteTempFile = await runRemoteCommand(ssh, "mktemp").stdout.trim()
+      remoteTempFile = (await runRemoteCommand(ssh, "mktemp")).stdout.trim()
 
       this.log.info(
         `Created remote script file${this.debug ? " - " + remoteTempFile : ""}`
@@ -187,7 +189,7 @@ sudo apt -y -q install nodejs`
       await runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
         sudo,
         password: sshConfig.password,
-        logOutput: true,
+        log: this.log.output,
       })
     } finally {
       if (isConnected) {
@@ -501,7 +503,7 @@ const pipeToPromise = (readable, writeable) => {
 
  {
     noThrow: boolean    // Do not throw on bad exit code
-    logOutput: boolean  // Send script output on STDOUT directly to this.log
+    log: boolean  // Send script output on STDOUT directly to this.log
     sudo: boolean       // Run this command under sudo
     password: string    // Password (if needed for sudo)
  }
@@ -534,11 +536,15 @@ const runRemoteCommand = async (ssh, command, options) => {
         .on("close", () => resolve({ stdout, stderr }))
         .on("error", reject)
         .on("data", (data) => {
-          stdout += data
+          const lines = data.toString()
 
-          if (options.logOutput) {
-            for (const line of data.split("\n")) {
-              this.log.output(line)
+          stdout += lines
+
+          if (options.log) {
+            for (const line of lines.split("\n")) {
+              if (line) {
+                options.log(line)
+              }
             }
           }
         }) // We have to read any data or the socket will block
