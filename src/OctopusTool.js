@@ -291,8 +291,14 @@ sudo apt -y -q install nodejs`
     } = state
 
     if (options.verbose) {
-      this.log.info(JSON5.stringify(vmContext.env, null, "  "))
-      // TODO: Dump other non-object entries in vmContext
+      const vars = {}
+
+      Object.keys(vmContext).forEach((key) => {
+        if (key === "env" || typeof vmContext[key] !== "object") {
+          vars[key] = vmContext[key]
+        }
+      })
+      this.log.info(JSON5.stringify(vars, null, "  "))
     }
 
     this.log.output(
