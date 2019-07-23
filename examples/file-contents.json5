@@ -2,25 +2,27 @@
   options: {
     description: "Set file contents",
   },
+  vars: {
+    FILE_CONTENTS: {
+      value: "${fs.readFile('./examples/much-content.txt')}",
+      local: true,
+    },
+  },
   assertions: [
     {
-      description: "Create Test Directory",
-      assert: "DirectoryExists",
+      assert: "FileContains",
       with: {
-        path: "scratch/${TEST_DIR_1}",
+        path: "scratch/my-bashrc",
+        contents: "# The individual per-interactive-shell startup file\\n\
+\\n\
+source /usr/local/etc/bash_completion.d/git-prompt.sh\\n\
+source /usr/local/etc/bash_completion.d/git-completion.bash\\n\
+",
       },
-    },
-    {
-      description: "Create A Second Directory",
-      assert: "DirectoryExists",
+      assert: "FileContains",
       with: {
-        path: "scratch/${TEST_DIR_2}",
-      },
-    },
-    {
-      assert: "FileExists",
-      with: {
-        path: "scratch/${TEST_FILE_1}",
+        path: "scratch/my-otherfile",
+        contents: "${FILE_CONTENTS}",
       },
     },
   ],

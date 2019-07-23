@@ -23,7 +23,7 @@ export class FileDownloaded {
     this.fs = container.fs || fs
     this.fetch = container.fetch || fetch
     this.newScriptError = container.newScriptError
-    this.expandString = container.expandString
+    this.expandStringNode = container.expandStringNode
     this.withNode = container.withNode
   }
 
@@ -53,8 +53,8 @@ export class FileDownloaded {
       )
     }
 
-    this.expandedUrl = this.expandString(urlNode.value)
-    this.expandedToPath = this.expandString(toPathNode.value)
+    this.expandedUrl = this.expandStringNode(urlNode)
+    this.expandedToPath = this.expandStringNode(toPathNode)
     this.toFileExists = await util.fileExists(this.fs, this.expandedToPath)
 
     if (!this.toFileExists) {

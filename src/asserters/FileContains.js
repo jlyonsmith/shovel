@@ -21,7 +21,7 @@ export class FileContains {
   constructor(container) {
     this.fs = container.fs || fs
     this.newScriptError = container.newScriptError
-    this.expandString = container.expandString
+    this.expandStringNode = container.expandStringNode
     this.withNode = container.withNode
   }
 
@@ -44,13 +44,16 @@ export class FileContains {
       )
     }
 
-    this.expandedPath = this.expandString(pathNode.value)
-    this.expandedContents = this.expandString(contentsNode.value)
+    this.expandedPath = this.expandStringNode(pathNode)
+    this.expandedContents = this.expandStringNode(contentsNode)
 
-    const pathDigest = await util.generateDigestFromFile(
-      this.fs,
-      this.expandedPath
-    )
+    let pathDigest = null
+
+    try {
+      pathDigest = await util.generateDigestFromFile(this.fs, this.expandedPath)
+    } catch (e) {
+      return false
+    }
     const contentsDigest = util.generateDigest(this.expandedContents)
 
     return pathDigest === contentsDigest

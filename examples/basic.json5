@@ -2,7 +2,7 @@
   options: {
     description: "A basic script",
   },
-  variables: {
+  vars: {
     TEST_DIR_1: "octo-dir-1",
     TEST_DIR_2: "octo-dir-2",
     TEST_FILE_1: "octo-file-1",

@@ -18,7 +18,7 @@ export class FileExists {
   constructor(container) {
     this.fs = container.fs || fs
     this.newScriptError = container.newScriptError
-    this.expandString = container.expandString
+    this.expandStringNode = container.expandStringNode
     this.withNode = container.withNode
     this.stat = null
   }
@@ -35,7 +35,7 @@ export class FileExists {
       )
     }
 
-    this.expandedPath = this.expandString(pathNode.value)
+    this.expandedPath = this.expandStringNode(pathNode)
 
     try {
       this.stat = await this.fs.lstat(this.expandedPath)

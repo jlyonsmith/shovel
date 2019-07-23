@@ -24,7 +24,7 @@ export class GroupExists {
     this.childProcess = container.childProcess || childProcess
     this.os = container.os || os
     this.newScriptError = container.newScriptError
-    this.expandString = container.expandString
+    this.expandStringNode = container.expandStringNode
     this.withNode = container.withNode
     this.assertNode = container.assertNode
   }
@@ -41,7 +41,7 @@ export class GroupExists {
       )
     }
 
-    this.expandedName = this.expandString(nameNode.value)
+    this.expandedName = this.expandStringNode(nameNode)
 
     return (await this.fs.readFile("/etc/groups")).includes(
       this.expandedName + ":"

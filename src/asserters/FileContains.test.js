@@ -11,7 +11,7 @@ beforeEach(() => {
       expect(typeof node).toBe("string")
       return new Error(message)
     },
-    expandString: (s) => s,
+    expandStringNode: (node) => node.value,
     withNode: { line: 0, column: 0 },
     assertNode: { line: 0, column: 0 },
     fs: {

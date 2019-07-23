@@ -22,7 +22,7 @@ export class FileUnzipped {
     this.fs = container.fs || fs
     this.yauzl = container.yauzl || yauzl
     this.newScriptError = container.newScriptError
-    this.expandString = container.expandString
+    this.expandStringNode = container.expandStringNode
     this.withNode = container.withNode
   }
 
@@ -45,8 +45,8 @@ export class FileUnzipped {
       )
     }
 
-    this.expandedZipPath = this.expandString(zipPathNode.value)
-    this.expandedToDirPath = this.expandString(toDirPathNode.value)
+    this.expandedZipPath = this.expandStringNode(zipPathNode)
+    this.expandedToDirPath = this.expandStringNode(toDirPathNode)
 
     if (!(await util.fileExists(this.fs, this.expandedZipPath))) {
       return false

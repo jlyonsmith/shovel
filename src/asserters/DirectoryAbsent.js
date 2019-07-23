@@ -17,7 +17,7 @@ export class DirectoryAbsent {
   constructor(container) {
     this.fs = container.fs || fs
     this.newScriptError = container.newScriptError
-    this.expandString = container.expandString
+    this.expandStringNode = container.expandStringNode
     this.withNode = container.withNode
     this.stats = null
   }
@@ -34,7 +34,7 @@ export class DirectoryAbsent {
       )
     }
 
-    this.expandedPath = this.expandString(pathNode.value)
+    this.expandedPath = this.expandStringNode(pathNode)
 
     try {
       this.stat = await this.fs.lstat(this.expandedPath)

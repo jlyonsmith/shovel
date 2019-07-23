@@ -19,7 +19,7 @@ export class FileCopied {
   constructor(container) {
     this.fs = container.fs || fs
     this.newScriptError = container.newScriptError
-    this.expandString = container.expandString
+    this.expandStringNode = container.expandStringNode
     this.withNode = container.withNode
   }
 
@@ -42,8 +42,8 @@ export class FileCopied {
       )
     }
 
-    this.expandedToPath = this.expandString(toPathNode.value)
-    this.expandedFromPath = this.expandString(fromPathNode.value)
+    this.expandedToPath = this.expandStringNode(toPathNode)
+    this.expandedFromPath = this.expandStringNode(fromPathNode)
 
     if (
       !(await util.fileExists(this.fs, this.expandedFromPath)) ||
