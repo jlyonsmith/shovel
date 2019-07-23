@@ -419,21 +419,21 @@ sudo apt -y -q install nodejs`
         }`
       )
 
-      const state = this.processScriptFile(options.scriptFile, {
+      const state = await this.processScriptFile(options.scriptFile, {
         onlyExpandLocalVars: true,
       })
 
-      const script = state.script
+      const { script, vmContext } = state
 
       for (const [key, value] of Object.entries(vmContext)) {
-        if (typeof vmContext[key] !== "object") {
-          script[key] = vmContext[key]
+        if (typeof value !== "object") {
+          script.vars[key] = value
         }
       }
 
       let readStream = new Readable({
         read(size) {
-          this.push(JSON.stringify(newScript))
+          this.push(JSON.stringify(script))
           this.push(null)
         },
       })
