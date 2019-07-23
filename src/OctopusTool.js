@@ -98,6 +98,235 @@ sudo apt -y -q install nodejs`
     })
   }
 
+  async processScriptFile(scriptFile, options = {}) {
+    const { onlyExpandLocalVars } = options
+    const newScriptError = (message, node) => {
+      return new ScriptError(message, scriptFile, node)
+    }
+
+    const scriptNodes = JSON5.parse(await fs.readFile(scriptFile), {
+      wantNodes: true,
+    })
+
+    if (scriptNodes.type !== "object") {
+      throw newScriptError(
+        "Script must have an object as the root",
+        scriptNodes
+      )
+    }
+
+    const {
+      options: optionsNode,
+      vars: varsNode,
+      assertions: assertionsNode,
+    } = scriptNodes.value
+
+    if (!assertionsNode) {
+      this.log.warn("No 'assertions' found")
+      return
+    }
+
+    if (assertionsNode.type !== "array") {
+      throw newScriptError("'assertions' must be an array", assertionsNode)
+    }
+
+    const vmContext = {
+      env: process.env,
+      fs: {
+        readFile: (fileName) => fs.readFileSync(fileName),
+      },
+    }
+    const expandStringNode = (node) => {
+      if (
+        !node.value ||
+        !node.type ||
+        node.type !== "string" ||
+        !node.line ||
+        !node.column
+      ) {
+        throw new Error("Must pass in a string node to expand")
+      }
+
+      try {
+        return new vm.Script("`" + node.value + "`").runInContext(
+          vm.createContext(vmContext)
+        )
+      } catch (e) {
+        throw newScriptError(e.message, node)
+      }
+    }
+
+    if (optionsNode) {
+      if (optionsNode.type !== "object") {
+        throw newScriptError("'options' must be an object", optionsNode)
+      }
+      const { description: descriptionNode } = optionsNode.value
+      if (descriptionNode) {
+        if (descriptionNode.type !== "string") {
+          throw newScriptError(
+            "'options.description' must be a string",
+            descriptionNode
+          )
+        }
+      }
+    }
+
+    if (varsNode) {
+      if (varsNode.type !== "object") {
+        throw newScriptError("'vars' must be an object", varsNode)
+      }
+      for (const [key, varNode] of Object.entries(varsNode.value)) {
+        if (vmContext[key] && typeof vmContext[key] === "object") {
+          throw newScriptError(
+            `Variable ${key} conflicts with a built-in object`,
+            varNode
+          )
+        }
+
+        switch (varNode.type) {
+          case "null":
+            delete vmContext[key]
+            break
+          case "numeric":
+          case "boolean":
+            vmContext[key] = varNode.value.toString()
+            break
+          case "string":
+            vmContext[key] = onlyExpandLocalVars
+              ? varNode.value
+              : expandStringNode(varNode)
+            break
+          case "object":
+            const valueNode = varNode.value.value
+
+            if (!valueNode || valueNode.type !== "string") {
+              throw newScriptError(
+                `Variable object must have value field of type string`,
+                varNode
+              )
+            }
+
+            if (
+              !onlyExpandLocalVars ||
+              (onlyExpandLocalVars && varNode.value.local)
+            ) {
+              vmContext[key] = expandStringNode(valueNode)
+            }
+            break
+          default:
+            throw newScriptError(
+              `Variable of type ${varNode.type} is invalid`,
+              varNode
+            )
+        }
+      }
+    }
+
+    let assertions = []
+
+    for (const assertionNode of assertionsNode.value) {
+      if (assertionNode.type !== "object") {
+        throw newScriptError("Assertion must be an object", assertionNode)
+      }
+
+      const assertion = {}
+      const {
+        description: descriptionNode,
+        assert: assertNode,
+        with: withNode,
+      } = assertionNode.value
+
+      assertion.assertNode = assertNode
+      assertion.withNode = withNode
+
+      if (assertNode) {
+        if (assertNode.type !== "string") {
+          throw newScriptError(
+            "Assertion 'assert' must be a string",
+            assertNode
+          )
+        }
+        assertion.name = assertNode.value
+      } else {
+        throw newScriptError("Assertion has no 'assert' value", assertNode)
+      }
+
+      if (descriptionNode) {
+        if (descriptionNode.type !== "string") {
+          throw newScriptError(
+            "Assertion 'description' must be a string",
+            descriptionNode
+          )
+        }
+        assertion.description = descriptionNode.value
+      }
+
+      if (withNode) {
+        if (withNode.type !== "object") {
+          throw newScriptError("Assertion 'with' must be an object", withNode)
+        }
+
+        assertion.args = withNode.value
+      }
+
+      assertions.push(assertion)
+    }
+
+    return {
+      script: JSON5.simplify(scriptNodes),
+      assertions,
+      vmContext,
+      expandStringNode,
+      newScriptError,
+    }
+  }
+
+  async runScript(state, options) {
+    const {
+      script,
+      assertions,
+      vmContext,
+      expandStringNode,
+      newScriptError,
+    } = state
+
+    if (options.verbose) {
+      this.log.info(JSON5.stringify(vmContext.env, null, "  "))
+      // TODO: Dump other non-object entries in vmContext
+    }
+
+    this.log.output(
+      JSON5.stringify({ description: script.options.description })
+    )
+
+    for (const assertion of assertions) {
+      const asserter = new asserters[assertion.name]({
+        newScriptError,
+        expandStringNode,
+        assertNode: assertion.assertNode,
+        withNode: assertion.withNode,
+      })
+
+      let ok = await asserter.assert(assertion.args)
+      let output = {}
+
+      if (!ok) {
+        await asserter.rectify()
+
+        output.rectified = assertion.name
+      } else {
+        output.asserted = assertion.name
+      }
+
+      if (assertion.description) {
+        output.description = assertion.description
+      }
+
+      output.result = asserter.result()
+      this.log.output(JSON5.stringify(output))
+    }
+  }
+
   async runOnHost(options) {
     let isConnected = false
     let ssh = null
@@ -184,15 +413,21 @@ sudo apt -y -q install nodejs`
         }`
       )
 
-      const state = this.prepareScriptFile(options.scriptFile, {
+      const state = this.processScriptFile(options.scriptFile, {
         onlyExpandLocalVars: true,
       })
 
-      // TODO: Build a new script from the processed script state
+      const script = state.script
+
+      for (const [key, value] of Object.entries(vmContext)) {
+        if (typeof vmContext[key] !== "object") {
+          script[key] = vmContext[key]
+        }
+      }
 
       let readStream = new Readable({
         read(size) {
-          this.push(scriptData)
+          this.push(JSON.stringify(newScript))
           this.push(null)
         },
       })
@@ -204,7 +439,6 @@ sudo apt -y -q install nodejs`
       const sudo =
         script.assertions &&
         script.assertions.find((assertion) => assertion.hasOwnProperty("runAs"))
-      let socket = null
 
       this.log.info(`Running script on remote host`)
       await runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
@@ -226,236 +460,6 @@ sudo apt -y -q install nodejs`
       }
 
       process.stdin.unref() // To free the Node event loop
-    }
-  }
-
-  async prepareScriptFile(scriptFile, options) {
-    const { onlyExpandLocalVars } = options
-    const newScriptError = (message, node) => {
-      return new ScriptError(message, scriptFile, node)
-    }
-
-    const scriptNodes = JSON5.parse(await fs.readFile(scriptFile), {
-      wantNodes: true,
-    })
-
-    if (scriptNodes.type !== "object") {
-      throw newScriptError(
-        "Script must have an object as the root",
-        scriptNodes
-      )
-    }
-
-    const {
-      options: optionsNode,
-      vars: varsNode,
-      assertions: assertionsNode,
-    } = scriptNodes.value
-
-    if (!assertionsNode) {
-      this.log.warn("No 'assertions' found")
-      return
-    }
-
-    if (assertionsNode.type !== "array") {
-      throw newScriptError("'assertions' must be an array", assertionsNode)
-    }
-
-    const script = {
-      vars: {},
-      options: {},
-      assertions: {},
-    }
-    const context = {
-      ...process.env,
-      fs: {
-        readFile: (fileName) => {
-          fs.readFileSync(fileName)
-        },
-      },
-    }
-    const expandStringNode = (node) => {
-      if (
-        !node.value ||
-        !node.type ||
-        node.type !== "string" ||
-        !node.line ||
-        !node.column
-      ) {
-        throw new Error("Must pass in a string node to expand")
-      }
-
-      try {
-        return new vm.Script("`" + node.value + "`").runInContext(
-          vm.createContext(context)
-        )
-      } catch (e) {
-        throw newScriptError(e.message, node)
-      }
-    }
-
-    if (optionsNode) {
-      if (optionsNode.type !== "object") {
-        throw newScriptError("'options' must be an object", optionsNode)
-      }
-      const { description: descriptionNode } = optionsNode.value
-      if (descriptionNode) {
-        if (descriptionNode.type !== "string") {
-          throw newScriptError(
-            "'options.description' must be a string",
-            descriptionNode
-          )
-        }
-        script.options.description = descriptionNode.value
-      }
-    }
-
-    if (varsNode) {
-      if (varsNode.type !== "object") {
-        throw newScriptError("'vars' must be an object", varsNode)
-      }
-      for (const [key, varNode] of Object.entries(varsNode.value)) {
-        if (context[key] && typeof context[key] === "object") {
-          this.log.warning(
-            `Ignoring variable ${key} as it conflicts with a built-in object`
-          )
-          continue
-        }
-
-        switch (varNode.type) {
-          case "null":
-            delete vars[key]
-            break
-          case "numeric":
-          case "boolean":
-            context[key] = varNode.value.toString()
-            break
-          case "string":
-            script.vars[key] = varNode.value
-
-            if (!onlyExpandLocalVars) {
-              context[key] = expandStringNode(varNode)
-            }
-            break
-          case "object":
-            const valueNode = varNode.value.value
-
-            if (!valueNode || valueNode.type !== "string") {
-              throw newScriptError(
-                `Variable object must have value field of type string`,
-                varNode
-              )
-            }
-
-            script.vars[key] = varNode.value.value
-
-            if (onlyExpandLocalVars && varNode.value.local) {
-              context[key] = expandStringNode(valueNode)
-            }
-            break
-          default:
-            throw newScriptError(
-              `Variable of type ${varNode.type} is invalid`,
-              varNode
-            )
-        }
-      }
-    }
-
-    script.assertions = []
-
-    for (const assertionNode of assertionsNode.value) {
-      if (assertionNode.type !== "object") {
-        throw newScriptError("Assertion must be an object", assertionNode)
-      }
-
-      const assertion = {}
-      const {
-        description: descriptionNode,
-        assert: assertNode,
-        with: withNode,
-      } = assertionNode.value
-
-      assertion.assertNode = assertNode
-      assertion.withNode = withNode
-
-      if (assertNode) {
-        if (assertNode.type !== "string") {
-          throw newScriptError(
-            "Assertion 'assert' must be a string",
-            assertNode
-          )
-        }
-        assertion.name = assertNode.value
-      } else {
-        throw newScriptError("Assertion has no 'assert' value", assertNode)
-      }
-
-      if (descriptionNode) {
-        if (descriptionNode.type !== "string") {
-          throw newScriptError(
-            "Assertion 'description' must be a string",
-            descriptionNode
-          )
-        }
-        assertion.description = descriptionNode.value
-      }
-
-      if (withNode) {
-        if (withNode.type !== "object") {
-          throw newScriptError("Assertion 'with' must be an object", withNode)
-        }
-
-        assertion.args = withNode.value
-      }
-
-      script.assertions.push(assertion)
-    }
-
-    return {
-      script,
-      context,
-      expandStringNode,
-      newScriptError,
-    }
-  }
-
-  async runScript(state, options) {
-    const { script, expandStringNode, newScriptError } = state
-
-    if (options.verbose) {
-      this.log.info(JSON5.stringify(script.vars, null, "  "))
-    }
-
-    this.log.output(
-      JSON5.stringify({ description: script.options.description })
-    )
-
-    for (const assertion of script.assertions) {
-      const asserter = new asserters[assertion.name]({
-        newScriptError,
-        expandStringNode,
-        assertNode: assertion.assertNode,
-        withNode: assertion.withNode,
-      })
-
-      let ok = await asserter.assert(assertion.args)
-      let output = {}
-
-      if (!ok) {
-        await asserter.rectify()
-
-        output.rectified = assertion.name
-      } else {
-        output.asserted = assertion.name
-      }
-
-      if (assertion.description) {
-        output.description = assertion.description
-      }
-
-      output.result = asserter.result()
-      this.log.output(JSON5.stringify(output))
     }
   }
 
@@ -553,11 +557,8 @@ Options:
         })
       }
     } else {
-      const state = await this.prepareScriptFile(scriptFile, {
-        onlyExpandLocalVars: true,
-      })
-      console.log(JSON5.stringify(state.script, null, " "))
-      //await this.runScript(state, { verbose: args.verbose })
+      const state = await this.processScriptFile(scriptFile)
+      await this.runScript(state, { verbose: args.verbose })
     }
 
     return 0
@@ -590,9 +591,7 @@ const pipeToPromise = (readable, writeable) => {
     password: string    // Password (if needed for sudo)
  }
 */
-const runRemoteCommand = async (ssh, command, options) => {
-  options = options || {}
-
+const runRemoteCommand = async (ssh, command, options = {}) => {
   let stderr = ""
   let stdout = ""
 

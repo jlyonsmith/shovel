@@ -3,7 +3,7 @@
     description: "Set file contents",
   },
   vars: {
-    FILE_CONTENTS: {
+    fileContents: {
       value: "${fs.readFile('./examples/much-content.txt')}",
       local: true,
     },
@@ -22,7 +22,7 @@ source /usr/local/etc/bash_completion.d/git-completion.bash\\n\
       assert: "FileContains",
       with: {
         path: "scratch/my-otherfile",
-        contents: "${FILE_CONTENTS}",
+        contents: "${fileContents}",
       },
     },
   ],
