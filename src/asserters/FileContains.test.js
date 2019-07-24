@@ -15,6 +15,15 @@ beforeEach(() => {
     withNode: { line: 0, column: 0 },
     assertNode: { line: 0, column: 0 },
     fs: {
+      createReadStream: jest.fn((fileName) => {
+        expect(typeof fileName).toBe("string")
+        return new stream.Readable({
+          read(size) {
+            this.push(testString)
+            this.push(null)
+          },
+        })
+      }),
       outputFile: jest.fn(async (fileName, data) => {
         expect(typeof fileName).toBe("string")
         expect(typeof data).toBe("string")
