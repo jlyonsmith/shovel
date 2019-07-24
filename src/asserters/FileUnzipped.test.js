@@ -14,20 +14,6 @@ beforeEach(() => {
     withNode: { line: 0, column: 0 },
     assertNode: { line: 0, column: 0 },
     fs: {
-      createReadStream: jest.fn((fileName) => {
-        expect(typeof fileName).toBe("string")
-
-        return new stream.Readable({
-          read(size) {
-            if (fileName === "/badfile") {
-              this.push("not the test string")
-            } else {
-              this.push("The quick brown fox jumps over the lazy dog\n")
-            }
-            this.push(null)
-          },
-        })
-      }),
       lstat: jest.fn(async (path) => {
         switch (path) {
           case "./filesize.zip":
@@ -60,10 +46,27 @@ beforeEach(() => {
       ensureDir: jest.fn(async (dirPath) => {
         expect(typeof dirPath).toBe("string")
       }),
+      createWriteStream: jest.fn(async (fileName) => {
+        expect(typeof fileName).toBe("string")
+
+        return new stream.Writable({
+          write(chunk, encoding, callback) {
+            callback()
+          },
+        })
+      }),
     },
     yauzl: {
       open: jest.fn(async (path) => {
         expect(typeof path).toBe("string")
+
+        const openReadStream = async () =>
+          new stream.Readable({
+            read(size) {
+              this.push("The quick brown fox jumps over the lazy dog\n")
+              this.push(null)
+            },
+          })
 
         let entries = null
 
@@ -72,20 +75,40 @@ beforeEach(() => {
           case "./somefile.zip":
             entries = [
               { uncompressedSize: 0, fileName: "dir/" },
-              { uncompressedSize: 100, fileName: "dir/file.txt" },
+              {
+                uncompressedSize: 100,
+                fileName: "dir/file.txt",
+                openReadStream,
+              },
             ]
             break
           case "./filesize.zip":
             entries = [
               { uncompressedSize: 0, fileName: "dir/" },
-              { uncompressedSize: 50, fileName: "dir/file.txt" },
+              {
+                uncompressedSize: 50,
+                fileName: "dir/file.txt",
+                openReadStream,
+              },
             ]
             break
           case "./filedir.zip": // File is a directory
-            entries = [{ uncompressedSize: 50, fileName: "filedir.txt" }]
+            entries = [
+              {
+                uncompressedSize: 50,
+                fileName: "filedir.txt",
+                openReadStream,
+              },
+            ]
             break
           case "./filemissing.zip":
-            entries = [{ uncompressedSize: 100, fileName: "notthere.txt" }]
+            entries = [
+              {
+                uncompressedSize: 100,
+                fileName: "notthere.txt",
+                openReadStream,
+              },
+            ]
             break
         }
 

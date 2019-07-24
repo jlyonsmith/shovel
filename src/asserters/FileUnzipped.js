@@ -64,10 +64,11 @@ export class FileUnzipped {
         const targetPath = path.join(this.expandedToDirPath, entry.fileName)
         // This will throw if the file or directory is not present
         const stat = await this.fs.lstat(targetPath)
+        const entryIsDir = /\/$/.test(entry.fileName)
 
-        if (entry.uncompressedSize !== 0 && !stat.isFile()) {
+        if (!entryIsDir && stat.isDirectory()) {
           throw new Error(
-            `'${targetPath}' is a directory and zip file entry is a file`
+            `Existing '${targetPath}' is a directory and zip file entry is a file`
           )
         } else if (entry.uncompressedSize !== stat.size) {
           throw new Error(
@@ -91,7 +92,28 @@ export class FileUnzipped {
   }
 
   async rectify() {
-    // TODO: Unzip the file!
+    let zipFile = null
+
+    try {
+      zipFile = await this.yauzl.open(this.expandedZipPath)
+      await zipFile.walkEntries(async (entry) => {
+        const targetPath = path.join(this.expandedToDirPath, entry.fileName)
+        const entryIsDir = /\/$/.test(entry.fileName)
+
+        if (!entryIsDir) {
+          const readable = await entry.openReadStream()
+          const writeable = await this.fs.createWriteStream(targetPath)
+
+          await util.pipeToPromise(readable, writeable)
+        }
+      })
+    } catch (e) {
+      return false
+    } finally {
+      if (zipFile) {
+        await zipFile.close()
+      }
+    }
   }
 
   result() {
