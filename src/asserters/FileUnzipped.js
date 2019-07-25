@@ -49,7 +49,6 @@ export class FileUnzipped {
     this.expandedToDirPath = this.expandStringNode(toDirPathNode)
 
     if (!(await util.fileExists(this.fs, this.expandedZipPath))) {
-      console.log(path.join(require("process").cwd(), this.expandedZipPath))
       throw this.newScriptError(
         `Zip file ${this.expandedZipPath} does not exist`,
         zipPathNode

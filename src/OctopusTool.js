@@ -5,6 +5,7 @@ import SSH2Promise from "ssh2-promise"
 import os from "os"
 import fs from "fs-extra"
 import vm from "vm"
+import path from "path"
 import { Readable } from "stream"
 import JSON5 from "@johnls/json5"
 import autobind from "autobind-decorator"
@@ -130,8 +131,13 @@ sudo apt -y -q install nodejs`
       throw newScriptError("'assertions' must be an array", assertionsNode)
     }
 
+    const fullScriptFile = path.resolve(scriptFile)
     const vmContext = {
       env: process.env,
+      sys: {
+        SCRIPT_FILE: fullScriptFile,
+        SCRIPT_DIR: path.dirname(fullScriptFile),
+      },
       fs: {
         readFile: (fileName) => fs.readFileSync(fileName),
       },
