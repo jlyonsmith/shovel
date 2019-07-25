@@ -11,9 +11,9 @@ import autobind from "autobind-decorator"
 import * as asserters from "./asserters"
 
 class ScriptError extends Error {
-  constructor(message, fileName, node) {
-    const lineNumber = node.line || 0
-    const columnNumber = node.column || 0
+  constructor(message, fileName, node = { line: 0, column: 0 }) {
+    const lineNumber = node.line
+    const columnNumber = node.column
 
     super(message, fileName, lineNumber, columnNumber)
     this.message += ` (${fileName}:${lineNumber}:${columnNumber})`

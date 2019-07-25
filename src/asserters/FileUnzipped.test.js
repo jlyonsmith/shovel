@@ -20,6 +20,7 @@ beforeEach(() => {
           case "./filedir.zip":
           case "./dirfile.zip":
           case "./somefile.zip":
+          case "./filemissing.zip":
             return {
               isDirectory: jest.fn(() => false),
               isFile: jest.fn(() => true),
@@ -134,8 +135,7 @@ test("With zip file not present", async () => {
       zipPath: { type: "string", value: "./missing.zip" },
       toDirPath: { type: "string", value: "./outdir" },
     })
-  ).resolves.toBe(false)
-  await expect(asserter.rectify()).rejects
+  ).rejects.toThrow()
 })
 
 test("With all files unzipped and the same", async () => {

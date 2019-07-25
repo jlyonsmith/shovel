@@ -1,0 +1,14 @@
+{
+  options: {
+    description: "Unzip file",
+  },
+  assertions: [
+    {
+      assert: "FileUnzipped",
+      with: {
+        zipPath: "examples/test.zip",
+        toDirPath: "scratch/",
+      },
+    },
+  ],
+}
