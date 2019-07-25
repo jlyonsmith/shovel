@@ -6,7 +6,7 @@
     {
       assert: "FileUnzipped",
       with: {
-        zipPath: "examples/test.zip",
+        zipPath: "${sys.SCRIPT_DIR}/test.zip",
         toDirPath: "scratch/",
       },
     },
