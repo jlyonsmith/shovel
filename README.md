@@ -17,6 +17,45 @@ Or use `npx` to run the latest version:
 npx @johnls/octopus --help
 ```
 
+## Example
+
+Here is an Octopus script that creates some directories and files on a remote system:
+
+```json5
+{
+  options: {
+    description: "A basic script",
+  },
+  vars: {
+    TEST_DIR_1: "octo-dir-1",
+    TEST_DIR_2: "octo-dir-2",
+    TEST_FILE_1: "octo-file-1",
+  },
+  assertions: [
+    {
+      description: "Create Test Directory",
+      assert: "DirectoryExists",
+      with: {
+        path: "scratch/${TEST_DIR_1}",
+      },
+    },
+    {
+      description: "Create A Second Directory",
+      assert: "DirectoryExists",
+      with: {
+        path: "scratch/${TEST_DIR_2}",
+      },
+    },
+    {
+      assert: "FileExists",
+      with: {
+        path: "scratch/${TEST_FILE_1}",
+      },
+    },
+  ],
+}
+```
+
 ## Features
 
 Octopus has the following features:
@@ -40,9 +79,12 @@ The assertert must be a Javascript ES6 class.  The `constructor` will be called 
 
 ```js
 {
-  newScriptError: (message, node) => {...}, // Create a new script error for the given node
-  expandStringNode: (string) => {...} // Expand a string by treating it as a Javascript template and running it in a VM
-  withNode: {...} // The parent 'with' node of the assertion
+  // Create a new script error for the given node
+  newScriptError: (message, node) => {...},
+  // Expand a string by treating it as a Javascript template and running it in a VM
+  expandStringNode: (string) => {...},
+  // The parent 'with' node of the assertion
+  withNode: {...},
 }
 ```
 

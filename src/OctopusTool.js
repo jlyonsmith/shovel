@@ -55,7 +55,7 @@ sudo apt -y -q install nodejs`
 
     this.log.info("Creating /opt/octopus directory")
     await runRemoteCommand(ssh, "mkdir -p /opt/octopus", {
-      needsSudo: true,
+      sudo: true,
       password,
     })
 
