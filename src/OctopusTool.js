@@ -611,39 +611,38 @@ const runRemoteCommand = async (ssh, command, options = {}) => {
   let stdout = ""
 
   try {
-    const socket = await ssh.spawn(
+    const commandLine =
       (options.cwd ? `cd ${options.cwd} 1> /dev/null 2> /dev/null;` : "") +
-        (options.sudo ? "sudo " : "") +
-        command +
-        "; echo $? >&2",
-      null,
-      {
-        pty: options.sudo && options.password,
-      }
-    )
+      (options.sudo ? "sudo " : "") +
+      command +
+      "; echo $? 1>&2"
+    const socket = await ssh.spawn(commandLine, null, {
+      pty: !!options.password,
+    })
 
-    if (options.sudo && options.password) {
-      socket.write(password + "\n")
+    if (options.password) {
+      socket.write(options.password + "\n")
       socket.end()
     }
 
     await new Promise((resolve, reject) => {
       socket
-        .on("close", () => resolve({ stdout, stderr }))
+        .on("close", resolve)
         .on("error", reject)
+        // We have to read data or the socket will block
         .on("data", (data) => {
-          const lines = data.toString()
+          data = data.toString()
 
-          stdout += lines
+          stdout += data
 
           if (options.log) {
-            for (const line of lines.split("\n")) {
+            for (const line of data.split("\n")) {
               if (line) {
                 options.log(line)
               }
             }
           }
-        }) // We have to read any data or the socket will block
+        })
         .stderr.on("data", (data) => {
           stderr += data.toString()
         })
@@ -652,8 +651,23 @@ const runRemoteCommand = async (ssh, command, options = {}) => {
     throw new Error(`Failed to run command '${command}'`)
   }
 
-  const index = stderr.lastIndexOf("\n", stderr.length - 2)
-  const exitCode = parseInt(stderr.slice(index + 1))
+  const temp = stderr ? stderr : stdout
+  let index = temp.length - 1
+  let digits = ""
+
+  if (temp[index] === "\n") {
+    index -= 1
+
+    if (temp[index] === "\r") {
+      index -= 1
+    }
+
+    while (temp[index] >= "0" && temp[index] <= "9") {
+      digits = temp[index] + digits
+      index -= 1
+    }
+  }
+  const exitCode = digits ? parseInt(digits) : 255
 
   if (!options.noThrow && exitCode !== 0) {
     throw new Error(`Command '${command}' returned exit code ${exitCode}`)

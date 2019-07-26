@@ -60,6 +60,7 @@ Here is an Octopus script that creates some directories and files on a remote sy
 
 Octopus has the following features:
 
+- Bootstraps itself on a remote system, installing Node.js and Octopus as needed
 - Able to set script wide variables
 - Can safely use Javascripts templated string functionality in scripts
 - Cross platform (macOS, Linux, Windows) by leveraging Node's inherent cross platform capabilities
@@ -102,6 +103,8 @@ Octopus steals heavily from the design of [Ansible](https://www.ansible.com/). S
 - Use Javascript for templated strings to keep the learning curve low
 - Use JSON instead of YAML as a script format
 - Be fast!
+- Must bootstrap the remote system with Node.js
+- Must bootstrap the remote system with Octopus
 - Leverage SSH as a remote transport
 - Have asserters use idempotency consistently (no empty assertions)
 - Have an easy to parse output format
