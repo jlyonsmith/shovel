@@ -661,7 +661,7 @@ const runRemoteCommand = async (ssh, command, options = {}) => {
 
   stderr = index <= 0 ? "" : stderr.slice(0, index)
 
-  if (options.logError) {
+  if (exitCode !== 0 && options.logError) {
     options.logError(stderr)
   }
 
