@@ -16,8 +16,8 @@ const log = {
       console.log(line)
     }
   },
-  rectified: function(name, result) {
-    console.log(chalk.yellow(...arguments))
+  outputError: function(line) {
+    console.log(chalk.red("remote-" + line))
   },
   warning: function() {
     console.error(chalk.yellow("warning:", [...arguments].join(" ")))

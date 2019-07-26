@@ -457,6 +457,8 @@ sudo apt -y -q install nodejs`
         sudo,
         password: sshConfig.password,
         log: this.log.output,
+        logError: this.log.outputError,
+        noThrow: true,
       })
     } finally {
       if (isConnected) {
@@ -477,7 +479,7 @@ sudo apt -y -q install nodejs`
 
   async run(argv) {
     const options = {
-      boolean: ["help", "version", "debug"],
+      boolean: ["help", "version", "debug", "verbose"],
       string: ["host", "host-file", "user", "port", "password", "set"],
       alias: {
         h: "host",
@@ -486,6 +488,7 @@ sudo apt -y -q install nodejs`
         f: "host-file",
         P: "password",
         s: "set",
+        v: "verbose",
       },
     }
     const args = parseArgs(argv, options)
@@ -642,7 +645,7 @@ const runRemoteCommand = async (ssh, command, options = {}) => {
           }
         }) // We have to read any data or the socket will block
         .stderr.on("data", (data) => {
-          stderr += data
+          stderr += data.toString()
         })
     })
   } catch (error) {
@@ -657,6 +660,10 @@ const runRemoteCommand = async (ssh, command, options = {}) => {
   }
 
   stderr = index <= 0 ? "" : stderr.slice(0, index)
+
+  if (options.logError) {
+    options.logError(stderr)
+  }
 
   return { exitCode, stdout, stderr }
 }
