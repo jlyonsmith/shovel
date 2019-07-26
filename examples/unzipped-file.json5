@@ -6,7 +6,7 @@
     {
       assert: "FileUnzipped",
       with: {
-        zipPath: "${sys.SCRIPT_DIR}/test.zip",
+        zipPath: "${env.HOME}/projects/octopus/examples/test.zip",
         toDirPath: "scratch/",
       },
     },
