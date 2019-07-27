@@ -51,7 +51,21 @@ sudo apt -y -q install nodejs`
 
   async rectifyHasNode(ssh) {
     const password = ssh.config[0].password
-    let stream = null
+    let result = null
+
+    this.log.info("Checking remote system clock")
+    result = await runRemoteCommand(ssh, "date")
+
+    const remoteDate = new Date(result.stdout)
+    const localDate = new Date()
+
+    if (
+      remoteDate.getFullYear() !== localDate.getFullYear() ||
+      remoteDate.getMonth() !== localDate.getFullMonth() ||
+      remoteDate.getDate() !== localDate.getDate()
+    ) {
+      throw new Error("Remote system clock is more than 24 hours out of sync.")
+    }
 
     this.log.info("Creating /opt/octopus directory")
     await runRemoteCommand(ssh, "mkdir -p /opt/octopus", {
@@ -71,11 +85,32 @@ sudo apt -y -q install nodejs`
     )
 
     this.log.info("Running /opt/octopus/install_node.sh script")
-    await runRemoteCommand(ssh, "bash ./install_node.sh", {
+    result = await runRemoteCommand(ssh, "bash ./install_node.sh", {
       cwd: "/opt/octopus",
       sudo: true,
       password,
+      noThrow: true,
     })
+
+    if (result.exitCode !== 0) {
+      // If the Node install fails it may just need an upgrade
+      this.log.info("Trying to upgrade Node.js")
+      result = await runRemoteCommand(ssh, "apt install -y nodejs", {
+        cwd: "/opt/octopus",
+        sudo: true,
+        password,
+      })
+    }
+
+    result = await runRemoteCommand(ssh, "node --version", {
+      noThrow: true,
+    })
+
+    if (result.exitCode !== 0 || !result.stdout.trim().startsWith("v10")) {
+      throw new Error(
+        `Node version ${result.stdout} is wrong after installation`
+      )
+    }
   }
 
   async assertHasOctopus(ssh) {
@@ -456,7 +491,13 @@ sudo apt -y -q install nodejs`
       await runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
         sudo,
         password: sshConfig.password,
-        log: this.log.output,
+        log: (line) => {
+          const trimmedLine = line.trim()
+
+          if (trimmedLine !== "" && trimmedLine.startsWith("{")) {
+            this.log.output(trimmedLine)
+          }
+        },
         logError: this.log.outputError,
         noThrow: true,
       })
@@ -609,6 +650,11 @@ const pipeToPromise = (readable, writeable) => {
 const runRemoteCommand = async (ssh, command, options = {}) => {
   let stderr = ""
   let stdout = ""
+  // From https://stackoverflow.com/a/29497680/576235
+  const ansiEscapeRegex = new RegExp(
+    /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g
+  )
+  const stripAnsiEscapes = (s) => s.replace(ansiEscapeRegex, "")
 
   try {
     const commandLine =
@@ -631,20 +677,19 @@ const runRemoteCommand = async (ssh, command, options = {}) => {
         .on("error", reject)
         // We have to read data or the socket will block
         .on("data", (data) => {
-          data = data.toString()
+          const s = stripAnsiEscapes(data.toString())
 
-          stdout += data
+          stdout += s
 
           if (options.log) {
-            for (const line of data.split("\n")) {
-              if (line) {
-                options.log(line)
-              }
+            for (const line of s.split("\n")) {
+              options.log(line)
             }
           }
         })
         .stderr.on("data", (data) => {
-          stderr += data.toString()
+          const s = stripAnsiEscapes(data.toString())
+          stderr += s
         })
     })
   } catch (error) {
@@ -655,16 +700,27 @@ const runRemoteCommand = async (ssh, command, options = {}) => {
   let index = temp.length - 1
   let digits = ""
 
-  if (temp[index] === "\n") {
+  // Be super careful about grabbing the exit code digits
+  // as some apps like 'apt' generate a lot of extra noise
+  // at the end of the output. And when a pseudo-TTY is in
+  // in use strings are terminated with \r\n
+  if (index >= 1 && temp[index] === "\n") {
     index -= 1
 
     if (temp[index] === "\r") {
       index -= 1
     }
 
-    while (temp[index] >= "0" && temp[index] <= "9") {
-      digits = temp[index] + digits
+    const endIndex = index + 1
+
+    while (index >= 0 && temp[index] >= "0" && temp[index] <= "9") {
       index -= 1
+    }
+
+    index += 1
+
+    if (index < endIndex) {
+      digits = temp.substring(index, endIndex)
     }
   }
   const exitCode = digits ? parseInt(digits) : 255
