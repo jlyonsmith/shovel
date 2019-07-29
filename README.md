@@ -19,23 +19,29 @@ npx @johnls/octopus --help
 
 ## Example
 
-Here is an Octopus script that creates some directories and files on a remote system:
+Here is a valid Octopus script that creates some directories and files on a remote system:
 
 ```json5
 {
+  // Global options for the script go here
   options: {
     description: "A basic script",
   },
+  // Global variables go here
   vars: {
     TEST_DIR_1: "octo-dir-1",
     TEST_DIR_2: "octo-dir-2",
     TEST_FILE_1: "octo-file-1",
   },
+  // Every script must have a list of assertions
   assertions: [
     {
       description: "Create Test Directory",
+      // Each assertion specifies an asserter...
       assert: "DirectoryExists",
+      // And arguments
       with: {
+        // Arguments can include template substitutions, exactly like Javascript
         path: "scratch/${TEST_DIR_1}",
       },
     },
@@ -56,7 +62,7 @@ Here is an Octopus script that creates some directories and files on a remote sy
 }
 ```
 
-## Features
+## Overview
 
 Octopus has the following features:
 
@@ -66,13 +72,46 @@ Octopus has the following features:
 - Cross platform (macOS, Linux, Windows) by leveraging Node's inherent cross platform capabilities
 - An easy to read JSON5 format script format that allows multi-line strings and comments
 
-## Scripts and Asserters
+### Background
+
+Octopus borrows heavily from the design of [Ansible](https://www.ansible.com/). For example, the use of SSH to avoid having remote agents.  Also Ansible's idempotent *plays* are similar to Octopuses *asserters*.
+
+The goal of Octopus are:
+
+- Be written in and use Javascript and Node.js
+- Use Javascript for templated strings to keep the learning curve low
+- Use JSON instead of YAML as a script format
+- Be fast!
+- Must bootstrap the remote system with Node.js
+- Must bootstrap the remote system with Octopus
+- Leverage SSH as a remote transport
+- Have asserters use idempotency consistently (no empty assertions)
+- Have an easy to parse output format
+- Leverage Node.js for platform independence whenever possible
+
+### Scripts and Asserters
 
 Octopus scripts are made up of a collections of assertions about a host state.  Assertions are run one at a time, from the top to bottom.  Each assertion invokes an *asserter* class to assert some particular type of machine state.  There are asserters for files, directories, users, groups, file downsloads, file contents, and so on.
 
 Asserters are the core of Octopus.  They are simple Javascript objects that contain two methods, `assert` and `rectify`. The `assert` method confirms the machine state. If `assert` returns `true` then the script proceeds. If `assert` returns `false`, then the machine is not in the correct state and the `rectify` method is called to fix things. If `rectify` cannot put the machine in the correct state so that `assert` will succeed next time then it throws an exception and the script ends.  The `assert` will throw an exception if it is impossible for the `assert` to ever succeed, e.g. unzipping a file that is not actually present.
 
-## Writing an Asserter Class
+### SSH Authentication
+
+When run against one or more hosts, Octopus uses SSH to run scripts on those hostes. When run without a remote host, Octopus just runs the script directly.
+
+## Asserters
+
+### `FileAbsent`
+
+Ensures that a file is absent (deleted) from a system.
+
+| Arg    | Type     | Description                       |
+| ------ | -------- | --------------------------------- |
+| `path` | `String` | Path of the file to ensure absent |
+
+## Advanced
+
+### Writing an Asserter Class
 
 Each script assertions runs with a new instance of the specified asserter. `assert` will always be called before `rectify`.
 
@@ -94,18 +133,3 @@ The method `assert(args)` receives the args from the script and must return `tru
 The method `rectify()` is called to modify the host state.  The key thing is that when `rectify` finishes the next call to `assert` *must succeed*.  If rectify cannot ensure this, then it should throw a `ScriptError` (see `newScriptError` above) or some other `Error` with enough information for the user to be able to fix the problem.
 
 Finally, the `result()` method will always be called to output the result of the asserter.  This method should contain an object that helps the user understand what the assert checked or modified.
-
-## Background
-
-Octopus steals heavily from the design of [Ansible](https://www.ansible.com/). Specifically the reliance on SSH.  Also Ansible's *idempotent* plays are similar to Octopuses asserters.  The goal of Octopus are:
-
-- Be written in and use Javascript and Node.js
-- Use Javascript for templated strings to keep the learning curve low
-- Use JSON instead of YAML as a script format
-- Be fast!
-- Must bootstrap the remote system with Node.js
-- Must bootstrap the remote system with Octopus
-- Leverage SSH as a remote transport
-- Have asserters use idempotency consistently (no empty assertions)
-- Have an easy to parse output format
-- Leverage Node.js for platform independence whenever possible

@@ -342,9 +342,11 @@ sudo apt -y -q install nodejs`
       this.log.info(JSON5.stringify(vars, null, "  "))
     }
 
-    this.log.output(
-      JSON5.stringify({ description: script.options.description })
-    )
+    if (options && options.description) {
+      this.log.output(
+        JSON5.stringify({ description: script.options.description })
+      )
+    }
 
     for (const assertion of assertions) {
       const asserter = new asserters[assertion.name]({
@@ -696,40 +698,45 @@ const runRemoteCommand = async (ssh, command, options = {}) => {
     throw new Error(`Failed to run command '${command}'`)
   }
 
-  const temp = stderr ? stderr : stdout
-  let index = temp.length - 1
+  // If no stderr then we are using a pseudo-TTY and output is blended
+  stderr = stderr || stdout
+
+  let index = stderr.length - 1
   let digits = ""
 
   // Be super careful about grabbing the exit code digits
   // as some apps like 'apt' generate a lot of extra noise
   // at the end of the output. And when a pseudo-TTY is in
   // in use strings are terminated with \r\n
-  if (index >= 1 && temp[index] === "\n") {
+  if (index >= 1 && stderr[index] === "\n") {
     index -= 1
 
-    if (temp[index] === "\r") {
+    if (stderr[index] === "\r") {
       index -= 1
     }
 
     const endIndex = index + 1
 
-    while (index >= 0 && temp[index] >= "0" && temp[index] <= "9") {
+    while (index >= 0 && stderr[index] >= "0" && stderr[index] <= "9") {
       index -= 1
     }
 
     index += 1
 
     if (index < endIndex) {
-      digits = temp.substring(index, endIndex)
+      digits = stderr.substring(index, endIndex)
     }
+
+    stderr = index <= 0 ? "" : stderr.substring(0, index)
+  } else {
+    stderr = ""
   }
+
   const exitCode = digits ? parseInt(digits) : 255
 
   if (!options.noThrow && exitCode !== 0) {
     throw new Error(`Command '${command}' returned exit code ${exitCode}`)
   }
-
-  stderr = index <= 0 ? "" : stderr.slice(0, index)
 
   if (exitCode !== 0 && options.logError) {
     options.logError(stderr)
