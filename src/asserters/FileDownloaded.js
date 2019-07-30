@@ -70,16 +70,15 @@ export class FileDownloaded {
   }
 
   async rectify() {
-    if (!this.toFileExists) {
-      {
-        const toDirPath = path.dirname(this.expandedToPath)
-
-        if (!(await util.dirExists(this.fs, toDirPath))) {
-          await this.fs.ensureDir(toDirPath)
-        }
-      }
-    } else {
+    // TODO: Ensure this works when the file cannot be removed
+    if (this.toFileExists) {
       await this.fs.remove(this.expandedToPath)
+    }
+
+    const toDirPath = path.dirname(this.expandedToPath)
+
+    if (!(await util.dirExists(fs, toDirPath))) {
+      await this.fs.ensureDir(toDirPath)
     }
 
     const result = await this.fetch(this.expandedUrl)

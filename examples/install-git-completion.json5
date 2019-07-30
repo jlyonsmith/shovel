@@ -1,0 +1,30 @@
+{
+  vars: {
+    bashCompletionDir: "/Users/john/Projects/jlyonsmith/octopus/scratch",
+  },
+  assertions: [
+    {
+      assert: "DirectoryExists",
+      runAs: "root",
+      with: {
+        path: "${bashCompletionDir}",
+      },
+    },
+    {
+      assert: "FileDownloaded",
+      with: {
+        url: "https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash",
+        digest: "c5ae20282e52103f3775cba158df5b380b853cdffa024b7f7495069682d2b4ee",
+        toPath: "${bashCompletionDir}/git-completion.bash",
+      },
+    },
+    {
+      assert: "FileDownloaded",
+      with: {
+        url: "https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh",
+        digest: "7a0e409206671e3cdf6544641b29cbdd2cd2dab4a07af70339b9b590db16447f",
+        toPath: "${bashCompletionDir}/git-prompt.sh",
+      },
+    },
+  ],
+}
