@@ -97,8 +97,8 @@ export const runRemoteCommand = async (ssh, command, options = {}) => {
             options.password &&
             (s.startsWith("error:") ||
             s.startsWith("warning:") ||
-            /^v?\d+\./.test(s) || // Version numbers
-              /\d+$/.test(s)) // Exit codes
+            /^v?\d+\.\d+\.\d+/.test(s) || // Version numbers
+              /^\d+$/.test(s)) // Exit codes
           ) {
             stderr += s
             return

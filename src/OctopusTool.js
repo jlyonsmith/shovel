@@ -112,13 +112,14 @@ sudo apt -y -q install nodejs`
 
   async rectifyHasOctopus(ssh) {
     const password = ssh.config[0].password
-    let stream = null
 
     this.log.info("Installing Octopus")
     await util.runRemoteCommand(ssh, "npm install -g @johnls/octopus", {
       sudo: true,
       password,
     })
+
+    // TODO: Ensure that Octopus runs
   }
 
   async processScriptFile(scriptFile, options = {}) {
@@ -421,7 +422,6 @@ sudo apt -y -q install nodejs`
           }; attempting to rectify.`
         )
         await this.rectifyHasNode(ssh)
-        await this.rectifyHasOctopus(ssh)
       } else if (options.verbose) {
         this.log.info(
           `Node.js is installed on ${sshConfig.host}:${sshConfig.port}`
