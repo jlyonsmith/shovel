@@ -11,21 +11,7 @@ import JSON5 from "@johnls/json5"
 import autobind from "autobind-decorator"
 import * as asserters from "./asserters"
 import * as util from "./util"
-
-class ScriptError extends Error {
-  constructor(message, fileName, node = { line: 0, column: 0 }) {
-    const lineNumber = node.line
-    const columnNumber = node.column
-
-    super(message, fileName, lineNumber, columnNumber)
-    this.message += ` (${fileName}:${lineNumber}:${columnNumber})`
-  }
-
-  // Otherwise "Error: " is prefixed
-  toString() {
-    return this.message
-  }
-}
+import { ScriptError } from "./ScriptError"
 
 @autobind
 export class OctopusTool {
