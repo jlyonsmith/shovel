@@ -48,7 +48,7 @@ sudo apt -y -q install nodejs`
 
     if (
       remoteDate.getFullYear() !== localDate.getFullYear() ||
-      remoteDate.getMonth() !== localDate.getFullMonth() ||
+      remoteDate.getMonth() !== localDate.getMonth() ||
       remoteDate.getDate() !== localDate.getDate()
     ) {
       throw new Error("Remote system clock is more than 24 hours out of sync.")
@@ -430,7 +430,7 @@ sudo apt -y -q install nodejs`
 
       if (!(await this.assertHasOctopus(ssh))) {
         this.log.warning(
-          `Octopus with version ${version.fullVersion} not found on ${
+          `Octopus with version ${version.version} not found on ${
             sshConfig.host
           }:${sshConfig.port}; attempting to rectify`
         )
