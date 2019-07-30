@@ -1,6 +1,6 @@
 import fs from "fs-extra"
 import childProcess from "child_process"
-import * as util from "./util"
+import * as util from "../util"
 import os from "os"
 
 /*

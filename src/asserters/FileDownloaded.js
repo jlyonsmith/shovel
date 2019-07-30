@@ -1,7 +1,7 @@
 import fs from "fs-extra"
 import path from "path"
 import fetch from "node-fetch"
-import * as util from "./util"
+import * as util from "../util"
 
 /*
 Asserts that a file is downloaded. Uses SHA256 digest to verify proper file.

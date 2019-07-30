@@ -1,7 +1,7 @@
 import fs from "fs-extra"
 import childProcess from "child_process"
 import os from "os"
-import * as util from "./util"
+import * as util from "../util"
 
 /*
 Asserts and ensures that a user is absent.

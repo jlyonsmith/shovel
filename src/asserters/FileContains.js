@@ -1,5 +1,5 @@
 import fs from "fs-extra"
-import * as util from "./util"
+import * as util from "../util"
 
 /*
 Ensures that a text file contains specific contents.

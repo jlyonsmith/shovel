@@ -1,6 +1,6 @@
 import fs from "fs-extra"
 import path from "path"
-import * as util from "./util"
+import * as util from "../util"
 
 /*
 That a file was copied from one location to another.

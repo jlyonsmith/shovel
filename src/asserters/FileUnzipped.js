@@ -1,6 +1,6 @@
 import fs from "fs-extra"
 import yauzl from "yauzl-promise"
-import * as util from "./util"
+import * as util from "../util"
 import path from "path"
 
 /*

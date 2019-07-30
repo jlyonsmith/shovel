@@ -10,6 +10,7 @@ import { Readable } from "stream"
 import JSON5 from "@johnls/json5"
 import autobind from "autobind-decorator"
 import * as asserters from "./asserters"
+import * as util from "./util"
 
 class ScriptError extends Error {
   constructor(message, fileName, node = { line: 0, column: 0 }) {
@@ -42,7 +43,7 @@ sudo apt -y -q install nodejs`
 
   // Assert the remote system has Node 10 installed
   async assertHasNode(ssh) {
-    let result = await runRemoteCommand(ssh, "node --version", {
+    let result = await util.runRemoteCommand(ssh, "node --version", {
       noThrow: true,
     })
 
@@ -54,7 +55,7 @@ sudo apt -y -q install nodejs`
     let result = null
 
     this.log.info("Checking remote system clock")
-    result = await runRemoteCommand(ssh, "date")
+    result = await util.runRemoteCommand(ssh, "date")
 
     const remoteDate = new Date(result.stdout)
     const localDate = new Date()
@@ -68,13 +69,13 @@ sudo apt -y -q install nodejs`
     }
 
     this.log.info("Creating /opt/octopus directory")
-    await runRemoteCommand(ssh, "mkdir -p /opt/octopus", {
+    await util.runRemoteCommand(ssh, "mkdir -p /opt/octopus", {
       sudo: true,
       password,
     })
 
     this.log.info("Creating /opt/octopus/install_node.sh script")
-    await runRemoteCommand(
+    await util.runRemoteCommand(
       ssh,
       `bash -c 'echo "${OctopusTool.installNodeScript}" > ./install_node.sh'`,
       {
@@ -85,7 +86,7 @@ sudo apt -y -q install nodejs`
     )
 
     this.log.info("Running /opt/octopus/install_node.sh script")
-    result = await runRemoteCommand(ssh, "bash ./install_node.sh", {
+    result = await util.runRemoteCommand(ssh, "bash ./install_node.sh", {
       cwd: "/opt/octopus",
       sudo: true,
       password,
@@ -95,14 +96,14 @@ sudo apt -y -q install nodejs`
     if (result.exitCode !== 0) {
       // If the Node install fails it may just need an upgrade
       this.log.info("Trying to upgrade Node.js")
-      result = await runRemoteCommand(ssh, "apt install -y nodejs", {
+      result = await util.runRemoteCommand(ssh, "apt install -y nodejs", {
         cwd: "/opt/octopus",
         sudo: true,
         password,
       })
     }
 
-    result = await runRemoteCommand(ssh, "node --version", {
+    result = await util.runRemoteCommand(ssh, "node --version", {
       noThrow: true,
     })
 
@@ -114,7 +115,7 @@ sudo apt -y -q install nodejs`
   }
 
   async assertHasOctopus(ssh) {
-    let result = await runRemoteCommand(ssh, "octopus --version", {
+    let result = await util.runRemoteCommand(ssh, "octopus --version", {
       noThrow: true,
     })
 
@@ -128,7 +129,7 @@ sudo apt -y -q install nodejs`
     let stream = null
 
     this.log.info("Installing Octopus")
-    await runRemoteCommand(ssh, "npm install -g @johnls/octopus", {
+    await util.runRemoteCommand(ssh, "npm install -g @johnls/octopus", {
       sudo: true,
       password,
     })
@@ -456,7 +457,10 @@ sudo apt -y -q install nodejs`
         )
       }
 
-      remoteTempFile = (await runRemoteCommand(ssh, "mktemp")).stdout.trim()
+      remoteTempFile = (await util.runRemoteCommand(
+        ssh,
+        "mktemp"
+      )).stdout.trim()
 
       this.log.info(
         `Created remote host script file${
@@ -485,14 +489,14 @@ sudo apt -y -q install nodejs`
       const sftp = ssh.sftp()
       let writeStream = await sftp.createWriteStream(remoteTempFile)
 
-      await pipeToPromise(readStream, writeStream)
+      await util.pipeToPromise(readStream, writeStream)
 
       const sudo =
         script.assertions &&
         script.assertions.find((assertion) => assertion.hasOwnProperty("runAs"))
 
       this.log.info(`Running script on remote host`)
-      await runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
+      await util.runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
         sudo,
         password: sshConfig.password,
         log: this.log.output,
@@ -503,7 +507,7 @@ sudo apt -y -q install nodejs`
       if (isConnected) {
         if (remoteTempFile && !this.debug) {
           this.log.info("Deleting remote temp file")
-          await runRemoteCommand(ssh, `rm ${remoteTempFile}`)
+          await util.runRemoteCommand(ssh, `rm ${remoteTempFile}`)
         }
 
         ssh.close()
@@ -617,132 +621,4 @@ Options:
 
     return 0
   }
-}
-
-const pipeToPromise = (readable, writeable) => {
-  const promise = new Promise((resolve, reject) => {
-    readable.on("error", (error) => {
-      reject(error)
-    })
-    writeable.on("error", (error) => {
-      reject(error)
-    })
-    writeable.on("finish", (file) => {
-      resolve(file)
-    })
-  })
-  readable.pipe(writeable)
-  return promise
-}
-
-/*
-  Run a command on the remote system. Options are:
-
- {
-    noThrow: boolean    // Do not throw on bad exit code
-    log: boolean  // Send script output on STDOUT directly to this.log
-    sudo: boolean       // Run this command under sudo
-    password: string    // Password (if needed for sudo)
- }
-*/
-const runRemoteCommand = async (ssh, command, options = {}) => {
-  let stderr = ""
-  let stdout = ""
-  // From https://stackoverflow.com/a/29497680/576235
-  const ansiEscapeRegex = new RegExp(
-    /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g
-  )
-  const stripAnsiEscapes = (s) => s.replace(ansiEscapeRegex, "")
-
-  try {
-    const commandLine =
-      (options.cwd ? `cd ${options.cwd} 1> /dev/null 2> /dev/null;` : "") +
-      (options.sudo ? "sudo " : "") +
-      command +
-      "; echo $? 1>&2"
-    const socket = await ssh.spawn(commandLine, null, {
-      pty: !!options.password,
-    })
-
-    if (options.password) {
-      socket.write(options.password + "\n")
-      socket.end()
-    }
-
-    await new Promise((resolve, reject) => {
-      socket
-        .on("close", resolve)
-        .on("error", reject)
-        // We have to read data or the socket will block
-        .on("data", (data) => {
-          const s = stripAnsiEscapes(data.toString()).trim()
-
-          // If using a pseudo-TTY catch stderr here
-          if (
-            options.password &&
-            (s.startsWith("error:") ||
-            s.startsWith("warning:") ||
-            /^v\d\./.test(s) || // Version numbers can come to stderr
-              /\d+$/.test(s))
-          ) {
-            stderr += s
-            return
-          }
-
-          stdout += s
-
-          if (options.log && s.startsWith("{")) {
-            // Log output as we go otherwise we keep the user guessing about what's happening
-            for (const line of s.split("\n")) {
-              options.log(line)
-            }
-          }
-        })
-        .stderr.on("data", (data) => {
-          const s = stripAnsiEscapes(data.toString())
-          stderr += s
-        })
-    })
-  } catch (error) {
-    throw new Error(`Failed to run command '${command}'`)
-  }
-
-  let exitCode = 0
-
-  // Be extra careful about grabbing the exit code digits
-  // In case the script generates noise to STDERR.
-  if (stderr) {
-    let index = stderr.length - 1
-
-    if (stderr[index] === "\n") {
-      index -= 1
-    }
-
-    if (stderr[index] === "\r") {
-      index -= 1
-    }
-
-    const endIndex = index + 1
-
-    while (index >= 0 && stderr[index] >= "0" && stderr[index] <= "9") {
-      index -= 1
-    }
-
-    index += 1
-
-    if (index < endIndex) {
-      exitCode = parseInt(stderr.substring(index, endIndex))
-      stderr = stderr.substring(0, index).trim()
-    }
-  }
-
-  if (!options.noThrow && exitCode !== 0) {
-    throw new Error(`Command '${command}' returned exit code ${exitCode}`)
-  }
-
-  if (exitCode !== 0 && options.logError) {
-    options.logError(stderr)
-  }
-
-  return { exitCode, stdout, stderr }
 }
