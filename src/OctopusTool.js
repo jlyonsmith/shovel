@@ -122,7 +122,7 @@ sudo apt -y -q install nodejs`
   }
 
   async processScriptFile(scriptFile, options = {}) {
-    const { onlyExpandLocalVars } = options
+    const { runningLocally } = options
     const newScriptError = (message, node) => {
       return new ScriptError(message, scriptFile, node)
     }
@@ -176,9 +176,9 @@ sudo apt -y -q install nodejs`
       }
 
       try {
-        return new vm.Script("`" + node.value + "`")
-          .runInContext(vm.createContext(vmContext))
-          .replace("\\", "\\\\")
+        return new vm.Script("`" + node.value + "`").runInContext(
+          vm.createContext(vmContext)
+        )
       } catch (e) {
         throw newScriptError(e.message, node)
       }
@@ -220,9 +220,7 @@ sudo apt -y -q install nodejs`
             vmContext[key] = varNode.value.toString()
             break
           case "string":
-            vmContext[key] = onlyExpandLocalVars
-              ? varNode.value
-              : expandStringNode(varNode)
+            vmContext[key] = varNode.value
             break
           case "object":
             const valueNode = varNode.value.value
@@ -234,10 +232,7 @@ sudo apt -y -q install nodejs`
               )
             }
 
-            if (
-              !onlyExpandLocalVars ||
-              (onlyExpandLocalVars && varNode.value.local)
-            ) {
+            if (runningLocally && varNode.value.local) {
               vmContext[key] = expandStringNode(valueNode)
             }
             break
@@ -309,7 +304,8 @@ sudo apt -y -q install nodejs`
     }
   }
 
-  async runScript(state, options) {
+  async runScript(options) {
+    const state = await this.processScriptFile(options.scriptFile)
     const {
       script,
       assertions,
@@ -361,9 +357,11 @@ sudo apt -y -q install nodejs`
       output.result = asserter.result()
       this.log.output(JSON5.stringify(output))
     }
+
+    return 0
   }
 
-  async runOnHost(options) {
+  async runScriptOnHost(options) {
     let isConnected = false
     let ssh = null
     let remoteTempFile = null
@@ -455,7 +453,7 @@ sudo apt -y -q install nodejs`
       )
 
       const state = await this.processScriptFile(options.scriptFile, {
-        onlyExpandLocalVars: true,
+        runningLocally: true,
       })
 
       const { script, vmContext } = state
@@ -466,9 +464,10 @@ sudo apt -y -q install nodejs`
         }
       }
 
+      const newScript = JSON.stringify(script, null, "  ")
       let readStream = new Readable({
         read(size) {
-          this.push(JSON.stringify(script))
+          this.push(newScript)
           this.push(null)
         },
       })
@@ -551,7 +550,6 @@ Options:
   --password, -P      Remote user password. Defaults is to just use PPK.
   --host-file, -f     JSON5 file containing multiple remote host names
   --verbose           Emit verbose output
-  --set,-s            Set one or more variables
 `)
       return 0
     }
@@ -560,6 +558,12 @@ Options:
 
     if (!scriptFile) {
       throw new Error("Please specify a script file")
+    }
+
+    if (!args.host && (args.port || args.user || args.password)) {
+      this.log.warning(
+        "Port, user and password supplied without host are ignored; script will run locally"
+      )
     }
 
     const parsePort = (s) => {
@@ -591,7 +595,7 @@ Options:
       let exitCode = 0
 
       for (const host of hosts) {
-        exitCode += await this.runOnHost({
+        exitCode += await this.runScriptOnHost({
           scriptFile,
           host: host.host,
           user: host.user,
@@ -600,11 +604,10 @@ Options:
           verbose: args.verbose,
         })
       }
-    } else {
-      const state = await this.processScriptFile(scriptFile)
-      await this.runScript(state, { verbose: args.verbose })
-    }
 
-    return 0
+      return exitCode
+    } else {
+      return await this.runScript({ scriptFile, verbose: args.verbose })
+    }
   }
 }
