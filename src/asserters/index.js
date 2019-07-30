@@ -1,6 +1,7 @@
 export { DirectoryAbsent } from "./DirectoryAbsent"
 export { DirectoryExists } from "./DirectoryExists"
 export { FileAbsent } from "./FileAbsent"
+export { FilesAbsent } from "./FilesAbsent"
 export { FileContains } from "./FileContains"
 export { FileCopied } from "./FileCopied"
 export { FileDownloaded } from "./FileDownloaded"

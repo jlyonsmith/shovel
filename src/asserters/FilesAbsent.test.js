@@ -1,4 +1,4 @@
-import { FileAbsent } from "./FileAbsent"
+import { FilesAbsent } from "./FilesAbsent"
 
 let container = null
 
@@ -33,27 +33,51 @@ beforeEach(() => {
   }
 })
 
-test("FileAbsent with no dir or file existing", async () => {
-  const asserter = new FileAbsent(container)
+test("FilesAbsent with no dir or files existing", async () => {
+  const asserter = new FilesAbsent(container)
 
   await expect(
-    asserter.assert({ path: { type: "string", value: "/notthere" } })
+    asserter.assert({
+      paths: {
+        type: "array",
+        value: [
+          { type: "string", value: "/notthere" },
+          { type: "string", value: "/alsonotthere" },
+        ],
+      },
+    })
   ).resolves.toBe(true)
 })
 
-test("FileAbsent with file existing", async () => {
-  const asserter = new FileAbsent(container)
+test("FilesAbsent with file existing", async () => {
+  const asserter = new FilesAbsent(container)
 
   await expect(
-    asserter.assert({ path: { type: "string", value: "/somefile" } })
+    asserter.assert({
+      paths: {
+        type: "array",
+        value: [
+          { type: "string", value: "/somefile" },
+          { type: "string", value: "/notthere" },
+        ],
+      },
+    })
   ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
 
-test("FileAbsent with dir instead of file existing", async () => {
-  const asserter = new FileAbsent(container)
+test("FilesAbsent with dir instead of file existing", async () => {
+  const asserter = new FilesAbsent(container)
 
   await expect(
-    asserter.assert({ path: { type: "string", value: "/somedir" } })
+    asserter.assert({
+      paths: {
+        type: "array",
+        value: [
+          { type: "string", value: "/nothere" },
+          { type: "string", value: "/somedir" },
+        ],
+      },
+    })
   ).rejects.toThrow(Error)
 })

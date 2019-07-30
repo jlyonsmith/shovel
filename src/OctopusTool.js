@@ -431,7 +431,9 @@ sudo apt -y -q install nodejs`
 
       if (!(await this.assertHasNode(ssh))) {
         this.log.warning(
-          `Node not found on ${sshConfig.host}; attempting to rectify.`
+          `Node not found on ${sshConfig.host}:${
+            sshConfig.port
+          }; attempting to rectify.`
         )
         await this.rectifyHasNode(ssh)
         await this.rectifyHasOctopus(ssh)
@@ -493,13 +495,7 @@ sudo apt -y -q install nodejs`
       await runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
         sudo,
         password: sshConfig.password,
-        log: (line) => {
-          const trimmedLine = line.trim()
-
-          if (trimmedLine !== "" && trimmedLine.startsWith("{")) {
-            this.log.output(trimmedLine)
-          }
-        },
+        log: this.log.output,
         logError: this.log.outputError,
         noThrow: true,
       })
@@ -679,11 +675,24 @@ const runRemoteCommand = async (ssh, command, options = {}) => {
         .on("error", reject)
         // We have to read data or the socket will block
         .on("data", (data) => {
-          const s = stripAnsiEscapes(data.toString())
+          const s = stripAnsiEscapes(data.toString()).trim()
+
+          // If using a pseudo-TTY catch stderr here
+          if (
+            options.password &&
+            (s.startsWith("error:") ||
+            s.startsWith("warning:") ||
+            /^v\d\./.test(s) || // Version numbers can come to stderr
+              /\d+$/.test(s))
+          ) {
+            stderr += s
+            return
+          }
 
           stdout += s
 
-          if (options.log) {
+          if (options.log && s.startsWith("{")) {
+            // Log output as we go otherwise we keep the user guessing about what's happening
             for (const line of s.split("\n")) {
               options.log(line)
             }
@@ -698,18 +707,16 @@ const runRemoteCommand = async (ssh, command, options = {}) => {
     throw new Error(`Failed to run command '${command}'`)
   }
 
-  // If no stderr then we are using a pseudo-TTY and output is blended
-  stderr = stderr || stdout
+  let exitCode = 0
 
-  let index = stderr.length - 1
-  let digits = ""
+  // Be extra careful about grabbing the exit code digits
+  // In case the script generates noise to STDERR.
+  if (stderr) {
+    let index = stderr.length - 1
 
-  // Be super careful about grabbing the exit code digits
-  // as some apps like 'apt' generate a lot of extra noise
-  // at the end of the output. And when a pseudo-TTY is in
-  // in use strings are terminated with \r\n
-  if (index >= 1 && stderr[index] === "\n") {
-    index -= 1
+    if (stderr[index] === "\n") {
+      index -= 1
+    }
 
     if (stderr[index] === "\r") {
       index -= 1
@@ -724,15 +731,10 @@ const runRemoteCommand = async (ssh, command, options = {}) => {
     index += 1
 
     if (index < endIndex) {
-      digits = stderr.substring(index, endIndex)
+      exitCode = parseInt(stderr.substring(index, endIndex))
+      stderr = stderr.substring(0, index).trim()
     }
-
-    stderr = index <= 0 ? "" : stderr.substring(0, index)
-  } else {
-    stderr = ""
   }
-
-  const exitCode = digits ? parseInt(digits) : 255
 
   if (!options.noThrow && exitCode !== 0) {
     throw new Error(`Command '${command}' returned exit code ${exitCode}`)

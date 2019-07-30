@@ -7,7 +7,7 @@ Checks and ensures that a file exists.
 Example:
 
 {
-  assert: "fileExists",
+  assert: "FileExists",
   with: {
     path: "/path/to/file"
   }

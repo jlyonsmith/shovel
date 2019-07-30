@@ -6,7 +6,7 @@ Checks and ensures that a file does not exist.
 Example:
 
 {
-  assert: "fileAbsent",
+  assert: "FileAbsent",
   with: {
     path: "/path/to/file"
   }
@@ -36,24 +36,25 @@ export class FileAbsent {
 
     this.expandedPath = this.expandStringNode(pathNode)
 
+    let stat = null
+    let ok = true
+
     try {
-      this.stat = await this.fs.lstat(this.expandedPath)
-      return !this.stat.isFile()
-    } catch (e) {
-      return true
-    }
-  }
+      stat = await this.fs.lstat(this.expandedPath)
+      ok = false
+    } catch (e) {}
 
-  async rectify() {
-    const { path: pathNode } = this.args
-
-    if (this.stat && this.stat.isDirectory()) {
+    if (stat && stat.isDirectory()) {
       throw this.newScriptError(
         `Not removing existing directory with the name '${this.expandedPath}'`,
         pathNode
       )
     }
 
+    return ok
+  }
+
+  async rectify() {
     await this.fs.unlink(this.expandedPath)
   }
 
