@@ -176,9 +176,9 @@ sudo apt -y -q install nodejs`
       }
 
       try {
-        return new vm.Script("`" + node.value + "`").runInContext(
-          vm.createContext(vmContext)
-        )
+        return new vm.Script("`" + node.value + "`")
+          .runInContext(vm.createContext(vmContext))
+          .replace("\\", "\\\\")
       } catch (e) {
         throw newScriptError(e.message, node)
       }

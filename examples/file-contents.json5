@@ -21,7 +21,7 @@ source /usr/local/etc/bash_completion.d/git-completion.bash\\n\
       },
       assert: "FileContains",
       with: {
-        path: "scratch/my-otherfile",
+        path: "scratch/my-otherfile.sh",
         contents: "${fileContents}",
       },
     },
