@@ -61,22 +61,27 @@ export const runningAsRoot = (os) => os.userInfo().uid === 0
  }
 */
 export const runRemoteCommand = async (ssh, command, options = {}) => {
-  let stderr = ""
-  let stdout = ""
   // From https://stackoverflow.com/a/29497680/576235
   const ansiEscapeRegex = new RegExp(
     /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g
   )
   const stripAnsiEscapes = (s) => s.replace(ansiEscapeRegex, "")
 
+  let output = ""
+  let firstLine = true
+  let exitCode = 0
+
   try {
     const commandLine =
       (options.cwd ? `cd ${options.cwd} 1> /dev/null 2> /dev/null;` : "") +
       (options.sudo ? "sudo " : "") +
       command +
-      "; echo $? 1>&2"
+      "; echo $?"
     const socket = await ssh.spawn(commandLine, null, {
-      pty: !!options.password,
+      // Always allocate a pseudo-TTY. Unfortunately this merges STDOUT & STDERR
+      // but different apps use those randomly anyway, so we might as
+      // well merge them and identify the output with pattern matches.
+      pty: true,
     })
 
     if (options.password) {
@@ -92,72 +97,39 @@ export const runRemoteCommand = async (ssh, command, options = {}) => {
         .on("data", (data) => {
           const s = stripAnsiEscapes(data.toString()).trim()
 
-          // If using a pseudo-TTY catch stderr here
-          if (
-            options.password &&
-            (s.startsWith("error:") ||
-            s.startsWith("warning:") ||
-            /^v?\d+\.\d+\.\d+/.test(s) || // Version numbers
-              /^\d+$/.test(s)) // Exit codes
-          ) {
-            stderr += s
+          if (options.password && firstLine) {
+            // Password will be output to first line if supplied
+            firstLine = false
             return
-          }
-
-          stdout += s
-
-          if (options.log && s.startsWith("{")) {
+          } else if (
+            (options.logError && s.startsWith("error:")) ||
+            s.startsWith("warning:")
+          ) {
+            options.logError(s)
+          } else if (/^\d+$/.test(s)) {
+            exitCode = parseInt(s)
+            return
+          } else if (/^v?\d+\.\d+\.\d+/.test(s)) {
+            // Version numbers
+            output += s
+          } else if (s.startsWith("/")) {
+            // Paths
+            output += s
+          } else if (options.log && s.startsWith("{")) {
             // Log output as we go otherwise we keep the user guessing about what's happening
             for (const line of s.split("\n")) {
               options.log(line)
             }
           }
         })
-        .stderr.on("data", (data) => {
-          const s = stripAnsiEscapes(data.toString())
-          stderr += s
-        })
     })
   } catch (error) {
     throw new Error(`Failed to run command '${command}'`)
-  }
-
-  let exitCode = 0
-
-  // Be extra careful about grabbing the exit code digits
-  // In case the script generates noise to STDERR.
-  if (stderr) {
-    let index = stderr.length - 1
-
-    if (stderr[index] === "\n") {
-      index -= 1
-    }
-
-    if (stderr[index] === "\r") {
-      index -= 1
-    }
-
-    const endIndex = index + 1
-
-    while (index >= 0 && stderr[index] >= "0" && stderr[index] <= "9") {
-      index -= 1
-    }
-
-    index += 1
-
-    if (index < endIndex) {
-      exitCode = parseInt(stderr.substring(index, endIndex))
-      stderr = stderr.substring(0, index).trim()
-    }
   }
 
   if (!options.noThrow && exitCode !== 0) {
     throw new Error(`Command '${command}' returned exit code ${exitCode}`)
   }
 
-  if (exitCode !== 0 && options.logError) {
-    options.logError(stderr)
-  }
-
-  return { exitCode, stdout, stderr }
+  return { exitCode, output }
 }

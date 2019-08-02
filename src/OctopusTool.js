@@ -32,7 +32,7 @@ sudo apt -y -q install nodejs`
       noThrow: true,
     })
 
-    return result.exitCode === 0 && result.stdout.trim().startsWith("v10")
+    return result.exitCode === 0 && result.output.trim().startsWith("v10")
   }
 
   async rectifyHasNode(ssh) {
@@ -42,7 +42,7 @@ sudo apt -y -q install nodejs`
     this.log.info("Checking remote system clock")
     result = await util.runRemoteCommand(ssh, "date")
 
-    const remoteDate = new Date(result.stdout)
+    const remoteDate = new Date(result.output)
     const localDate = new Date()
 
     if (
@@ -92,9 +92,9 @@ sudo apt -y -q install nodejs`
       noThrow: true,
     })
 
-    if (result.exitCode !== 0 || !result.stdout.trim().startsWith("v10")) {
+    if (result.exitCode !== 0 || !result.output.trim().startsWith("v10")) {
       throw new Error(
-        `Node version ${result.stdout} is wrong after installation`
+        `Node version ${result.output} is wrong after installation`
       )
     }
   }
@@ -105,7 +105,7 @@ sudo apt -y -q install nodejs`
     })
 
     return (
-      result.exitCode === 0 && result.stderr.trim().startsWith(version.version)
+      result.exitCode === 0 && result.output.trim().startsWith(version.version)
     )
   }
 
@@ -443,7 +443,7 @@ sudo apt -y -q install nodejs`
       remoteTempFile = (await util.runRemoteCommand(
         ssh,
         "mktemp"
-      )).stdout.trim()
+      )).output.trim()
 
       this.log.info(
         `Created remote host script file${
