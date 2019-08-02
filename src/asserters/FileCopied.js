@@ -15,6 +15,8 @@ Example:
     },
 */
 
+// TODO: Add 'origin' to copy file from the origin system
+
 export class FileCopied {
   constructor(container) {
     this.fs = container.fs || fs

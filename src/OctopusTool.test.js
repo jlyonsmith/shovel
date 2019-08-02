@@ -38,3 +38,14 @@ test("--version", async () => {
     expect.stringMatching(/\d\.\d\.\d/)
   )
 })
+
+// TODO: Add a test for assertHasNode
+// TODO: Add a test for rectifyHasNode
+// TODO: Add a test for assertHasOctopus
+// TODO: Add a test for rectifyHasOctopus
+// TODO: Add a test for processScriptFile
+// TODO: Add a test for runScript
+// TODO: Add a test for runScriptOnHost
+// TODO: Add a test for run with local only script
+// TODO: Add a test for run with host and script
+// TODO: Add a test for run with multiple hosts and script

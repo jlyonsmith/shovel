@@ -109,6 +109,8 @@ Ensures that a file is absent (deleted) from a system.
 | ------ | -------- | --------------------------------- |
 | `path` | `String` | Path of the file to ensure absent |
 
+// TODO: Document all asserters
+
 ## Advanced
 
 ### Writing an Asserter Class

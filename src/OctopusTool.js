@@ -26,6 +26,22 @@ curl -sL https://deb.nodesource.com/setup_10.x -o ./nodesource_setup.sh
 sudo bash ./nodesource_setup.sh
 sudo apt -y -q install nodejs`
 
+  async assertCanSudoOnHost(ssh) {
+    result = await util.runRemoteCommand(ssh, "bash -c 'echo /$EUID'", {
+      sudo: true,
+      password,
+      noThrow: true,
+    })
+    if (result.output !== "/0") {
+      throw new Error(
+        `User ${
+          ssh.config[0].username
+        } does not have sudo ability on remote system`
+      )
+    }
+    return true
+  }
+
   // Assert the remote system has Node 10 installed
   async assertHasNode(ssh) {
     let result = await util.runRemoteCommand(ssh, "node --version", {
@@ -52,6 +68,8 @@ sudo apt -y -q install nodejs`
     ) {
       throw new Error("Remote system clock is more than 24 hours out of sync.")
     }
+
+    this.assertCanSudoOnHost(ssh)
 
     this.log.info("Creating /opt/octopus directory")
     await util.runRemoteCommand(ssh, "mkdir -p /opt/octopus", {
@@ -109,7 +127,11 @@ sudo apt -y -q install nodejs`
     )
   }
 
-  async rectifyHasOctopus(ssh) {
+  async rectifyHasOctopus(ssh, options = {}) {
+    if (!options.canSudoOnHost) {
+      this.assertCanSudoOnHost(ssh)
+    }
+
     const password = ssh.config[0].password
 
     this.log.info("Installing Octopus")
@@ -122,6 +144,7 @@ sudo apt -y -q install nodejs`
   }
 
   async processScriptFile(scriptFile, options = {}) {
+    // TODO: Rename runningLocally to runningOnOrigin
     const { runningLocally } = options
     const newScriptError = (message, node) => {
       return new ScriptError(message, scriptFile, node)
@@ -163,6 +186,7 @@ sudo apt -y -q install nodejs`
       fs: {
         readFile: (fileName) => fs.readFileSync(fileName),
       },
+      // TODO: Add 'path' methods
     }
     const expandStringNode = (node) => {
       if (
@@ -199,6 +223,8 @@ sudo apt -y -q install nodejs`
       }
     }
 
+    // TODO: Add an 'include' node that merges in the 'options', 'vars' and 'assertions from another script. Ensure description reflects the origin
+
     if (varsNode) {
       if (varsNode.type !== "object") {
         throw newScriptError("'vars' must be an object", varsNode)
@@ -232,6 +258,7 @@ sudo apt -y -q install nodejs`
               )
             }
 
+            // TODO: Change runningLocally to runningOnOrigin and 'local' to 'origin'
             if (runningLocally && varNode.value.local) {
               vmContext[key] = expandStringNode(valueNode)
             }
@@ -414,6 +441,8 @@ sudo apt -y -q install nodejs`
 
       this.log.info(`Connected to ${sshConfig.host}:${sshConfig.port}`)
 
+      let installedNode = false
+
       if (!(await this.assertHasNode(ssh))) {
         this.log.warning(
           `Node not found on ${sshConfig.host}:${
@@ -421,6 +450,7 @@ sudo apt -y -q install nodejs`
           }; attempting to rectify.`
         )
         await this.rectifyHasNode(ssh)
+        installedNode = true
       } else if (options.verbose) {
         this.log.info(
           `Node.js is installed on ${sshConfig.host}:${sshConfig.port}`
@@ -433,7 +463,7 @@ sudo apt -y -q install nodejs`
             sshConfig.host
           }:${sshConfig.port}; attempting to rectify`
         )
-        await this.rectifyHasOctopus(ssh)
+        await this.rectifyHasOctopus(ssh, { canSudoOnHost: installedNode })
       } else if (options.verbose) {
         this.log.info(
           `Octopus is installed on ${sshConfig.host}:${sshConfig.port}`

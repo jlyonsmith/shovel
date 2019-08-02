@@ -15,8 +15,6 @@ Example:
 }
 */
 
-// TODO: Add ability not replace whole file
-
 export class FileContains {
   constructor(container) {
     this.fs = container.fs || fs

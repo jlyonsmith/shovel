@@ -17,6 +17,8 @@ Example:
     }
 */
 
+// TODO: Implement FileZipped and tests
+
 export class FileZipped {
   constructor(container) {
     this.fs = container.fs || fs

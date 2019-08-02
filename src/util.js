@@ -72,6 +72,7 @@ export const runRemoteCommand = async (ssh, command, options = {}) => {
   let exitCode = 0
 
   try {
+    // TODO: Implement ability to run as a specific user
     const commandLine =
       (options.cwd ? `cd ${options.cwd} 1> /dev/null 2> /dev/null;` : "") +
       (options.sudo ? "sudo " : "") +
