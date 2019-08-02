@@ -15,11 +15,10 @@ import { ScriptError } from "./ScriptError"
 
 @autobind
 export class OctopusTool {
-  constructor(toolName, log, options) {
-    options = options || {}
-    this.toolName = toolName
-    this.log = log
-    this.debug = options.debug
+  constructor(container) {
+    this.toolName = container.toolName
+    this.log = container.log
+    this.debug = container.debug
   }
 
   static installNodeScript = `#!/bin/bash

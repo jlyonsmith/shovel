@@ -7,15 +7,21 @@ That a file was copied from one location to another.
 
 Example:
     {
-      assert: "FileCopied",
+      assert: "FileCopiedToHost",
       with: {
-        from: <string> | { path: <string>, origin: <bool> },
-        to: <string>,
+        fromPath: <string>,
+        to: {
+          host: <string>,
+          port: <number>,
+          user: <string>,
+          password: <string>,
+          path: <string>,
+        },
       },
     },
 */
 
-export class FileCopied {
+export class FileCopiedToHost {
   constructor(container) {
     this.fs = container.fs || fs
     this.newScriptError = container.newScriptError

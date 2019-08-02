@@ -72,22 +72,22 @@ Octopus has the following features:
 - Cross platform (macOS, Linux, Windows) by leveraging Node's inherent cross platform capabilities
 - An easy to read JSON5 format script format that allows multi-line strings and comments
 
-### Background
+### Design
 
 Octopus borrows heavily from the design of [Ansible](https://www.ansible.com/). For example, the use of SSH to avoid having remote agents.  Also Ansible's idempotent *plays* are similar to Octopuses *asserters*.
 
-The goal of Octopus are:
+The *design goals* of Octopus are:
 
 - Be written in and use Javascript and Node.js
 - Use Javascript for templated strings to keep the learning curve low
 - Use JSON instead of YAML as a script format
-- Be fast!
+- Be fast
 - Must bootstrap the remote system with Node.js
 - Must bootstrap the remote system with Octopus
 - Leverage SSH as a remote transport
 - Have asserters use idempotency consistently (no empty assertions)
 - Have an easy to parse output format
-- Leverage Node.js for platform independence whenever possible
+- Whenever possible leverage Node.js for platform independence
 
 ### Scripts and Asserters
 
