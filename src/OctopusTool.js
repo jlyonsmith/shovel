@@ -25,6 +25,7 @@ export class OctopusTool {
 curl -sL https://deb.nodesource.com/setup_10.x -o ./nodesource_setup.sh
 sudo bash ./nodesource_setup.sh
 sudo apt -y -q install nodejs`
+  static minNodeVersion = "v10"
 
   async assertCanSudoOnHost(ssh) {
     result = await util.runRemoteCommand(ssh, "bash -c 'echo /$EUID'", {
@@ -48,7 +49,10 @@ sudo apt -y -q install nodejs`
       noThrow: true,
     })
 
-    return result.exitCode === 0 && result.output.trim().startsWith("v10")
+    return (
+      result.exitCode === 0 &&
+      result.output.trim().startsWith(OctopusTool.minNodeVersion)
+    )
   }
 
   async rectifyHasNode(ssh) {
@@ -110,9 +114,12 @@ sudo apt -y -q install nodejs`
       noThrow: true,
     })
 
-    if (result.exitCode !== 0 || !result.output.trim().startsWith("v10")) {
+    if (
+      result.exitCode !== 0 ||
+      !result.output.trim().startsWith(OctopusTool.minNodeVersion)
+    ) {
       throw new Error(
-        `Node version ${result.output} is wrong after installation`
+        `Unable to install Node.js ${OctopusTool.minNodeVersion} on remote host`
       )
     }
   }
@@ -140,7 +147,18 @@ sudo apt -y -q install nodejs`
       password,
     })
 
-    // TODO: Ensure that Octopus runs
+    result = await util.runRemoteCommand(ssh, "octopus --version", {
+      noThrow: true,
+    })
+
+    if (
+      result.exitCode !== 0 ||
+      !result.output.trim().startsWith(version.version)
+    ) {
+      throw new Error(
+        `Unable to install Octopus ${version.version} on remote host`
+      )
+    }
   }
 
   async processScriptFile(scriptFile, options = {}) {
