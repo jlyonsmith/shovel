@@ -28,12 +28,13 @@ sudo apt -y -q install nodejs`
   static minNodeVersion = "v10"
 
   async assertCanSudoOnHost(ssh) {
-    result = await util.runRemoteCommand(ssh, "bash -c 'echo /$EUID'", {
+    const result = await util.runRemoteCommand(ssh, "bash -c 'echo /$EUID'", {
       sudo: true,
-      password,
+      password: ssh.config[0].password,
       noThrow: true,
     })
-    if (result.output !== "/0") {
+
+    if (result.exitCode !== 0 || result.output !== "/0") {
       throw new Error(
         `User ${
           ssh.config[0].username
@@ -60,9 +61,15 @@ sudo apt -y -q install nodejs`
     let result = null
 
     this.log.info("Checking remote system clock")
-    result = await util.runRemoteCommand(ssh, "date")
+    result = await util.runRemoteCommand(ssh, 'bash -c "echo /$(date)"', {
+      noThrow: true,
+    })
 
-    const remoteDate = new Date(result.output)
+    if (result.exitCode !== 0 || !result.output.startsWith("/")) {
+      throw new Error("Unable to get remote host date & time")
+    }
+
+    const remoteDate = new Date(result.output.substring(1))
     const localDate = new Date()
 
     if (
@@ -147,7 +154,7 @@ sudo apt -y -q install nodejs`
       password,
     })
 
-    result = await util.runRemoteCommand(ssh, "octopus --version", {
+    const result = await util.runRemoteCommand(ssh, "octopus --version", {
       noThrow: true,
     })
 
