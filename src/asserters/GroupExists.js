@@ -11,12 +11,13 @@ Example:
 {
   assert: "GroupExists",
   with: {
-    name: "string",
+    name: <string>,
+    gid: <number>,
   }
 }
 */
 
-// TODO: Support {gid: "number"}
+// TODO: Support gid
 
 export class GroupExists {
   constructor(container) {

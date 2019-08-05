@@ -173,7 +173,6 @@ sudo apt -y -q install nodejs`
     const newScriptError = (message, node) => {
       return new ScriptError(message, scriptFile, node)
     }
-
     const scriptNodes = JSON5.parse(await fs.readFile(scriptFile), {
       wantNodes: true,
     })
@@ -581,6 +580,9 @@ sudo apt -y -q install nodejs`
       return 0
     }
 
+    // TODO: Add flag for running as root
+    // TODO: Figure out the whole runAs thing and how it should work
+
     if (args.help) {
       this.log.info(`
 Usage: ${this.toolName} [options] <script-file>
@@ -601,16 +603,16 @@ Options:
   --port, -p          Remote port number. Default is 22
   --user, -u          Remote user name. Defaults to current user.
   --password, -P      Remote user password. Defaults is to just use PPK.
-  --host-file, -f     JSON5 file containing multiple remote host names
+  --host-file, -f     JSON5 file containing multiple host names
   --verbose           Emit verbose output
 `)
       return 0
     }
 
-    const scriptFile = args._[0]
+    let scriptFiles = args._
 
-    if (!scriptFile) {
-      throw new Error("Please specify a script file")
+    if (!scriptFiles.length === 0) {
+      throw new Error("Please specify at least one script file")
     }
 
     if (!args.host && (args.port || args.user || args.password)) {
@@ -645,22 +647,35 @@ Options:
         })
       }
 
-      let exitCode = 0
+      for (const scriptFile of scriptFiles) {
+        for (const host of hosts) {
+          const exitCode = await this.runScriptOnHost({
+            scriptFile,
+            host: host.host,
+            user: host.user,
+            password: host.password,
+            port: parsePort(host.port),
+            verbose: args.verbose,
+          })
 
-      for (const host of hosts) {
-        exitCode += await this.runScriptOnHost({
+          if (exitCode !== 0) {
+            return exitCode
+          }
+        }
+      }
+    } else {
+      for (const scriptFile of scriptFiles) {
+        const exitCode = await this.runScript({
           scriptFile,
-          host: host.host,
-          user: host.user,
-          password: host.password,
-          port: parsePort(host.port),
           verbose: args.verbose,
         })
-      }
 
-      return exitCode
-    } else {
-      return await this.runScript({ scriptFile, verbose: args.verbose })
+        if (exitCode !== 0) {
+          return exitCode
+        }
+      }
     }
+
+    return 0
   }
 }

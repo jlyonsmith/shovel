@@ -1,4 +1,4 @@
-import { UserExists } from "./UserExists"
+import { UserDisabled } from "./UserDisabled"
 
 let container = null
 
@@ -15,13 +15,16 @@ beforeEach(() => {
     fs: {
       readFile: jest.fn(async (filePath) => {
         expect(typeof filePath).toBe("string")
-        return `root:x:0:0:root:/root:/bin/bash
-daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
-bin:x:2:2:bin:/bin:/usr/sbin/nologin
-sys:x:3:3:sys:/dev:/usr/sbin/nologin
-sync:x:4:65534:sync:/bin:/bin/sync
-games:x:5:60:games:/usr/games:/usr/sbin/nologin
-man:x:6:12:man:/var/cache/man:/usr/sbin/nologin`
+        return `lxd:*:17941:0:99999:7:::
+uuidd:*:17941:0:99999:7:::
+dnsmasq:*:17941:0:99999:7:::
+landscape:*:17941:0:99999:7:::
+pollinate:*:17941:0:99999:7:::
+realuser:$6$nrnXn0vExLOZH.Ad$OEMTYVv1gyz/j4gCHqZGLyLtfXaSbfC7zyfo0pVDKi07qq/dyuqOurFAb3M522nynovdLiM2kb1sBei9aDWnN/:18010:0:99999:7:::
+sshd:*:18010:0:99999:7:::
+ntp:*:18010:0:99999:7:::
+enabled:!:18113:0:99999:7:::
+disabled:!:18113:0:99999:7::1:`
       }),
     },
     childProcess: {
@@ -38,19 +41,19 @@ man:x:6:12:man:/var/cache/man:/usr/sbin/nologin`
   }
 })
 
-test("With user existing", async () => {
-  const asserter = new UserExists(container)
+test("With user disabled", async () => {
+  const asserter = new UserDisabled(container)
 
   await expect(
-    asserter.assert({ name: { type: "string", value: "games" } })
+    asserter.assert({ name: { type: "string", value: "disabled" } })
   ).resolves.toBe(true)
 })
 
-test("With user absent", async () => {
-  const asserter = new UserExists(container)
+test("With user enabled", async () => {
+  const asserter = new UserDisabled(container)
 
   await expect(
-    asserter.assert({ name: { type: "string", value: "notthere" } })
+    asserter.assert({ name: { type: "string", value: "enabled" } })
   ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })

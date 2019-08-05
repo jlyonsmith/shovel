@@ -8,13 +8,15 @@ Example:
 {
   assert: "DirectoryExists",
   with: {
-    path: "/path/to/dir"
+    path: <string>,
+    owner: <string>,
+    perms: <string>,
   }
 }
 */
 
-// TODO: Add directory ownership. Must be sudo if not self.
-// TODO: Add directory permissions.
+// TODO: support owner (as user:group)
+// TODO: Support perms (as ugo=rwx)
 
 export class DirectoryExists {
   constructor(container) {

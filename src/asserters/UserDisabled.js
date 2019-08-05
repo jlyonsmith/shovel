@@ -4,28 +4,21 @@ import os from "os"
 import * as util from "../util"
 
 /*
-Asserts and ensures that a user exists with UID, GID, shell and/or system priveges.
+Asserts and ensures that a user is disabled.
 
 Example:
 
 {
-  assert: "UserExists",
+  assert: "UserDisabled",
   with: {
     name: <string>,
-    gid: <number>,
-    uid: <number>,
-    system: <bool>,
-    shell: <string>,
   }
 }
+
+See https://www.thegeekdiary.com/unix-linux-how-to-lock-or-disable-an-user-account/ for more details
 */
 
-// TODO: Support uid
-// TODO: Support gid
-// TODO: Support system
-// TODO: Support shell
-
-export class UserExists {
+export class UserDisabled {
   constructor(container) {
     this.fs = container.fs || fs
     this.childProcess = container.childProcess || childProcess
@@ -34,6 +27,7 @@ export class UserExists {
     this.expandStringNode = container.expandStringNode
     this.withNode = container.withNode
     this.assertNode = container.assertNode
+    this.util = container.util || util
   }
 
   async assert(args) {
@@ -50,22 +44,23 @@ export class UserExists {
 
     this.expandedName = this.expandStringNode(nameNode)
 
-    return (await this.fs.readFile("/etc/passwd")).includes(
-      this.expandedName + ":"
-    )
-  }
-
-  async rectify() {
-    const { name: nameNode } = this.args
-
-    if (!util.runningAsRoot(this.os)) {
+    if (!this.util.runningAsRoot()) {
       throw this.newScriptError(
-        "Only root user can add or modify users",
-        this.assertNode
+        "Must be running as root to check for disabled accounts",
+        this.withNode
       )
     }
 
-    await this.childProcess.exec(`useradd ${this.expandedName}`)
+    const shadow = await this.fs.readFile("/etc/shadow")
+    const m = shadow.match(
+      new RegExp(this.expandedName + ":.*:.*:.*:.*:.*:(.*):.*")
+    )
+
+    return m && m[1] === "1"
+  }
+
+  async rectify() {
+    await this.childProcess.exec(`usermod -e 1 ${this.expandedName}`)
   }
 
   result() {
