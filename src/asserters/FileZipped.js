@@ -1,5 +1,5 @@
 import fs from "fs-extra"
-import yazl from "yazl-promise"
+import yazl from "yazl"
 import * as util from "../util"
 import path from "path"
 
@@ -12,12 +12,16 @@ Example:
       assert: "FileZipped",
       with: {
         zipPath: <string>,
-        fromDirPath: <string>,
+        fromDirPath: <string> | <array>,
       },
     }
 */
 
+// TODO: Change zipPath to zipFile
+// TODO: Change fromDirPath to from and use globs and allow array
 // TODO: Implement FileZipped and tests
+// TODO: Implement checking and setting of file ownership
+// TODO: Implement checking and setting of file permissions
 
 export class FileZipped {
   constructor(container) {
