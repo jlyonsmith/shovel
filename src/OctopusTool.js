@@ -169,8 +169,7 @@ sudo apt -y -q install nodejs`
   }
 
   async processScriptFile(scriptFile, options = {}) {
-    // TODO: Rename runningLocally to runningOnOrigin
-    const { runningLocally } = options
+    const { runningOnOrigin } = options
     const newScriptError = (message, node) => {
       return new ScriptError(message, scriptFile, node)
     }
@@ -187,6 +186,7 @@ sudo apt -y -q install nodejs`
     }
 
     const {
+      includes: includesNode,
       options: optionsNode,
       vars: varsNode,
       assertions: assertionsNode,
@@ -211,7 +211,9 @@ sudo apt -y -q install nodejs`
       fs: {
         readFile: (fileName) => fs.readFileSync(fileName),
       },
-      // TODO: Add 'path' methods
+      path: {
+        join: (...paths) => path.join(...paths),
+      },
     }
     const expandStringNode = (node) => {
       if (
@@ -248,8 +250,6 @@ sudo apt -y -q install nodejs`
       }
     }
 
-    // TODO: Add an 'include' node that merges in the 'options', 'vars' and 'assertions from another script. Ensure description reflects the origin
-
     if (varsNode) {
       if (varsNode.type !== "object") {
         throw newScriptError("'vars' must be an object", varsNode)
@@ -283,8 +283,7 @@ sudo apt -y -q install nodejs`
               )
             }
 
-            // TODO: Change runningLocally to runningOnOrigin and 'local' to 'origin'
-            if (runningLocally && varNode.value.local) {
+            if (runningOnOrigin && varNode.value.origin) {
               vmContext[key] = expandStringNode(valueNode)
             }
             break
@@ -507,7 +506,7 @@ sudo apt -y -q install nodejs`
       )
 
       const state = await this.processScriptFile(options.scriptFile, {
-        runningLocally: true,
+        runningOnOrigin: true,
       })
 
       const { script, vmContext } = state

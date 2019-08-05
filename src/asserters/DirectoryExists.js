@@ -13,7 +13,7 @@ Example:
 }
 */
 
-// TODO: Add directory ownership. Must be sudo?
+// TODO: Add directory ownership. Must be sudo if not self.
 // TODO: Add directory permissions.
 
 export class DirectoryExists {
