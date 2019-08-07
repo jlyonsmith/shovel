@@ -1,5 +1,4 @@
 import childProcess from "child-process-promise"
-import os from "os"
 import * as util from "../util"
 
 /*
@@ -19,7 +18,6 @@ Example:
 export class PackageRemoved {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
-    this.os = container.os || os
     this.util = container.util || util
     this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
@@ -41,9 +39,13 @@ export class PackageRemoved {
 
     this.expandedName = this.expandStringNode(nameNode)
 
-    const output = await this.childProcess.exec(`dpkg -l`)
+    try {
+      await this.childProcess.exec(`dpkg --list ${this.expandedName}`)
+    } catch (e) {
+      return true
+    }
 
-    return !new RegExp("\\b" + this.expandedName + "\\b").test(output)
+    return false
   }
 
   async rectify() {

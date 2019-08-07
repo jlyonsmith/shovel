@@ -1,6 +1,5 @@
 import fs from "fs-extra"
 import childProcess from "child-process-promise"
-import os from "os"
 import * as util from "../util"
 
 /*
@@ -22,7 +21,6 @@ Example:
 export class PackageInstalled {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
-    this.os = container.os || os
     this.util = container.util || util
     this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
@@ -44,10 +42,8 @@ export class PackageInstalled {
 
     this.expandedName = this.expandStringNode(nameNode)
 
-    let output = null
-
     try {
-      output = await this.childProcess.exec(`dpkg --list ${this.expandedName}`)
+      await this.childProcess.exec(`dpkg --list ${this.expandedName}`)
     } catch (e) {
       return false
     }

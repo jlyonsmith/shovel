@@ -26,15 +26,15 @@ beforeEach(() => {
 ii  package                    1:2.3.xyz          amd64              Some package or other`,
             stderr: "",
           }
-        } else if (command.startsWith("dpkg")) {
-          const e = new Error()
-          e.code = 1
-          throw e
-        } else if (command === "apt install -y package") {
+        } else if (command.startsWith("apt install")) {
           return {
             stdout: "",
             stderr: "",
           }
+        } else {
+          const e = new Error()
+          e.code = 1
+          throw e
         }
       }),
     },
