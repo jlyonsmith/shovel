@@ -1,5 +1,5 @@
 import fs from "fs-extra"
-import childProcess from "child_process"
+import childProcess from "child-process-promise"
 import os from "os"
 import * as util from "../util"
 
@@ -17,9 +17,10 @@ Example:
 
 */
 
+// TODO: Support version number
+
 export class PackageInstalled {
   constructor(container) {
-    this.fs = container.fs || fs
     this.childProcess = container.childProcess || childProcess
     this.os = container.os || os
     this.util = container.util || util
@@ -43,9 +44,15 @@ export class PackageInstalled {
 
     this.expandedName = this.expandStringNode(nameNode)
 
-    const output = await this.childProcess.exec(`dpkg -l`)
+    let output = null
 
-    return new RegExp("\\b" + this.expandedName + "\\b").test(output)
+    try {
+      output = await this.childProcess.exec(`dpkg --list ${this.expandedName}`)
+    } catch (e) {
+      return false
+    }
+
+    return true
   }
 
   async rectify() {

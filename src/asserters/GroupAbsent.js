@@ -1,5 +1,5 @@
 import fs from "fs-extra"
-import childProcess from "child_process"
+import childProcess from "child-process-promise"
 import * as util from "../util"
 import os from "os"
 

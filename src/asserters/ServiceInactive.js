@@ -1,4 +1,4 @@
-import childProcess from "child_process"
+import childProcess from "child-process-promise"
 import os from "os"
 import * as util from "../util"
 

@@ -17,6 +17,8 @@ Example:
     }
 */
 
+// TODO: Create globs for all paths
+// TODO: Actually zip the files
 // TODO: Change zipPath to zipFile
 // TODO: Change fromDirPath to from and use globs and allow array
 // TODO: Implement FileZipped and tests
