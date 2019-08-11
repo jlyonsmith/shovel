@@ -18,7 +18,6 @@ Example:
 export class ServiceInactive {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
-    this.os = container.os || os
     this.util = container.util || util
     this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
@@ -40,11 +39,11 @@ export class ServiceInactive {
 
     this.expandedName = this.expandStringNode(nameNode)
 
-    const state = await this.childProcess.exec(
-      `systemctl show -p ActiveState ${this.expandedName}`
+    const output = await this.childProcess.exec(
+      `systemctl is-active ${this.expandedName}`
     )
 
-    return state === "inactive" || state === "failed"
+    return output.stdout === "inactive" || output.stdout === "failed"
   }
 
   async rectify() {
@@ -55,15 +54,15 @@ export class ServiceInactive {
       )
     }
 
-    await this.childProcess.exec(`systemctl stop ${this.expandedName}`)
+    await this.childProcess.exec(`sudo systemctl stop ${this.expandedName}`)
 
-    let state = null
+    let output = null
 
     do {
-      state = await this.childProcess.exec(
-        `systemctl show -p ActiveState ${this.expandedName}`
+      output = await this.childProcess.exec(
+        `systemctl is-active ${this.expandedName}`
       )
-    } while (state !== "inactive" && state !== "failed")
+    } while (output.stdout !== "inactive" && output.stdout !== "failed")
   }
 
   result() {

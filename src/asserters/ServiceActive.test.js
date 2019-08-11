@@ -13,15 +13,38 @@ beforeEach(() => {
     withNode: { line: 0, column: 0 },
     assertNode: { line: 0, column: 0 },
     childProcess: {
-      exec: jest.fn(async (path) => {
-        expect(typeof path).toBe("string")
-        return 0
+      _state: {
+        service: "active",
+        otherService: "inactive",
+      },
+      exec: jest.fn(async (command) => {
+        expect(typeof command).toBe("string")
+        const state = container.childProcess._state
+
+        let m = command.match(/systemctl is-active (.+)/)
+
+        if (m) {
+          return {
+            stdout: state[m[1]],
+            stderr: "",
+          }
+        }
+
+        m = command.match(/sudo systemctl restart (.+)/)
+
+        if (m) {
+          state[m[1]] = "active"
+          return {
+            stdout: "",
+            stderr: "",
+          }
+        }
+
+        throw new Error()
       }),
     },
-    os: {
-      userInfo: jest.fn(() => ({
-        uid: 0,
-      })),
+    util: {
+      runningAsRoot: jest.fn(() => true),
     },
   }
 })
@@ -41,4 +64,5 @@ test("With service inactive", async () => {
     asserter.assert({ name: { type: "string", value: "otherService" } })
   ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
+  await expect(asserter.result()).toEqual({ name: "otherService" })
 })

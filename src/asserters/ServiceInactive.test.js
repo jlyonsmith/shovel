@@ -13,15 +13,38 @@ beforeEach(() => {
     withNode: { line: 0, column: 0 },
     assertNode: { line: 0, column: 0 },
     childProcess: {
-      exec: jest.fn(async (path) => {
-        expect(typeof path).toBe("string")
-        return 0
+      _state: {
+        service: "inactive",
+        otherService: "active",
+      },
+      exec: jest.fn(async (command) => {
+        expect(typeof command).toBe("string")
+        const state = container.childProcess._state
+
+        let m = command.match(/systemctl is-active (.+)/)
+
+        if (m) {
+          return {
+            stdout: state[m[1]],
+            stderr: "",
+          }
+        }
+
+        m = command.match(/sudo systemctl stop (.+)/)
+
+        if (m) {
+          state[m[1]] = "inactive"
+          return {
+            stdout: "",
+            stderr: "",
+          }
+        }
+
+        throw new Error()
       }),
     },
-    os: {
-      userInfo: jest.fn(() => ({
-        uid: 0,
-      })),
+    util: {
+      runningAsRoot: jest.fn(() => true),
     },
   }
 })

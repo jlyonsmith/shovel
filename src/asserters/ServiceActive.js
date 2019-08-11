@@ -1,5 +1,4 @@
 import childProcess from "child-process-promise"
-import os from "os"
 import * as util from "../util"
 
 /*
@@ -18,7 +17,6 @@ Example:
 export class ServiceActive {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
-    this.os = container.os || os
     this.util = container.util || util
     this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
@@ -40,11 +38,11 @@ export class ServiceActive {
 
     this.expandedName = this.expandStringNode(nameNode)
 
-    const state = await this.childProcess.exec(
-      `systemctl show -p ActiveState ${this.expandedName}`
+    const output = await this.childProcess.exec(
+      `systemctl is-active ${this.expandedName}`
     )
 
-    return state === "active"
+    return output.stdout === "active"
   }
 
   async rectify() {
@@ -55,19 +53,19 @@ export class ServiceActive {
       )
     }
 
-    await this.childProcess.exec(`systemctl restart ${this.expandedName}`)
+    await this.childProcess.exec(`sudo systemctl restart ${this.expandedName}`)
 
-    let state = null
+    let output = null
 
     do {
-      state = await this.childProcess.exec(
-        `systemctl show -p ActiveState ${this.expandedName}`
+      output = await this.childProcess.exec(
+        `sudo systemctl is-active ${this.expandedName}`
       )
 
-      if (state === "failed" || state === "inactive") {
+      if (output.stdout === "failed" || output.stdout === "inactive") {
         throw this.newScriptError(`Service failed to go into the active state`)
       }
-    } while (state !== "active")
+    } while (output.stdout !== "active")
   }
 
   result() {
