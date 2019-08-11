@@ -30,13 +30,14 @@ disabled:!:18113:0:99999:7::1:`
     childProcess: {
       exec: jest.fn(async (path) => {
         expect(typeof path).toBe("string")
-        return 0
+        return {
+          stdout: "",
+          stderr: "",
+        }
       }),
     },
-    os: {
-      userInfo: jest.fn(() => ({
-        uid: 0,
-      })),
+    util: {
+      runningAsRoot: jest.fn(() => true),
     },
   }
 })

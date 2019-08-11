@@ -22,7 +22,6 @@ export class UserDisabled {
   constructor(container) {
     this.fs = container.fs || fs
     this.childProcess = container.childProcess || childProcess
-    this.os = container.os || os
     this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
     this.withNode = container.withNode
@@ -60,7 +59,7 @@ export class UserDisabled {
   }
 
   async rectify() {
-    await this.childProcess.exec(`usermod -e 1 ${this.expandedName}`)
+    await this.childProcess.exec(`sudo usermod -e 1 ${this.expandedName}`)
   }
 
   result() {
