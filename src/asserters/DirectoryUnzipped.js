@@ -9,18 +9,19 @@ Checks and ensures that a .zip file is unzipped to a directory.
 Example:
 
     {
-      assert: "FileUnzipped",
+      assert: "DirectoryUnzipped",
       with: {
         zipPath: "${consulZipPath}",
-        toDirPath: "./xyz",
+        to: "./xyz",
       },
     }
 */
 
-export class FileUnzipped {
+export class DirectoryUnzipped {
   constructor(container) {
     this.fs = container.fs || fs
     this.yauzl = container.yauzl || yauzl
+    this.util = container.util || util
     this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
     this.withNode = container.withNode
@@ -29,33 +30,33 @@ export class FileUnzipped {
   async assert(args) {
     this.args = args
 
-    const { zipPath: zipPathNode, toDirPath: toDirPathNode } = args
+    const { zip: zipPathNode, to: toPathNode } = args
 
     if (!zipPathNode || zipPathNode.type !== "string") {
       throw this.newScriptError(
-        "'zipPath' must be supplied and be a string",
+        "'zip' must be supplied and be a string",
         zipPathNode || this.withNode
       )
     }
 
-    if (!toDirPathNode || toDirPathNode.type !== "string") {
+    if (!toPathNode || toPathNode.type !== "string") {
       throw this.newScriptError(
-        "'toDirPath' must be supplied and be a string",
-        toDirPathNode || this.withNode
+        "'to' must be supplied and be a string",
+        toPathNode || this.withNode
       )
     }
 
     this.expandedZipPath = this.expandStringNode(zipPathNode)
-    this.expandedToDirPath = this.expandStringNode(toDirPathNode)
+    this.expandedToPath = this.expandStringNode(toPathNode)
 
-    if (!(await util.fileExists(this.fs, this.expandedZipPath))) {
+    if (!(await this.util.fileExists(this.fs, this.expandedZipPath))) {
       throw this.newScriptError(
         `Zip file ${this.expandedZipPath} does not exist`,
         zipPathNode
       )
     }
 
-    if (!(await util.dirExists(this.fs, this.expandedToDirPath))) {
+    if (!(await this.util.dirExists(this.fs, this.expandedToPath))) {
       return false
     }
 
@@ -64,10 +65,10 @@ export class FileUnzipped {
     try {
       zipFile = await this.yauzl.open(this.expandedZipPath)
       await zipFile.walkEntries(async (entry) => {
-        const targetPath = path.join(this.expandedToDirPath, entry.fileName)
+        const targetPath = path.join(this.expandedToPath, entry.fileName)
+        const entryIsDir = entry.fileName.endsWith("/")
         // This will throw if the file or directory is not present
         const stat = await this.fs.lstat(targetPath)
-        const entryIsDir = /\/$/.test(entry.fileName)
 
         if (!entryIsDir && stat.isDirectory()) {
           throw new Error(
@@ -100,23 +101,21 @@ export class FileUnzipped {
     try {
       zipFile = await this.yauzl.open(this.expandedZipPath)
       await zipFile.walkEntries(async (entry) => {
-        const targetPath = path.join(this.expandedToDirPath, entry.fileName)
-        const targetDir = path.dirname(targetPath)
-        const entryIsDir = /\/$/.test(entry.fileName)
+        const targetPath = path.join(this.expandedToPath, entry.fileName)
+        const entryIsDir = entry.fileName.endsWith("/")
+        const targetDir = entryIsDir ? targetPath : path.dirname(targetPath)
 
-        if (!(await util.dirExists(targetDir))) {
-          this.fs.ensureDir(targetDir)
+        if (!(await this.util.dirExists(this.fs, targetDir))) {
+          await this.fs.ensureDir(targetDir)
         }
 
         if (!entryIsDir) {
           const readable = await entry.openReadStream()
           const writeable = await this.fs.createWriteStream(targetPath)
 
-          await util.pipeToPromise(readable, writeable)
+          await this.util.pipeToPromise(readable, writeable)
         }
       })
-    } catch (e) {
-      return false
     } finally {
       if (zipFile) {
         await zipFile.close()
@@ -125,6 +124,6 @@ export class FileUnzipped {
   }
 
   result() {
-    return { zipPath: this.expandedZipPath, toDirPath: this.expandedToDirPath }
+    return { zip: this.expandedZipPath, to: this.expandedToPath }
   }
 }

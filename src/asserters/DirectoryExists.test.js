@@ -6,7 +6,7 @@ beforeEach(() => {
   container = {
     newScriptError: (message, node) => {
       expect(typeof message).toBe("string")
-      expect(typeof node).toBe("string")
+      expect(typeof node).toBe("object")
       return new Error(message)
     },
     expandStringNode: (node) => node.value,

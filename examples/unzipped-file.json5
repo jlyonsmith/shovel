@@ -4,7 +4,7 @@
   },
   assertions: [
     {
-      assert: "FileUnzipped",
+      assert: "DirectoryUnzipped",
       with: {
         zipPath: "${env.HOME}/projects/octopus/examples/test.zip",
         toDirPath: "scratch/",

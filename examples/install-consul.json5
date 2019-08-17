@@ -24,11 +24,11 @@
     },
     {
       description: "Unzip consul",
-      assert: "FileUnzipped",
+      assert: "DirectoryUnzipped",
       with: {
         zipFile: "${consulZipFile}",
         toDir: "${consulUnzipDir}",
-        expectFile: "consul"
+        expectFile: "consul",
       },
     },
     {
@@ -46,11 +46,11 @@
       runAs: "sudo",
       with: {
         path: "/usr/local/bin/consul",
-        mode: "777"
+        mode: "777",
       },
     },
     {
-      description: "Verify expected version (${consulVersion})" ,
+      description: "Verify expected version (${consulVersion})",
       assert: "CommandOutputs",
       with: {
         command: "consul --version",

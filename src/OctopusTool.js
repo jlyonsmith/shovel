@@ -168,7 +168,10 @@ sudo apt -y -q install nodejs`
     }
   }
 
-  async processScriptFile(scriptFile, options = {}) {
+  // TODO: Create a expandScriptFile() and recursively extract scriptNodes
+  // TODO: Check for script cycles
+
+  async compileScriptFile(scriptFile, options = {}) {
     const { runningOnOrigin } = options
     const newScriptError = (message, node) => {
       return new ScriptError(message, scriptFile, node)
@@ -185,8 +188,8 @@ sudo apt -y -q install nodejs`
     }
 
     const {
-      includes: includesNode,
       options: optionsNode,
+      scripts: scriptsNode,
       vars: varsNode,
       assertions: assertionsNode,
     } = scriptNodes.value
@@ -355,7 +358,7 @@ sudo apt -y -q install nodejs`
   }
 
   async runScript(options) {
-    const state = await this.processScriptFile(options.scriptFile)
+    const state = await this.compileScriptFile(options.scriptFile)
     const {
       script,
       assertions,
@@ -368,7 +371,11 @@ sudo apt -y -q install nodejs`
       const vars = {}
 
       Object.keys(vmContext).forEach((key) => {
-        if (key === "env" || typeof vmContext[key] !== "object") {
+        if (
+          key === "env" ||
+          key === "sys" ||
+          typeof vmContext[key] !== "object"
+        ) {
           vars[key] = vmContext[key]
         }
       })
@@ -380,6 +387,8 @@ sudo apt -y -q install nodejs`
         JSON5.stringify({ description: script.options.description })
       )
     }
+
+    // TODO: Execute all the scripts by creating another OctopusTool for each one and calling runScript for each
 
     for (const assertion of assertions) {
       const asserter = new asserters[assertion.name]({
@@ -504,7 +513,7 @@ sudo apt -y -q install nodejs`
         }`
       )
 
-      const state = await this.processScriptFile(options.scriptFile, {
+      const state = await this.compileScriptFile(options.scriptFile, {
         runningOnOrigin: true,
       })
 
@@ -515,6 +524,8 @@ sudo apt -y -q install nodejs`
           script.vars[key] = value
         }
       }
+
+      // TODO: We need to transfer over _all_ the referenced scripts
 
       const newScript = JSON.stringify(script, null, "  ")
       let readStream = new Readable({
@@ -532,6 +543,8 @@ sudo apt -y -q install nodejs`
         script.assertions &&
         script.assertions.find((assertion) => assertion.hasOwnProperty("runAs"))
 
+      // TODO: Run all the scripts on the remote host in order
+
       this.log.info(`Running script on remote host`)
       await util.runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
         sudo,
@@ -542,6 +555,7 @@ sudo apt -y -q install nodejs`
       })
     } finally {
       if (isConnected) {
+        // TODO: Delete all temp files
         if (remoteTempFile && !this.debug) {
           this.log.info("Deleting remote temp file")
           await util.runRemoteCommand(ssh, `rm ${remoteTempFile}`)
@@ -580,7 +594,7 @@ sudo apt -y -q install nodejs`
       return 0
     }
 
-    // TODO: Add flag for running as root
+    // TODO: Add flag for running as root for bootstrapping scripts that would not otherwise require root
     // TODO: Figure out the whole runAs thing and how it should work
 
     if (args.help) {
