@@ -1,5 +1,6 @@
 import { DirectoryZipped } from "./DirectoryZipped"
 import stream from "stream"
+import generate from "@babel/generator"
 
 let container = null
 
@@ -14,35 +15,8 @@ beforeEach(() => {
     withNode: { line: 0, column: 0 },
     assertNode: { line: 0, column: 0 },
     fs: {
-      lstat: jest.fn(async (path) => {
-        switch (path) {
-          case "./filesize.zip":
-          case "./filedir.zip":
-          case "./dirfile.zip":
-          case "./somefile.zip":
-          case "./filemissing.zip":
-            return {
-              isDirectory: jest.fn(() => false),
-              isFile: jest.fn(() => true),
-            }
-            break
-          case "outdir/filedir.txt":
-          case "outdir/dir/":
-          case "./outdir":
-            return {
-              isDirectory: jest.fn(() => true),
-              isFile: jest.fn(() => false),
-              size: 0,
-            }
-          case "outdir/dir/file.txt":
-            return {
-              isDirectory: jest.fn(() => false),
-              isFile: jest.fn(() => true),
-              size: 100,
-            }
-          default:
-            throw new Error("ENOENT")
-        }
+      remove: jest.fn(async (path) => {
+        expect(typeof path).toBe("string")
       }),
       ensureDir: jest.fn(async (dirPath) => {
         expect(typeof dirPath).toBe("string")
@@ -56,6 +30,22 @@ beforeEach(() => {
           },
         })
       }),
+    },
+    readdirp: (path, options) => {
+      expect(typeof path).toBe("string")
+      expect(typeof options).toBe("object")
+
+      const generateEntries = async function*(entries) {
+        for (const entry of entries) {
+          yield entry
+        }
+      }
+
+      return generateEntries([
+        { path: "a.txt", stats: { size: 50 } },
+        { path: "x/b.txt", stats: { size: 150 } },
+        { path: "x/y/c.txt", stats: { size: 250 } },
+      ])
     },
     util: {
       fileExists: async (fs, path) => {
@@ -87,7 +77,68 @@ beforeEach(() => {
         expect(typeof writeable).toBe("object")
       },
     },
-    yazl: {},
+    yauzl: {
+      open: jest.fn(async (path) => {
+        expect(typeof path).toBe("string")
+
+        let entries = null
+
+        switch (path) {
+          default:
+          case "./somefile.zip":
+            entries = [
+              {
+                uncompressedSize: 50,
+                fileName: "a.txt",
+              },
+              { uncompressedSize: 0, fileName: "x/" },
+              {
+                uncompressedSize: 150,
+                fileName: "x/b.txt",
+              },
+              { uncompressedSize: 0, fileName: "x/y/" },
+              {
+                uncompressedSize: 250,
+                fileName: "x/y/c.txt",
+              },
+            ]
+            break
+          case "./withfilemissing.zip":
+            entries = [
+              { uncompressedSize: 0, fileName: "x/" },
+              {
+                uncompressedSize: 150,
+                fileName: "x/b.txt",
+              },
+            ]
+            break
+        }
+
+        expect(entries).not.toBeNull()
+
+        return {
+          close: jest.fn(async () => null),
+          walkEntries: jest.fn(async (callback) => {
+            // Assuming that callback returns a Promise
+            await Promise.all(entries.map(callback))
+          }),
+        }
+      }),
+    },
+    yazl: {
+      ZipFile: class {
+        constructor() {
+          this.outputStream = new stream.Readable({
+            read(size) {
+              this.push("The quick brown fox jumps over the lazy dog\n")
+              this.push(null)
+            },
+          })
+        }
+        addFile(path) {}
+        end() {}
+      },
+    },
   }
 })
 
@@ -103,18 +154,18 @@ test("With from directory not present", async () => {
   ).rejects.toThrowError(/directory .* does not exist/)
 })
 
-test("With missing zip", async () => {
+test("With missing zip argument", async () => {
   const asserter = new DirectoryZipped(container)
 
   await expect(
     asserter.assert({
-      from: { type: "string", value: "./missing" },
+      from: { type: "string", value: "./fromdir" },
       globs: { type: "array", value: [{ type: "string", value: "*" }] },
     })
   ).rejects.toThrowError("'zip' must be supplied")
 })
 
-test("With missing from", async () => {
+test("With missing from argument", async () => {
   const asserter = new DirectoryZipped(container)
 
   await expect(
@@ -125,73 +176,49 @@ test("With missing from", async () => {
   ).rejects.toThrowError("'from' must be supplied")
 })
 
-test("With missing globs", async () => {
+test("With missing globs argument", async () => {
+  const asserter = new DirectoryZipped(container)
+
+  await expect(
+    asserter.assert({
+      zip: { type: "string", value: "./missing.zip" },
+      from: { type: "string", value: "./fromdir" },
+    })
+  ).resolves.toBe(false)
+})
+
+test("With all files zipped and the same", async () => {
   const asserter = new DirectoryZipped(container)
 
   await expect(
     asserter.assert({
       zip: { type: "string", value: "./somefile.zip" },
-      from: { type: "string", value: "./missing" },
+      from: { type: "string", value: "./fromdir" },
+      globs: { type: "array", value: [{ type: "string", value: "*" }] },
     })
-  ).rejects.toThrowError("'globs' must be supplied")
+  ).resolves.toBe(true)
 })
 
-// test("With all files zipped and the same", async () => {
-//   const asserter = new DirectoryZipped(container)
+test("With a file missing", async () => {
+  const asserter = new DirectoryZipped(container)
 
-//   await expect(
-//     asserter.assert({
-//       zip: { type: "string", value: "./somefile.zip" },
-//       from: { type: "string", value: "./fromdir" },
-//       globs: { type: "array", value: [{ type: "string", value: "*" }] },
-//     })
-//   ).resolves.toBe(true)
-// })
+  await expect(
+    asserter.assert({
+      zip: { type: "string", value: "./withfilemissing.zip" },
+      from: { type: "string", value: "./fromdir" },
+    })
+  ).resolves.toBe(false)
+  await expect(asserter.rectify()).resolves.toBeUndefined()
+})
 
-// test("With output directory missing", async () => {
-//   const asserter = new DirectoryZipped(container)
+test("With zip file missing", async () => {
+  const asserter = new DirectoryZipped(container)
 
-//   await expect(
-//     asserter.assert({
-//       zipPath: { type: "string", value: "./somefile.zip" },
-//       toDirPath: { type: "string", value: "./notthere" },
-//     })
-//   ).resolves.toBe(false)
-//   await expect(asserter.rectify()).resolves.toBeUndefined()
-// })
-
-// test("With a file missing", async () => {
-//   const asserter = new DirectoryZipped(container)
-
-//   await expect(
-//     asserter.assert({
-//       zipPath: { type: "string", value: "./filemissing.zip" },
-//       toDirPath: { type: "string", value: "./outdir" },
-//     })
-//   ).resolves.toBe(false)
-//   await expect(asserter.rectify()).resolves.toBeUndefined()
-// })
-
-// test("With a file as different size", async () => {
-//   const asserter = new DirectoryZipped(container)
-
-//   await expect(
-//     asserter.assert({
-//       zipPath: { type: "string", value: "./filesize.zip" },
-//       toDirPath: { type: "string", value: "./outdir" },
-//     })
-//   ).resolves.toBe(false)
-//   await expect(asserter.rectify()).resolves.toBeUndefined()
-// })
-
-// test("With a file as a directory", async () => {
-//   const asserter = new DirectoryZipped(container)
-
-//   await expect(
-//     asserter.assert({
-//       zipPath: { type: "string", value: "./filedir.zip" },
-//       toDirPath: { type: "string", value: "./outdir" },
-//     })
-//   ).resolves.toBe(false)
-//   await expect(asserter.rectify()).resolves.toBeUndefined()
-// })
+  await expect(
+    asserter.assert({
+      zip: { type: "string", value: "./missing.zip" },
+      from: { type: "string", value: "./fromdir" },
+    })
+  ).resolves.toBe(false)
+  await expect(asserter.rectify()).resolves.toBeUndefined()
+})

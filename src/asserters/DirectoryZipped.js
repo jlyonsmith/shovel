@@ -1,8 +1,10 @@
 import fs from "fs-extra"
 import yazl from "yazl"
-import * as util from "../util"
+import yauzl from "yauzl"
+import readdirp from "readdirp"
+import crypto from "crypto"
 import path from "path"
-import { Minimatch } from "minimatch"
+import * as util from "../util"
 
 /*
 Checks and ensures that one or more files are in .zip file
@@ -24,6 +26,8 @@ export class DirectoryZipped {
     this.fs = container.fs || fs
     this.util = container.util || util
     this.yazl = container.yazl || yazl
+    this.yauzl = container.yauzl || yauzl
+    this.readdirp = container.readdirp || readdirp
     this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
     this.withNode = container.withNode
@@ -48,28 +52,32 @@ export class DirectoryZipped {
       )
     }
 
-    if (!globsNode || globsNode.type !== "array") {
-      throw this.newScriptError(
-        "'globs' must be supplied and be an array",
-        globsNode || this.withNode
-      )
-    }
+    this.globs = []
 
-    this.matchers = []
-
-    for (const globNode of globsNode.value) {
-      if (globNode.type !== "string") {
-        throw this.newScriptError("glob must be a string", globNode)
-      }
-
-      try {
-        this.matchers.push(new Minimatch(globNode.value))
-      } catch (e) {
+    if (globsNode) {
+      if (globsNode.type !== "array") {
         throw this.newScriptError(
-          `Glob '${globNode.value}' could not be parsed`,
-          globNode
+          "'globs' must be supplied and be an array",
+          globsNode || this.withNode
         )
       }
+
+      for (const globNode of globsNode.value) {
+        if (globNode.type !== "string") {
+          throw this.newScriptError("glob must be a string", globNode)
+        }
+
+        try {
+          this.globs.push(globNode.value)
+        } catch (e) {
+          throw this.newScriptError(
+            `Glob '${globNode.value}' could not be parsed`,
+            globNode
+          )
+        }
+      }
+    } else {
+      this.globs.push(".")
     }
 
     this.expandedZipPath = this.expandStringNode(zipPathNode)
@@ -82,29 +90,79 @@ export class DirectoryZipped {
       )
     }
 
-    // TODO: Create a list of all the files that should be zipped
     this.files = []
 
-    if (!(await this.util.fileExists(this.fs, this.expandedZipPath))) {
-      // TODO: We have to check if the zip is the same and if not we delete it in the rectify
-      return true
+    const hash = crypto.createHash("sha256")
+
+    for await (const entry of this.readdirp(this.expandedFromPath, {
+      fileFilter: this.globs,
+      type: "files",
+      alwaysStat: true,
+      lstat: true,
+    })) {
+      const { path, stats } = entry
+
+      hash.update(stats.size.toString())
+      this.files.push(path)
+    }
+
+    this.digest = hash.digest("hex")
+
+    if (await this.util.fileExists(this.fs, this.expandedZipPath)) {
+      this.zipFileExists = true
+
+      let zipFile = null
+      let zipHash = crypto.createHash("sha256")
+
+      try {
+        zipFile = await this.yauzl.open(this.expandedZipPath)
+        await zipFile.walkEntries(async (entry) => {
+          if (!entry.fileName.endsWith("/")) {
+            zipHash.update(entry.uncompressedSize.toString())
+          }
+        })
+      } catch (e) {
+        return false
+      } finally {
+        if (zipFile) {
+          await zipFile.close()
+        }
+      }
+
+      return this.digest === zipHash.digest("hex")
+    } else {
+      this.zipFileExists = false
     }
 
     return false
   }
 
   async rectify() {
+    if (this.zipFileExists) {
+      await this.fs.remove(this.expandedZipPath)
+    }
+
     let zipFile = null
 
-    // TODO: Delete the zip if it exists
-    // TODO: Zip the files
+    zipFile = new this.yazl.ZipFile()
+
+    for (const file in this.files) {
+      zipFile.addFile(path.join(this.expandedFromPath, file))
+    }
+
+    zipFile.end()
+
+    await this.util.pipeToPromise(
+      zipFile.outputStream,
+      this.fs.createWriteStream(this.expandedZipPath)
+    )
   }
 
   result() {
     return {
       zip: this.expandedZipPath,
       from: this.expandedFromPath,
-      globs: this.matchers.map((matcher) => matcher.pattern),
+      globs: this.globs,
       files: this.files,
     }
   }
