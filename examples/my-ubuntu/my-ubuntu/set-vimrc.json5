@@ -1,0 +1,12 @@
+{
+  assertions: [
+    {
+      assert: "FileContains",
+      with: {
+        path: "${env.HOME}/.vimrc",
+        contents: "color desert\\n\
+set shiftwidth=2 tabstop=2 expandtab\\n"
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  vars: {
+    motdDir: "/etc/update-motd.d"
+  },
+  assertions: [
+    {
+      assert: "FilesAbsent",
+      runAs: "root",
+      with: {
+        paths: [
+          "${motdDir}/10-help-text",
+          "${motdDir}/50-motd-news",
+          "${motdDir}/80-esm",
+          "${motdDir}/80-livepatch",
+          "${motdDir}/95-hwe-eol",
+          "${motdDir}/97-overlayroot"
+        ]
+      }
+    }
+  ]
+}
