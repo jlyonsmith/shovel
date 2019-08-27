@@ -135,7 +135,8 @@ sudo apt -y -q install nodejs`
     })
 
     return (
-      result.exitCode === 0 && result.output.trim().startsWith(version.version)
+      result.exitCode === 0 &&
+      result.output.trim().startsWith(version.shortVersion)
     )
   }
 
@@ -328,7 +329,7 @@ sudo apt -y -q install nodejs`
   }
 
   async compileScriptFile(scriptFile, options = {}) {
-    const { runningOnOrigin } = options
+    const { runningOnLocal } = options
     const fullScriptFile = path.resolve(scriptFile)
     const vmContext = {
       env: process.env,
@@ -402,7 +403,7 @@ sudo apt -y -q install nodejs`
           case "object":
             const valueNode = varNode.value.value
 
-            if (runningOnOrigin && varNode.value.origin) {
+            if (runningOnLocal && varNode.value.local) {
               vmContext[key] = expandStringNode(valueNode)
             }
             break
@@ -587,7 +588,7 @@ sudo apt -y -q install nodejs`
       )
 
       const state = await this.compileScriptFile(scriptFile, {
-        runningOnOrigin: true,
+        runningOnLocal: true,
       })
 
       const { script, vmContext } = state
@@ -642,14 +643,13 @@ sudo apt -y -q install nodejs`
   async run(argv) {
     const options = {
       boolean: ["help", "version", "debug", "verbose"],
-      string: ["host", "host-file", "user", "port", "password", "set"],
+      string: ["host", "host-file", "user", "port", "password"],
       alias: {
         h: "host",
         u: "user",
         p: "port",
         f: "host-file",
         P: "password",
-        s: "set",
         v: "verbose",
       },
     }
