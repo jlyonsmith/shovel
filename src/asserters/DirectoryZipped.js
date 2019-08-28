@@ -5,6 +5,7 @@ import readdirp from "readdirp"
 import crypto from "crypto"
 import path from "path"
 import * as util from "../util"
+import { ScriptError } from "../ScriptError"
 
 /*
 Checks and ensures that one or more files are in .zip file
