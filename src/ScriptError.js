@@ -1,10 +1,7 @@
 export class ScriptError extends Error {
-  constructor(message, fileName, node = { line: 0, column: 0 }) {
-    const lineNumber = node.line
-    const columnNumber = node.column
-
-    super(message, fileName, lineNumber, columnNumber)
-    this.message += ` (${fileName}:${lineNumber}:${columnNumber})`
+  constructor(message, node) {
+    super(message, node.filename, node.line, node.column)
+    this.message += ` (${node.filename}:${node.line}:${node.column})`
   }
 
   // Otherwise "Error: " is prefixed

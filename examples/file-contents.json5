@@ -5,7 +5,7 @@
   vars: {
     fileContents: {
       value: "${fs.readFile('./examples/much-content.txt')}",
-      origin: true,
+      local: true,
     },
   },
   assertions: [

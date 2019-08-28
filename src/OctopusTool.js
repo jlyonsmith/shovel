@@ -380,6 +380,7 @@ sudo apt -y -q install nodejs`
           vm.createContext(vmContext)
         )
       } catch (e) {
+        console.log(JSON5.stringify(node))
         throw new ScriptError(e.message, node)
       }
     }
