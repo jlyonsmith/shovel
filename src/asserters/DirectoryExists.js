@@ -1,4 +1,5 @@
 import fs from "fs-extra"
+import { ScriptError } from "../ScriptError"
 
 /*
 Checks and ensures that a directory exists.
@@ -22,7 +23,6 @@ export class DirectoryExists {
   constructor(container) {
     this.fs = container.fs || fs
     this.expandStringNode = container.expandStringNode
-    this.stat = null
   }
 
   async assert(assertNode) {
@@ -38,19 +38,24 @@ export class DirectoryExists {
 
     this.expandedPath = this.expandStringNode(pathNode)
 
-    if (this.stat && this.stat.isFile()) {
+    let stat = null
+    let ok
+
+    try {
+      stat = await this.fs.lstat(this.expandedPath)
+      ok = true
+    } catch (e) {
+      ok = false
+    }
+
+    if (ok && stat.isFile()) {
       throw new ScriptError(
         `A file with the name '${this.expandedPath}' exists`,
         pathNode
       )
     }
 
-    try {
-      this.stat = await this.fs.lstat(this.expandedPath)
-      return this.stat.isDirectory()
-    } catch (e) {
-      return false
-    }
+    return ok
   }
 
   async rectify() {

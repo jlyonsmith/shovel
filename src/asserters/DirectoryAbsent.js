@@ -1,4 +1,5 @@
 import fs from "fs-extra"
+import { ScriptError } from "../ScriptError"
 
 /*
 Asserts and ensures that a directory is absent.
@@ -17,7 +18,6 @@ export class DirectoryAbsent {
   constructor(container) {
     this.fs = container.fs || fs
     this.expandStringNode = container.expandStringNode
-    this.stats = null
   }
 
   async assert(assertNode) {
@@ -33,19 +33,24 @@ export class DirectoryAbsent {
 
     this.expandedPath = this.expandStringNode(pathNode)
 
-    if (this.stat && this.stat.isFile()) {
+    let stat = null
+    let ok
+
+    try {
+      stat = await this.fs.lstat(this.expandedPath)
+      ok = false
+    } catch (e) {
+      ok = true
+    }
+
+    if (!ok && stat.isFile()) {
       throw new ScriptError(
         `File exists with the name '${this.expandedPath}'`,
         pathNode
       )
     }
 
-    try {
-      this.stat = await this.fs.lstat(this.expandedPath)
-      return !this.stat.isDirectory()
-    } catch (e) {
-      return true
-    }
+    return ok
   }
 
   async rectify() {
