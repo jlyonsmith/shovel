@@ -18,21 +18,18 @@ export class ServiceActive {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
     this.util = container.util || util
-    this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
-    this.withNode = container.withNode
-    this.assertNode = container.assertNode
   }
 
-  async assert(args) {
-    this.args = args
+  async assert(assertNode) {
+    const withNode = assertNode.value.with
 
-    const { name: nameNode } = args
+    const { name: nameNode } = withNode.value
 
     if (!nameNode || nameNode.type !== "string") {
-      throw this.newScriptError(
+      throw new ScriptError(
         "'name' must be supplied and be a string",
-        nameNode || this.withNode
+        nameNode || withNode
       )
     }
 
@@ -47,9 +44,9 @@ export class ServiceActive {
 
   async rectify() {
     if (!this.util.runningAsRoot()) {
-      throw this.newScriptError(
+      throw new ScriptError(
         "Must be running as root to start services",
-        this.withNode
+        withNode
       )
     }
 
@@ -63,7 +60,7 @@ export class ServiceActive {
       )
 
       if (output.stdout === "failed" || output.stdout === "inactive") {
-        throw this.newScriptError(`Service failed to go into the active state`)
+        throw new ScriptError(`Service failed to go into the active state`)
       }
     } while (output.stdout !== "active")
   }

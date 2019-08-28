@@ -28,27 +28,28 @@ export class DirectoryZipped {
     this.yazl = container.yazl || yazl
     this.yauzl = container.yauzl || yauzl
     this.readdirp = container.readdirp || readdirp
-    this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
-    this.withNode = container.withNode
   }
 
-  async assert(args) {
-    this.args = args
-
-    const { zip: zipPathNode, from: fromPathNode, globs: globsNode } = args
+  async assert(assertNode) {
+    const withNode = assertNode.value.with
+    const {
+      zip: zipPathNode,
+      from: fromPathNode,
+      globs: globsNode,
+    } = withNode.value
 
     if (!zipPathNode || zipPathNode.type !== "string") {
-      throw this.newScriptError(
+      throw new ScriptError(
         "'zip' must be supplied and be a string",
-        zipPathNode || this.withNode
+        zipPathNode || withNode
       )
     }
 
     if (!fromPathNode || zipPathNode.type !== "string") {
-      throw this.newScriptError(
+      throw new ScriptError(
         "'from' must be supplied and be a string",
-        fromPathNode || this.withNode
+        fromPathNode || withNode
       )
     }
 
@@ -56,21 +57,21 @@ export class DirectoryZipped {
 
     if (globsNode) {
       if (globsNode.type !== "array") {
-        throw this.newScriptError(
+        throw new ScriptError(
           "'globs' must be supplied and be an array",
-          globsNode || this.withNode
+          globsNode || withNode
         )
       }
 
       for (const globNode of globsNode.value) {
         if (globNode.type !== "string") {
-          throw this.newScriptError("glob must be a string", globNode)
+          throw new ScriptError("glob must be a string", globNode)
         }
 
         try {
           this.globs.push(globNode.value)
         } catch (e) {
-          throw this.newScriptError(
+          throw new ScriptError(
             `Glob '${globNode.value}' could not be parsed`,
             globNode
           )
@@ -84,7 +85,7 @@ export class DirectoryZipped {
     this.expandedFromPath = this.expandStringNode(fromPathNode)
 
     if (!(await this.util.dirExists(this.fs, this.expandedFromPath))) {
-      throw this.newScriptError(
+      throw new ScriptError(
         `From directory ${this.expandedFromPath} does not exist`,
         globsNode
       )

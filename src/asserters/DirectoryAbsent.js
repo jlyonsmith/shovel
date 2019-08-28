@@ -16,21 +16,19 @@ Example:
 export class DirectoryAbsent {
   constructor(container) {
     this.fs = container.fs || fs
-    this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
-    this.withNode = container.withNode
+    this.assertNode = container.assertNode
     this.stats = null
   }
 
-  async assert(args) {
-    this.args = args
-
-    const { path: pathNode } = args
+  async assert(assertNode) {
+    const withNode = assertNode.value.with
+    const { path: pathNode } = withNode.value
 
     if (!pathNode || pathNode.type !== "string") {
-      throw this.newScriptError(
+      throw new ScriptError(
         "'path' must be supplied and be a string",
-        pathNode || this.withNode
+        pathNode || withNode
       )
     }
 
@@ -48,7 +46,7 @@ export class DirectoryAbsent {
     const { path: pathNode } = this.args
 
     if (this.stat && this.stat.isFile()) {
-      throw this.newScriptError(
+      throw new ScriptError(
         `Not removing existing file with the name '${this.expandedPath}'`,
         pathNode
       )

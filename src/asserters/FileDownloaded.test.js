@@ -7,13 +7,7 @@ const testString = "The quick brown fox jumps over the lazy dog\n"
 
 beforeEach(() => {
   container = {
-    newScriptError: (message, node) => {
-      expect(typeof message).toBe("string")
-      expect(typeof node).toBe("string")
-      return new Error(message)
-    },
     expandStringNode: (node) => node.value,
-    withNode: { line: 0, column: 0 },
     assertNode: { line: 0, column: 0 },
     fs: {
       createReadStream: jest.fn((fileName) => {

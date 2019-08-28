@@ -20,27 +20,25 @@ Example:
 export class FileCopied {
   constructor(container) {
     this.fs = container.fs || fs
-    this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
-    this.withNode = container.withNode
   }
 
-  async assert(args) {
-    this.args = args
+  async assert(assertNode) {
+    const withNode = assertNode.value.with
 
-    const { fromPath: fromPathNode, toPath: toPathNode } = args
+    const { fromPath: fromPathNode, toPath: toPathNode } = withNode.value
 
     if (!fromPathNode || fromPathNode.type !== "string") {
-      throw this.newScriptError(
+      throw new ScriptError(
         "'fromPath' must be supplied and be a string",
-        fromPathNode || this.withNode
+        fromPathNode || withNode
       )
     }
 
     if (!toPathNode || toPathNode.type !== "string") {
-      throw this.newScriptError(
+      throw new ScriptError(
         "'toPath' must be supplied and be a string",
-        toPathNode || this.withNode
+        toPathNode || withNode
       )
     }
 

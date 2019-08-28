@@ -22,34 +22,36 @@ export class FileDownloaded {
   constructor(container) {
     this.fs = container.fs || fs
     this.fetch = container.fetch || fetch
-    this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
-    this.withNode = container.withNode
   }
 
-  async assert(args) {
-    this.args = args
+  async assert(assertNode) {
+    const withNode = assertNode.value.with
 
-    const { url: urlNode, digest: digestNode, toPath: toPathNode } = args
+    const {
+      url: urlNode,
+      digest: digestNode,
+      toPath: toPathNode,
+    } = withNode.value
 
     if (!urlNode || urlNode.type !== "string") {
-      throw this.newScriptError(
+      throw new ScriptError(
         "'fromPath' must be supplied and be a string",
-        urlNode || this.withNode
+        urlNode || withNode
       )
     }
 
     if (!digestNode || digestNode.type !== "string") {
-      throw this.newScriptError(
+      throw new ScriptError(
         "'digest' must be supplied and be a string containing the SHA256 hash of the string in hexadecimal",
-        digestNode || this.withNode
+        digestNode || withNode
       )
     }
 
     if (!toPathNode || toPathNode.type !== "string") {
-      throw this.newScriptError(
+      throw new ScriptError(
         "'toPath' must be supplied and be a string",
-        toPathNode || this.withNode
+        toPathNode || withNode
       )
     }
 

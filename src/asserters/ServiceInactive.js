@@ -19,21 +19,18 @@ export class ServiceInactive {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
     this.util = container.util || util
-    this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
-    this.withNode = container.withNode
-    this.assertNode = container.assertNode
   }
 
-  async assert(args) {
-    this.args = args
+  async assert(assertNode) {
+    const withNode = assertNode.value.with
 
-    const { name: nameNode } = args
+    const { name: nameNode } = withNode.value
 
     if (!nameNode || nameNode.type !== "string") {
-      throw this.newScriptError(
+      throw new ScriptError(
         "'name' must be supplied and be a string",
-        nameNode || this.withNode
+        nameNode || withNode
       )
     }
 
@@ -48,9 +45,9 @@ export class ServiceInactive {
 
   async rectify() {
     if (!this.util.runningAsRoot()) {
-      throw this.newScriptError(
+      throw new ScriptError(
         "Must be running as root to stop services",
-        this.withNode
+        withNode
       )
     }
 

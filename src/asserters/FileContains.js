@@ -18,27 +18,25 @@ Example:
 export class FileContains {
   constructor(container) {
     this.fs = container.fs || fs
-    this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
-    this.withNode = container.withNode
   }
 
-  async assert(args) {
-    this.args = args
+  async assert(assertNode) {
+    const withNode = assertNode.value.with
 
-    const { path: pathNode, contents: contentsNode } = args
+    const { path: pathNode, contents: contentsNode } = withNode.value
 
     if (!pathNode || pathNode.type !== "string") {
-      throw this.newScriptError(
+      throw new ScriptError(
         "'path' must be supplied and be a string",
-        pathNode || this.withNode
+        pathNode || withNode
       )
     }
 
     if (!contentsNode || contentsNode.type !== "string") {
-      throw this.newScriptError(
+      throw new ScriptError(
         "'contents' must be supplied and be a string",
-        contentsNode || this.withNode
+        contentsNode || withNode
       )
     }
 

@@ -5,12 +5,7 @@ let container = null
 
 beforeEach(() => {
   container = {
-    newScriptError: (message, node) => {
-      expect(typeof message).toBe("string")
-      expect(typeof node).toBe("string")
-      return new Error(message)
-    },
-    withNode: { line: 0, column: 0 },
+    assertNode: { line: 0, column: 0 },
     expandStringNode: (node) => node.value,
     fs: {
       createReadStream: jest.fn((fileName) => {

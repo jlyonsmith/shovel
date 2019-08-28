@@ -22,31 +22,28 @@ export class UserDisabled {
   constructor(container) {
     this.fs = container.fs || fs
     this.childProcess = container.childProcess || childProcess
-    this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
-    this.withNode = container.withNode
-    this.assertNode = container.assertNode
     this.util = container.util || util
   }
 
-  async assert(args) {
-    this.args = args
+  async assert(assertNode) {
+    const withNode = assertNode.value.with
 
-    const { name: nameNode } = args
+    const { name: nameNode } = withNode.value
 
     if (!nameNode || nameNode.type !== "string") {
-      throw this.newScriptError(
+      throw new ScriptError(
         "'name' must be supplied and be a string",
-        nameNode || this.withNode
+        nameNode || withNode
       )
     }
 
     this.expandedName = this.expandStringNode(nameNode)
 
     if (!this.util.runningAsRoot()) {
-      throw this.newScriptError(
+      throw new ScriptError(
         "Must be running as root to check for disabled accounts",
-        this.withNode
+        withNode
       )
     }
 

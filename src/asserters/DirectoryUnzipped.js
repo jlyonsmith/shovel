@@ -22,27 +22,24 @@ export class DirectoryUnzipped {
     this.fs = container.fs || fs
     this.yauzl = container.yauzl || yauzl
     this.util = container.util || util
-    this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
-    this.withNode = container.withNode
   }
 
-  async assert(args) {
-    this.args = args
-
-    const { zip: zipPathNode, to: toPathNode } = args
+  async assert(assertNode) {
+    const withNode = assertNode.value.with
+    const { zip: zipPathNode, to: toPathNode } = assertNode.with
 
     if (!zipPathNode || zipPathNode.type !== "string") {
-      throw this.newScriptError(
+      throw new ScriptError(
         "'zip' must be supplied and be a string",
-        zipPathNode || this.withNode
+        zipPathNode || withNode
       )
     }
 
     if (!toPathNode || toPathNode.type !== "string") {
-      throw this.newScriptError(
+      throw new ScriptError(
         "'to' must be supplied and be a string",
-        toPathNode || this.withNode
+        toPathNode || withNode
       )
     }
 
@@ -50,7 +47,7 @@ export class DirectoryUnzipped {
     this.expandedToPath = this.expandStringNode(toPathNode)
 
     if (!(await this.util.fileExists(this.fs, this.expandedZipPath))) {
-      throw this.newScriptError(
+      throw new ScriptError(
         `Zip file ${this.expandedZipPath} does not exist`,
         zipPathNode
       )
@@ -76,11 +73,7 @@ export class DirectoryUnzipped {
           )
         } else if (entry.uncompressedSize !== stat.size) {
           throw new Error(
-            `File size ${
-              stat.size
-            } of '${targetPath} does not match zip file entry of ${
-              entry.uncompressedSize
-            }`
+            `File size ${stat.size} of '${targetPath} does not match zip file entry of ${entry.uncompressedSize}`
           )
         }
       })

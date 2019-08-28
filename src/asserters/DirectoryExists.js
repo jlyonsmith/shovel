@@ -21,25 +21,29 @@ Example:
 export class DirectoryExists {
   constructor(container) {
     this.fs = container.fs || fs
-    this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
-    this.withNode = container.withNode
     this.stat = null
   }
 
-  async assert(args) {
-    this.args = args
-
-    const { path: pathNode } = args
+  async assert(assertNode) {
+    const withNode = assertNode.value.with
+    const { path: pathNode } = withNode.value
 
     if (!pathNode || pathNode.type !== "string") {
-      throw this.newScriptError(
+      throw new ScriptError(
         "'path' must be supplied and be a string",
-        pathNode || this.withNode
+        pathNode || withNode
       )
     }
 
     this.expandedPath = this.expandStringNode(pathNode)
+
+    if (this.stat && this.stat.isFile()) {
+      throw new ScriptError(
+        `A file with the name '${this.expandedPath}' exists`,
+        pathNode
+      )
+    }
 
     try {
       this.stat = await this.fs.lstat(this.expandedPath)
@@ -50,15 +54,6 @@ export class DirectoryExists {
   }
 
   async rectify() {
-    const { path: pathNode } = this.args
-
-    if (this.stat && this.stat.isFile()) {
-      throw this.newScriptError(
-        `A file with the name as '${this.expandedPath}' exists`,
-        pathNode
-      )
-    }
-
     await this.fs.ensureDir(this.expandedPath)
   }
 

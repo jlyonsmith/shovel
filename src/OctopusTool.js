@@ -168,15 +168,37 @@ sudo apt -y -q install nodejs`
   }
 
   async readScriptFile(scriptFile) {
-    const scriptNodes = JSON5.parse(await fs.readFile(scriptFile), {
+    const scriptNode = JSON5.parse(await fs.readFile(scriptFile), {
       wantNodes: true,
-      addFilename: true,
     })
 
-    if (scriptNodes.type !== "object") {
+    const addFilename = (node) => {
+      node.filename = scriptFile
+
+      switch (node.type) {
+        case "null":
+        case "number":
+        case "boolean":
+          break
+        case "object":
+          for (const [key, value] of Object.entries(node.value)) {
+            addFilename(value)
+          }
+          break
+        case "array":
+          for (const value of node.value) {
+            addFilename(value)
+          }
+          break
+      }
+    }
+
+    addFilename(scriptNode)
+
+    if (scriptNode.type !== "object") {
       throw new ScriptError(
         "Script must have an object as the root",
-        scriptNodes
+        scriptNode
       )
     }
 
@@ -185,11 +207,11 @@ sudo apt -y -q install nodejs`
       options: optionsNode,
       vars: varsNode,
       assertions: assertionsNode,
-    } = scriptNodes.value
+    } = scriptNode.value
 
     if (includesNode) {
-      if (scriptNodes.type !== "array") {
-        throw new ScriptError("'include' must be an array", scriptNodes)
+      if (includeNodes.type !== "array") {
+        throw new ScriptError("'include' must be an array", includeNodes)
       }
 
       for (const includeNode of includesNode.value) {
@@ -224,27 +246,29 @@ sudo apt -y -q install nodejs`
         throw new ScriptError("'vars' must be an object", varsNode)
       }
 
-      switch (varNode.type) {
-        case "null":
-        case "numeric":
-        case "boolean":
-        case "string":
-          break
-        case "object":
-          const valueNode = varNode.value.value
+      for (const varNode of Object.values(varsNode.value)) {
+        switch (varNode.type) {
+          case "null":
+          case "numeric":
+          case "boolean":
+          case "string":
+            break
+          case "object":
+            const valueNode = varNode.value.value
 
-          if (!valueNode || valueNode.type !== "string") {
+            if (!valueNode || valueNode.type !== "string") {
+              throw new ScriptError(
+                `Variable object must have value field of type string`,
+                varNode
+              )
+            }
+            break
+          default:
             throw new ScriptError(
-              `Variable object must have value field of type string`,
+              `Variable of type ${varNode.type} is invalid`,
               varNode
             )
-          }
-          break
-        default:
-          throw new ScriptError(
-            `Variable of type ${varNode.type} is invalid`,
-            varNode
-          )
+        }
       }
     }
 
@@ -297,14 +321,14 @@ sudo apt -y -q install nodejs`
     }
   }
 
-  async mergeIncludeNodes(scriptNodes) {
-    const { includes: includesNode } = scriptNodes
+  async mergeIncludeNodes(scriptNode) {
+    const { includes: includesNode } = scriptNode
 
     if (!includesNode) {
-      return scriptNodes
+      return scriptNode
     }
 
-    const scriptDir = path.dirname(scriptNodes.filename)
+    const scriptDir = path.dirname(scriptNode.filename)
 
     for (const includeNode of includesNodes) {
       const fullScriptPath = path.resolve(scriptDir, path)
@@ -312,30 +336,32 @@ sudo apt -y -q install nodejs`
       try {
         const newScriptNodes = await this.readScriptFile(fullScriptPath)
 
-        scriptNodes = this.mergeIncludeNodes(
-          scriptNodes,
+        scriptNode = this.mergeIncludeNodes(
+          scriptNode,
           newScriptNodes.includesNodes
         )
 
-        scriptNodes.options.concat(newScriptNodes.options)
-        scriptNodes.vars.concat(newScriptNodes.vars)
-        scriptNodes.assertions.concat(newScriptNodes.assertions)
+        scriptNode.options.concat(newScriptNodes.options)
+        scriptNode.vars.concat(newScriptNodes.vars)
+        scriptNode.assertions.concat(newScriptNodes.assertions)
       } catch (e) {
-        throw new ScriptError(`Cannot read script - ${e.message}`, includeNode)
+        throw new ScriptError(
+          `Unable to read script file ${fullScriptPath}. ${e.message}`,
+          includeNode
+        )
       }
     }
 
-    return scriptNodes
+    return scriptNode
   }
 
-  async compileScriptFile(scriptFile, options = {}) {
-    const { runningOnLocal } = options
-    const fullScriptFile = path.resolve(scriptFile)
+  async compileScriptFile(scriptFile, expandLocalVars = false) {
+    const fullScriptPath = path.resolve(scriptFile)
     const vmContext = {
       env: process.env,
       sys: {
-        SCRIPT_FILE: fullScriptFile,
-        SCRIPT_DIR: path.dirname(fullScriptFile),
+        SCRIPT_FILE: fullScriptPath,
+        SCRIPT_DIR: path.dirname(fullScriptPath),
       },
       fs: {
         readFile: (fileName) => fs.readFileSync(fileName),
@@ -345,13 +371,7 @@ sudo apt -y -q install nodejs`
       },
     }
     const expandStringNode = (node) => {
-      if (
-        !node.value ||
-        !node.type ||
-        node.type !== "string" ||
-        !node.line ||
-        !node.column
-      ) {
+      if (!node.type || node.type !== "string") {
         throw new Error("Must pass in a string node to expand")
       }
 
@@ -363,24 +383,32 @@ sudo apt -y -q install nodejs`
         throw new ScriptError(e.message, node)
       }
     }
-    let scriptNodes = null
+    let scriptNode = null
 
     try {
-      scriptNodes = this.readScriptFile(scriptFile)
+      scriptNode = await this.readScriptFile(fullScriptPath)
     } catch (e) {
-      throw new Error(`Unable to read script file ${fullScriptFile}`)
+      throw new ScriptError(
+        `Unable to read script file ${fullScriptPath}. ${e.message}`,
+        scriptNode
+      )
     }
 
     const {
-      includes: includesNode,
+      options: optionsNode,
       vars: varsNode,
       assertions: assertionsNode,
-    } = scriptNodes
+    } = scriptNode
 
-    scriptNodes = this.mergeIncludeNodes(scriptNodes)
-    scriptNodes.includes = null
+    scriptNode = this.mergeIncludeNodes(scriptNode)
+    scriptNode.includes = null
+
+    const options = optionsNode ? JSON5.simplify(optionsNode) : {}
+    let vars
 
     if (varsNode) {
+      vars = JSON5.simplify(scriptNode)
+
       for (const [key, varNode] of Object.entries(varsNode.value)) {
         if (vmContext[key] && typeof vmContext[key] === "object") {
           throw new ScriptError(
@@ -403,79 +431,72 @@ sudo apt -y -q install nodejs`
           case "object":
             const valueNode = varNode.value.value
 
-            if (runningOnLocal && varNode.value.local) {
+            if (expandLocalVars && varNode.value.local) {
               vmContext[key] = expandStringNode(valueNode)
             }
             break
         }
       }
+    } else {
+      vars = {}
     }
 
-    let assertions = []
+    let assertions
 
     if (assertionsNode) {
-      for (const assertionNode of assertionsNode.value) {
-        const assertion = {}
-        const {
-          description: descriptionNode,
-          assert: assertNode,
-          with: withNode,
-        } = assertionNode.value
+      assertions = JSON5.simplify(assertionsNode)
 
-        assertion.assertNode = assertNode
-        assertion.withNode = withNode
-        assertion.name = assertNode.value
-
-        if (descriptionNode) {
-          assertion.description = descriptionNode.value
-        }
-
-        if (withNode) {
-          assertion.args = withNode.value
-        }
-
-        assertions.push(assertion)
+      for (let i = 0; i < assertions.length; i++) {
+        assertions[i]._assertNode = assertionsNode.value[i]
       }
+    } else {
+      assertions = {}
     }
 
+    const runAsRoot =
+      assertions &&
+      assertions.find((assertion) => assertion.hasOwnProperty("runAs"))
+
     return {
-      script: JSON5.simplify(scriptNodes),
+      vars,
+      options,
       assertions,
       vmContext,
+      runAsRoot,
       expandStringNode,
     }
   }
 
   async runScriptLocally(scriptFile, options) {
     const state = await this.compileScriptFile(scriptFile)
-    const { script, assertions, vmContext, expandStringNode } = state
 
     if (options.verbose) {
       const vars = {}
 
-      Object.keys(vmContext).forEach((key) => {
+      Object.keys(state.vmContext).forEach((key) => {
         if (
           key === "env" ||
           key === "sys" ||
-          typeof vmContext[key] !== "object"
+          typeof state.vmContext[key] !== "object"
         ) {
-          vars[key] = vmContext[key]
+          vars[key] = state.vmContext[key]
         }
       })
       this.log.info(JSON5.stringify(vars, null, "  "))
     }
 
-    if (options && options.description) {
+    if (state.options && state.options.description) {
       this.log.output(
-        JSON5.stringify({ description: script.options.description })
+        JSON5.stringify({ description: state.options.description })
       )
     }
 
-    for (const assertion of assertions) {
-      const asserter = new asserters[assertion.name]({
-        expandStringNode,
-        assertNode: assertion.assertNode,
-        withNode: assertion.withNode,
+    console.log(JSON5.stringify(state.assertions, null, " "))
+
+    for (const assertion of state.assertions) {
+      const asserter = new asserters[assertion.assert]({
+        expandStringNode: state.expandStringNode,
+        assertNode: assertion._assertNode,
       })
 
       let ok = await asserter.assert(assertion.args)
@@ -591,15 +612,17 @@ sudo apt -y -q install nodejs`
         runningOnLocal: true,
       })
 
-      const { script, vmContext } = state
-
       for (const [key, value] of Object.entries(vmContext)) {
         if (typeof value !== "object") {
-          script.vars[key] = value
+          state.vars[key] = value
         }
       }
 
-      const newScript = JSON.stringify(script, null, "  ")
+      const newScript = JSON.stringify(
+        { options, vars, assertions: originalAssertions },
+        null,
+        "  "
+      )
       let readStream = new Readable({
         read(size) {
           this.push(newScript)
@@ -611,13 +634,9 @@ sudo apt -y -q install nodejs`
 
       await util.pipeToPromise(readStream, writeStream)
 
-      const sudo =
-        script.assertions &&
-        script.assertions.find((assertion) => assertion.hasOwnProperty("runAs"))
-
       this.log.info(`Running script on remote host`)
       await util.runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
-        sudo,
+        sudo: state.runAs === "root",
         password: sshConfig.password,
         log: this.log.output,
         logError: this.log.outputError,
@@ -688,11 +707,11 @@ Options:
       return 0
     }
 
-    if (!args._.length !== 1) {
+    if (args._.length !== 1) {
       throw new Error("Please specify just one script file")
     }
 
-    let scriptFiles = args._[0]
+    const scriptFile = args._[0]
 
     if (!args.host && (args.port || args.user || args.password)) {
       this.log.warning(

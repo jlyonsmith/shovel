@@ -19,21 +19,19 @@ Example:
 export class FilesAbsent {
   constructor(container) {
     this.fs = container.fs || fs
-    this.newScriptError = container.newScriptError
     this.expandStringNode = container.expandStringNode
-    this.withNode = container.withNode
     this.stat = null
   }
 
-  async assert(args) {
-    this.args = args
+  async assert(assertNode) {
+    const withNode = assertNode.value.with
 
-    const { paths: pathsNode } = args
+    const { paths: pathsNode } = withNode.value
 
     if (!pathsNode || pathsNode.type !== "array") {
-      throw this.newScriptError(
+      throw new ScriptError(
         "'paths' must be supplied and be an array",
-        pathsNode || this.withNode
+        pathsNode || withNode
       )
     }
 
@@ -43,7 +41,7 @@ export class FilesAbsent {
 
     for (const pathNode of pathsNode.value) {
       if (pathNode.type !== "string") {
-        throw this.newScriptError("All 'paths' must be strings", pathNode)
+        throw new ScriptError("All 'paths' must be strings", pathNode)
       }
 
       const expandedPath = this.expandStringNode(pathNode)
@@ -58,7 +56,7 @@ export class FilesAbsent {
       } catch (e) {}
 
       if (stat && stat.isDirectory()) {
-        throw this.newScriptError(
+        throw new ScriptError(
           `Not removing existing directory with the name '${expandedPath}'`,
           pathNode
         )

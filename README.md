@@ -121,18 +121,16 @@ The assertert must be a Javascript ES6 class.  The `constructor` will be called 
 
 ```js
 {
-  // Create a new script error for the given node
-  newScriptError: (message, node) => {...},
   // Expand a string by treating it as a Javascript template and running it in a VM
   expandStringNode: (string) => {...},
-  // The parent 'with' node of the assertion
-  withNode: {...},
+  // The assertion node in the JSON5
+  assertNode: {...},
 }
 ```
 
-The method `assert(args)` receives the args from the script and must return `true` or `false`.  It can throw if the assert can never succeed. State can be saved in `this` in the `assert` call to be used by `rectify` if `assert` returns `false`.  You must save the `args` parameter if you want to use it in `rectify`.  Note that the `args` argument is a tree of JSON5 node objects as described in this [JSON5](https://www.npmjs.com/package/@johnls/json5) fork. A node is a Javascript object that was generated from JSON5 with a `type` and `value` fields, plus `line` and `column` fields showing where in the JSON5 file the object was created from.  This allows outputting error messages that enable the Octopus user to find and fix errors in their script.
+The method `assert(assertNode)` receives the args from the script and must return `true` or `false`.  It can throw if the assert can never succeed. State can be saved in `this` in the `assert` call to be used by `rectify` if `assert` returns `false`.  You must save the `args` parameter if you want to use it in `rectify`.  Note that the `args` argument is a tree of JSON5 node objects as described in this [JSON5](https://www.npmjs.com/package/@johnls/json5) fork. A node is a Javascript object that was generated from JSON5 with a `type` and `value` fields, plus `line` and `column` fields showing where in the JSON5 file the object was created from.  This allows outputting error messages that enable the Octopus user to find and fix errors in their script.
 
-The method `rectify()` is called to modify the host state.  The key thing is that when `rectify` finishes the next call to `assert` *must succeed*.  If rectify cannot ensure this, then it should throw a `ScriptError` (see `newScriptError` above) or some other `Error` with enough information for the user to be able to fix the problem.
+The method `rectify()` is called to modify the host state.  The key thing is that when `rectify` finishes the next call to `assert` *must succeed*.  If rectify cannot ensure this, then it should throw a new `ScriptError` or some other `Error` with enough information for the user to be able to fix the problem.
 
 Finally, the `result()` method will always be called to output the result of the asserter.  This method should contain an object that helps the user understand what the assert checked or modified.
 
