@@ -1,11 +1,11 @@
 import { FileAbsent } from "./FileAbsent"
+import { createAssertNode } from "./testUtil"
 
 let container = null
 
 beforeEach(() => {
   container = {
     expandStringNode: (node) => node.value,
-    assertNode: { line: 0, column: 0 },
     fs: {
       lstat: jest.fn(async (fileName) => {
         if (fileName === "/somedir") {
@@ -31,7 +31,7 @@ test("FileAbsent with no dir or file existing", async () => {
   const asserter = new FileAbsent(container)
 
   await expect(
-    asserter.assert({ path: { type: "string", value: "/notthere" } })
+    asserter.assert(createAssertNode(asserter, { path: "/notthere" }))
   ).resolves.toBe(true)
 })
 
@@ -39,7 +39,7 @@ test("FileAbsent with file existing", async () => {
   const asserter = new FileAbsent(container)
 
   await expect(
-    asserter.assert({ path: { type: "string", value: "/somefile" } })
+    asserter.assert(createAssertNode(asserter, { path: "/somefile" }))
   ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
@@ -48,6 +48,6 @@ test("FileAbsent with dir instead of file existing", async () => {
   const asserter = new FileAbsent(container)
 
   await expect(
-    asserter.assert({ path: { type: "string", value: "/somedir" } })
+    asserter.assert(createAssertNode(asserter, { path: "/somedir" }))
   ).rejects.toThrow(Error)
 })

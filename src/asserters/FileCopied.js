@@ -1,6 +1,7 @@
 import fs from "fs-extra"
 import path from "path"
 import * as util from "../util"
+import { ScriptError } from "../ScriptError"
 
 /*
 That a file was copied from one location to another.

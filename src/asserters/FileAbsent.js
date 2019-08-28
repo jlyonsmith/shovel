@@ -1,4 +1,5 @@
 import fs from "fs-extra"
+import { ScriptError } from "../ScriptError"
 
 /*
 Checks and ensures that a file does not exist.

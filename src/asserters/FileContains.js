@@ -1,5 +1,6 @@
 import fs from "fs-extra"
 import * as util from "../util"
+import { ScriptError } from "../ScriptError"
 
 /*
 Ensures that a text file contains specific contents.

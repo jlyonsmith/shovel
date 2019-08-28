@@ -1,11 +1,11 @@
 import { FileCopied } from "./FileCopied"
 import stream from "stream"
+import { createAssertNode } from "./testUtil"
 
 let container = null
 
 beforeEach(() => {
   container = {
-    assertNode: { line: 0, column: 0 },
     expandStringNode: (node) => node.value,
     fs: {
       createReadStream: jest.fn((fileName) => {
@@ -47,10 +47,12 @@ test("FileCopied with files the same", async () => {
   const asserter = new FileCopied(container)
 
   await expect(
-    asserter.assert({
-      fromPath: { type: "string", value: "/somefile" },
-      toPath: { type: "string", value: "/otherfile" },
-    })
+    asserter.assert(
+      createAssertNode(asserter, {
+        fromPath: "/somefile",
+        toPath: "/otherfile",
+      })
+    )
   ).resolves.toBe(true)
   expect(container.fs.createReadStream).toHaveBeenCalledTimes(2)
 })
@@ -59,10 +61,12 @@ test("FileCopied with from file non-existent", async () => {
   const asserter = new FileCopied(container)
 
   await expect(
-    asserter.assert({
-      fromPath: { type: "string", value: "/notthere" },
-      toPath: { type: "string", value: "/otherfile" },
-    })
+    asserter.assert(
+      createAssertNode(asserter, {
+        fromPath: "/notthere",
+        toPath: "/otherfile",
+      })
+    )
   ).resolves.toBe(false)
 })
 
@@ -70,10 +74,12 @@ test("FileCopied with to file non-existent", async () => {
   const asserter = new FileCopied(container)
 
   await expect(
-    asserter.assert({
-      fromPath: { type: "string", value: "/somefile" },
-      toPath: { type: "string", value: "/notthere" },
-    })
+    asserter.assert(
+      createAssertNode(asserter, {
+        fromPath: "/somefile",
+        toPath: "/notthere",
+      })
+    )
   ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
@@ -82,10 +88,12 @@ test("FileCopied with different files", async () => {
   const asserter = new FileCopied(container)
 
   await expect(
-    asserter.assert({
-      fromPath: { type: "string", value: "/somefile" },
-      toPath: { type: "string", value: "/badfile" },
-    })
+    asserter.assert(
+      createAssertNode(asserter, {
+        fromPath: "/somefile",
+        toPath: "/badfile",
+      })
+    )
   ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
