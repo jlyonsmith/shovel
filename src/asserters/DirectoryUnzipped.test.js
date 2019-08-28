@@ -1,12 +1,12 @@
 import { DirectoryUnzipped } from "./DirectoryUnzipped"
 import stream from "stream"
+import { createAssertNode } from "./testUtil"
 
 let container = null
 
 beforeEach(() => {
   container = {
     expandStringNode: (node) => node.value,
-    assertNode: { line: 0, column: 0 },
     fs: {
       lstat: jest.fn(async (path) => {
         switch (path) {
@@ -149,10 +149,12 @@ test("With zip file not present", async () => {
   const asserter = new DirectoryUnzipped(container)
 
   await expect(
-    asserter.assert({
-      zip: { type: "string", value: "./missing.zip" },
-      to: { type: "string", value: "./outdir" },
-    })
+    asserter.assert(
+      createAssertNode(asserter, {
+        zip: "./missing.zip",
+        to: "./outdir",
+      })
+    )
   ).rejects.toThrow()
 })
 
@@ -160,10 +162,12 @@ test("With all files unzipped and the same", async () => {
   const asserter = new DirectoryUnzipped(container)
 
   await expect(
-    asserter.assert({
-      zip: { type: "string", value: "./somefile.zip" },
-      to: { type: "string", value: "./outdir" },
-    })
+    asserter.assert(
+      createAssertNode(asserter, {
+        zip: "./somefile.zip",
+        to: "./outdir",
+      })
+    )
   ).resolves.toBe(true)
 })
 
@@ -171,10 +175,12 @@ test("With output directory missing", async () => {
   const asserter = new DirectoryUnzipped(container)
 
   await expect(
-    asserter.assert({
-      zip: { type: "string", value: "./somefile.zip" },
-      to: { type: "string", value: "./notthere" },
-    })
+    asserter.assert(
+      createAssertNode(asserter, {
+        zip: "./somefile.zip",
+        to: "./notthere",
+      })
+    )
   ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
@@ -183,10 +189,12 @@ test("With a file missing", async () => {
   const asserter = new DirectoryUnzipped(container)
 
   await expect(
-    asserter.assert({
-      zip: { type: "string", value: "./filemissing.zip" },
-      to: { type: "string", value: "./outdir" },
-    })
+    asserter.assert(
+      createAssertNode(asserter, {
+        zip: "./filemissing.zip",
+        to: "./outdir",
+      })
+    )
   ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
@@ -195,10 +203,12 @@ test("With a file as different size", async () => {
   const asserter = new DirectoryUnzipped(container)
 
   await expect(
-    asserter.assert({
-      zip: { type: "string", value: "./filesize.zip" },
-      to: { type: "string", value: "./outdir" },
-    })
+    asserter.assert(
+      createAssertNode(asserter, {
+        zip: "./filesize.zip",
+        to: "./outdir",
+      })
+    )
   ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
@@ -207,10 +217,12 @@ test("With a file as a directory", async () => {
   const asserter = new DirectoryUnzipped(container)
 
   await expect(
-    asserter.assert({
-      zip: { type: "string", value: "./filedir.zip" },
-      to: { type: "string", value: "./outdir" },
-    })
+    asserter.assert(
+      createAssertNode(asserter, {
+        zip: "./filedir.zip",
+        to: "./outdir",
+      })
+    )
   ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })

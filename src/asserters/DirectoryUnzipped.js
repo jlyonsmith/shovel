@@ -2,6 +2,7 @@ import fs from "fs-extra"
 import yauzl from "yauzl-promise"
 import * as util from "../util"
 import path from "path"
+import { ScriptError } from "../ScriptError"
 
 /*
 Checks and ensures that a .zip file is unzipped to a directory.
@@ -27,7 +28,7 @@ export class DirectoryUnzipped {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { zip: zipPathNode, to: toPathNode } = assertNode.with
+    const { zip: zipPathNode, to: toPathNode } = withNode.value
 
     if (!zipPathNode || zipPathNode.type !== "string") {
       throw new ScriptError(
