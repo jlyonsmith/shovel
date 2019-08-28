@@ -26,7 +26,6 @@ export class GroupAbsent {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-
     const { name: nameNode } = withNode.value
 
     if (!nameNode || nameNode.type !== "string") {
@@ -38,18 +37,18 @@ export class GroupAbsent {
 
     this.expandedName = this.expandStringNode(nameNode)
 
-    return !(await this.fs.readFile("/etc/groups")).includes(
+    const ok = !(await this.fs.readFile("/etc/groups")).includes(
       this.expandedName + ":"
     )
+
+    if (!ok && !util.runningAsRoot(this.os)) {
+      throw new ScriptError("Only root user can delete groups", assertNode)
+    }
+
+    return ok
   }
 
   async rectify() {
-    const { name: nameNode } = this.args
-
-    if (!util.runningAsRoot(this.os)) {
-      throw new ScriptError("Only root user can delete groups", this.assertNode)
-    }
-
     await this.childProcess.exec(`groupdel ${this.expandedName}`)
   }
 

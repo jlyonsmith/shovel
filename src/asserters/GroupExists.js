@@ -29,7 +29,6 @@ export class GroupExists {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-
     const { name: nameNode } = withNode.value
 
     if (!nameNode || nameNode.type !== "string") {
@@ -41,21 +40,21 @@ export class GroupExists {
 
     this.expandedName = this.expandStringNode(nameNode)
 
-    return (await this.fs.readFile("/etc/groups")).includes(
+    const ok = (await this.fs.readFile("/etc/groups")).includes(
       this.expandedName + ":"
     )
-  }
 
-  async rectify() {
-    const { name: nameNode } = this.args
-
-    if (!util.runningAsRoot(this.os)) {
+    if (!ok && !util.runningAsRoot(this.os)) {
       throw new ScriptError(
         "Only root user can add or modify groups",
-        this.assertNode
+        assertNode
       )
     }
 
+    return ok
+  }
+
+  async rectify() {
     await this.childProcess.exec(`groupadd ${this.expandedName}`)
   }
 

@@ -491,23 +491,20 @@ sudo apt -y -q install nodejs`
       )
     }
 
-    console.log(JSON5.stringify(state.assertions, null, " "))
-
     for (const assertion of state.assertions) {
       const asserter = new asserters[assertion.assert]({
         expandStringNode: state.expandStringNode,
-        assertNode: assertion._assertNode,
       })
 
-      let ok = await asserter.assert(assertion.args)
+      let ok = await asserter.assert(assertion._assertNode)
       let output = {}
 
       if (!ok) {
         await asserter.rectify()
 
-        output.rectified = assertion.name
+        output.rectified = assertion.assert
       } else {
-        output.asserted = assertion.name
+        output.asserted = assertion.assert
       }
 
       if (assertion.description) {

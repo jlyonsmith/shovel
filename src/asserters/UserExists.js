@@ -35,7 +35,6 @@ export class UserExists {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-
     const { name: nameNode } = withNode.value
 
     if (!nameNode || nameNode.type !== "string") {
@@ -47,21 +46,21 @@ export class UserExists {
 
     this.expandedName = this.expandStringNode(nameNode)
 
-    return (await this.fs.readFile("/etc/passwd")).includes(
+    const ok = (await this.fs.readFile("/etc/passwd")).includes(
       this.expandedName + ":"
     )
-  }
 
-  async rectify() {
-    const { name: nameNode } = this.args
-
-    if (!util.runningAsRoot(this.os)) {
+    if (!ok && !util.runningAsRoot(this.os)) {
       throw new ScriptError(
         "Only root user can add or modify users",
-        this.assertNode
+        assertNode
       )
     }
 
+    return ok
+  }
+
+  async rectify() {
     await this.childProcess.exec(`useradd ${this.expandedName}`)
   }
 

@@ -5,7 +5,21 @@ let container = null
 beforeEach(() => {
   container = {
     expandStringNode: (node) => node.value,
-    assertNode: { line: 0, column: 0 },
+    assertNode: {
+      line: 0,
+      column: 0,
+      filename: "a.json5",
+      type: "object",
+      value: {
+        with: {
+          type: "object",
+          value: {},
+          line: 1,
+          column: 0,
+          filename: "a.json5",
+        },
+      },
+    },
     fs: {
       lstat: jest.fn(async (dirName) => {
         if (dirName === "/somedir") {

@@ -128,7 +128,9 @@ The assertert must be a Javascript ES6 class.  The `constructor` will be called 
 }
 ```
 
-The method `assert(assertNode)` receives the args from the script and must return `true` or `false`.  It can throw if the assert can never succeed. State can be saved in `this` in the `assert` call to be used by `rectify` if `assert` returns `false`.  You must save the `args` parameter if you want to use it in `rectify`.  Note that the `args` argument is a tree of JSON5 node objects as described in this [JSON5](https://www.npmjs.com/package/@johnls/json5) fork. A node is a Javascript object that was generated from JSON5 with a `type` and `value` fields, plus `line` and `column` fields showing where in the JSON5 file the object was created from.  This allows outputting error messages that enable the Octopus user to find and fix errors in their script.
+The method `assert(assertNode)` receives an assert *node object* (see below) and must return `true` or `false`.  `true` is returned if the system state matches the assertion, `false` otherwise. `assert` should throw if it is going to return `false` and the `rectify` call could never succeed, e.g. the user needs to be root to rectify something or a situation exists which blocks rectifying the situation. Save anything to `this` that you calculate or need from the `assertNode` in the `assert` call so that it can be used by `rectify`.
+
+A node object is a Javascript object that was generated from JSON5 with a `type` and `value` fields, plus `line` and `column` fields showing where in the JSON5 file the object was created from.  This allows outputting error messages that enable the Octopus user to find and fix errors in their script. See the [JSON5](https://www.npmjs.com/package/@johnls/json5) fork for more details.
 
 The method `rectify()` is called to modify the host state.  The key thing is that when `rectify` finishes the next call to `assert` *must succeed*.  If rectify cannot ensure this, then it should throw a new `ScriptError` or some other `Error` with enough information for the user to be able to fix the problem.
 

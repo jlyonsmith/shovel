@@ -26,7 +26,6 @@ export class UserAbsent {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-
     const { name: nameNode } = withNode.value
 
     if (!nameNode || nameNode.type !== "string") {
@@ -38,18 +37,18 @@ export class UserAbsent {
 
     this.expandedName = this.expandStringNode(nameNode)
 
-    return !(await this.fs.readFile("/etc/passwd")).includes(
+    const ok = !(await this.fs.readFile("/etc/passwd")).includes(
       this.expandedName + ":"
     )
+
+    if (!ok && !util.runningAsRoot(this.os)) {
+      throw new ScriptError("Only root user can delete users", assertNode)
+    }
+
+    return ok
   }
 
   async rectify() {
-    const { name: nameNode } = this.args
-
-    if (!util.runningAsRoot(this.os)) {
-      throw new ScriptError("Only root user can delete users", this.assertNode)
-    }
-
     await this.childProcess.exec(`userdel ${this.expandedName}`)
   }
 

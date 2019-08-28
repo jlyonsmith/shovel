@@ -25,7 +25,6 @@ export class FilesAbsent {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-
     const { paths: pathsNode } = withNode.value
 
     if (!pathsNode || pathsNode.type !== "array") {

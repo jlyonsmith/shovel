@@ -27,7 +27,6 @@ export class FileDownloaded {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-
     const {
       url: urlNode,
       digest: digestNode,

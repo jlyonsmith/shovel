@@ -25,7 +25,6 @@ export class FileCopied {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-
     const { fromPath: fromPathNode, toPath: toPathNode } = withNode.value
 
     if (!fromPathNode || fromPathNode.type !== "string") {

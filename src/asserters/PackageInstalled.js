@@ -27,7 +27,6 @@ export class PackageInstalled {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-
     const { name: nameNode } = withNode.value
 
     if (!nameNode || nameNode.type !== "string") {

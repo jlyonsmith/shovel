@@ -23,7 +23,6 @@ export class FileContains {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-
     const { path: pathNode, contents: contentsNode } = withNode.value
 
     if (!pathNode || pathNode.type !== "string") {
