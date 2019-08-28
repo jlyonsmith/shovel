@@ -254,12 +254,19 @@ sudo apt -y -q install nodejs`
           case "string":
             break
           case "object":
-            const valueNode = varNode.value.value
+            const { value: valueNode, local: localNode } = varNode.value
 
             if (!valueNode || valueNode.type !== "string") {
               throw new ScriptError(
                 `Variable object must have value field of type string`,
                 varNode
+              )
+            }
+
+            if (localNode && localNode.type !== "boolean") {
+              throw new ScriptError(
+                `Variable object 'local' switch must be boolean`,
+                localNode
               )
             }
             break
@@ -355,7 +362,7 @@ sudo apt -y -q install nodejs`
     return scriptNode
   }
 
-  async compileScriptFile(scriptFile, expandLocalVars = false) {
+  async compileScriptFile(scriptFile) {
     const fullScriptPath = path.resolve(scriptFile)
     const vmContext = {
       env: process.env,
@@ -430,9 +437,9 @@ sudo apt -y -q install nodejs`
             vmContext[key] = varNode.value
             break
           case "object":
-            const valueNode = varNode.value.value
+            const { value: valueNode, local: localNode } = varNode.value
 
-            if (expandLocalVars && varNode.value.local) {
+            if (localNode && localNode.value) {
               vmContext[key] = expandStringNode(valueNode)
             }
             break
@@ -606,9 +613,7 @@ sudo apt -y -q install nodejs`
         }`
       )
 
-      const state = await this.compileScriptFile(scriptFile, {
-        runningOnLocal: true,
-      })
+      const state = await this.compileScriptFile(scriptFile)
 
       for (const [key, value] of Object.entries(vmContext)) {
         if (typeof value !== "object") {
