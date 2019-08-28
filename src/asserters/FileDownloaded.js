@@ -2,6 +2,7 @@ import fs from "fs-extra"
 import path from "path"
 import fetch from "node-fetch"
 import * as util from "../util"
+import { ScriptError } from "../ScriptError"
 
 /*
 Asserts that a file is downloaded. Uses SHA256 digest to verify proper file.

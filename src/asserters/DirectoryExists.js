@@ -39,23 +39,21 @@ export class DirectoryExists {
     this.expandedPath = this.expandStringNode(pathNode)
 
     let stat = null
-    let ok
 
     try {
       stat = await this.fs.lstat(this.expandedPath)
-      ok = true
     } catch (e) {
-      ok = false
+      return false
     }
 
-    if (ok && stat.isFile()) {
+    if (stat && stat.isFile()) {
       throw new ScriptError(
         `A file with the name '${this.expandedPath}' exists`,
         pathNode
       )
     }
 
-    return ok
+    return true
   }
 
   async rectify() {

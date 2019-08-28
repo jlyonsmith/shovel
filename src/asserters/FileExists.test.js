@@ -1,11 +1,12 @@
 import { FileExists } from "./FileExists"
+import { createAssertNode } from "./testUtil"
+import { ScriptError } from "../ScriptError"
 
 let container = null
 
 beforeEach(() => {
   container = {
     expandStringNode: (node) => node.value,
-    assertNode: { line: 0, column: 0 },
     fs: {
       lstat: jest.fn(async (fileName) => {
         if (fileName === "/somedir") {
@@ -33,7 +34,7 @@ test("FileExists with file existing", async () => {
   const asserter = new FileExists(container)
 
   await expect(
-    asserter.assert({ path: { type: "string", value: "/somefile" } })
+    asserter.assert(createAssertNode(asserter, { path: "/somefile" }))
   ).resolves.toBe(true)
 })
 
@@ -41,16 +42,16 @@ test("FileExists with no file or dir existing", async () => {
   const asserter = new FileExists(container)
 
   await expect(
-    asserter.assert({ path: { type: "string", value: "/notthere" } })
+    asserter.assert(createAssertNode(asserter, { path: "/notthere" }))
   ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
+  expect(asserter.result()).toEqual({ path: "/notthere" })
 })
 
 test("FileExists with dir instead of file existing", async () => {
   const asserter = new FileExists(container)
 
   await expect(
-    asserter.assert({ path: { type: "string", value: "/somedir" } })
-  ).resolves.toBe(false)
-  await expect(asserter.rectify()).rejects.toThrow(Error)
+    asserter.assert(createAssertNode(asserter, { path: "/somedir" }))
+  ).rejects.toThrow(ScriptError)
 })

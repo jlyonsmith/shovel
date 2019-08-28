@@ -35,12 +35,12 @@ export class FileAbsent {
     this.expandedPath = this.expandStringNode(pathNode)
 
     let stat = null
-    let ok = true
 
     try {
       stat = await this.fs.lstat(this.expandedPath)
-      ok = false
-    } catch (e) {}
+    } catch (e) {
+      return true
+    }
 
     if (stat && stat.isDirectory()) {
       throw new ScriptError(
@@ -49,7 +49,7 @@ export class FileAbsent {
       )
     }
 
-    return ok
+    return false
   }
 
   async rectify() {

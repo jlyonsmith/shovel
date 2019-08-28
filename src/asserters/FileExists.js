@@ -1,5 +1,5 @@
 import fs from "fs-extra"
-import JSON5 from "@johnls/json5"
+import { ScriptError } from "../ScriptError"
 
 /*
 Checks and ensures that a file exists.
@@ -34,19 +34,22 @@ export class FileExists {
 
     this.expandedPath = this.expandStringNode(pathNode)
 
-    if (this.stat && this.stat.isDirectory()) {
+    let stat = null
+
+    try {
+      stat = await this.fs.lstat(this.expandedPath)
+    } catch (e) {
+      return false
+    }
+
+    if (stat && stat.isDirectory()) {
       throw new ScriptError(
         `A directory exists with the name '${this.expandedPath}'`,
         pathNode
       )
     }
 
-    try {
-      this.stat = await this.fs.lstat(this.expandedPath)
-      return this.stat.isFile()
-    } catch (e) {
-      return false
-    }
+    return true
   }
 
   async rectify() {
