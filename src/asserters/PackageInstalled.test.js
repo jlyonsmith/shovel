@@ -1,12 +1,11 @@
 import { PackageInstalled } from "./PackageInstalled"
+import { createAssertNode } from "./testUtil"
 
 let container = null
 
 beforeEach(() => {
   container = {
     expandStringNode: (node) => node.value,
-    withNode: { line: 0, column: 0 },
-    assertNode: { line: 0, column: 0 },
     childProcess: {
       exec: jest.fn(async (command) => {
         expect(typeof command).toBe("string")
@@ -43,7 +42,7 @@ test("With package installed", async () => {
   const asserter = new PackageInstalled(container)
 
   await expect(
-    asserter.assert({ name: { type: "string", value: "package" } })
+    asserter.assert(createAssertNode(asserter, { name: "package" }))
   ).resolves.toBe(true)
 })
 
@@ -51,7 +50,7 @@ test("With package not installed", async () => {
   const asserter = new PackageInstalled(container)
 
   await expect(
-    asserter.assert({ name: { type: "string", value: "notthere" } })
+    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
   ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
   await expect(asserter.result()).toEqual({ name: "notthere" })

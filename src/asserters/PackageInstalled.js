@@ -1,6 +1,6 @@
-import fs from "fs-extra"
 import childProcess from "child-process-promise"
 import * as util from "../util"
+import { ScriptError } from "../ScriptError"
 
 /*
 Asserts and ensures that an O/S package is installed

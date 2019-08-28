@@ -1,4 +1,5 @@
 import { PackageRemoved } from "./PackageRemoved"
+import { createAssertNode } from "./testUtil"
 
 let container = null
 
@@ -43,7 +44,7 @@ test("With package removed", async () => {
   const asserter = new PackageRemoved(container)
 
   await expect(
-    asserter.assert({ name: { type: "string", value: "notthere" } })
+    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
   ).resolves.toBe(true)
 })
 
@@ -51,7 +52,7 @@ test("With package not removed", async () => {
   const asserter = new PackageRemoved(container)
 
   await expect(
-    asserter.assert({ name: { type: "string", value: "package" } })
+    asserter.assert(createAssertNode(asserter, { name: "package" }))
   ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
   await expect(asserter.result()).toEqual({ name: "package" })

@@ -1,5 +1,6 @@
 import childProcess from "child-process-promise"
 import * as util from "../util"
+import { ScriptError } from "../ScriptError"
 
 /*
 Ensures that an O/S service is running

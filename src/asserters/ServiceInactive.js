@@ -1,6 +1,6 @@
 import childProcess from "child-process-promise"
-import os from "os"
 import * as util from "../util"
+import { ScriptError } from "../ScriptError"
 
 /*
 Ensures that an O/S service is inactive
