@@ -1,10 +1,10 @@
 import { UserDisabled } from "./UserDisabled"
+import { createAssertNode } from "./testUtil"
 
 let container = null
 
 beforeEach(() => {
   container = {
-    assertNode: { line: 0, column: 0 },
     expandStringNode: (node) => node.value,
     fs: {
       readFile: jest.fn(async (filePath) => {
@@ -40,7 +40,7 @@ test("With user disabled", async () => {
   const asserter = new UserDisabled(container)
 
   await expect(
-    asserter.assert({ name: { type: "string", value: "disabled" } })
+    asserter.assert(createAssertNode(asserter, { name: "disabled" }))
   ).resolves.toBe(true)
 })
 
@@ -48,7 +48,7 @@ test("With user enabled", async () => {
   const asserter = new UserDisabled(container)
 
   await expect(
-    asserter.assert({ name: { type: "string", value: "enabled" } })
+    asserter.assert(createAssertNode(asserter, { name: "enabled" }))
   ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })

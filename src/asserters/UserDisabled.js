@@ -1,7 +1,7 @@
 import fs from "fs-extra"
 import childProcess from "child-process-promise"
-import os from "os"
 import * as util from "../util"
+import { ScriptError } from "../ScriptError"
 
 /*
 Asserts and ensures that a user is disabled.

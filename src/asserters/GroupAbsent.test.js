@@ -1,13 +1,11 @@
 import { GroupAbsent } from "./GroupAbsent"
 import { createAssertNode } from "./testUtil"
-import { ScriptError } from "../ScriptError"
 
 let container = null
 
 beforeEach(() => {
   container = {
     expandStringNode: (node) => node.value,
-    withNode: { line: 0, column: 0 },
     fs: {
       readFile: jest.fn(async (filePath) => {
         expect(typeof filePath).toBe("string")

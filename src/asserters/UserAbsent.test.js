@@ -1,12 +1,11 @@
 import { UserAbsent } from "./UserAbsent"
+import { createAssertNode } from "./testUtil"
 
 let container = null
 
 beforeEach(() => {
   container = {
     expandStringNode: (node) => node.value,
-    withNode: { line: 0, column: 0 },
-    assertNode: { line: 0, column: 0 },
     fs: {
       readFile: jest.fn(async (filePath) => {
         expect(typeof filePath).toBe("string")
@@ -37,7 +36,7 @@ test("With user absent", async () => {
   const asserter = new UserAbsent(container)
 
   await expect(
-    asserter.assert({ name: { type: "string", value: "notthere" } })
+    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
   ).resolves.toBe(true)
 })
 
@@ -45,7 +44,7 @@ test("With user present", async () => {
   const asserter = new UserAbsent(container)
 
   await expect(
-    asserter.assert({ name: { type: "string", value: "games" } })
+    asserter.assert(createAssertNode(asserter, { name: "games" }))
   ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
