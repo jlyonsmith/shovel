@@ -135,21 +135,3 @@ A node object is a Javascript object that was generated from JSON5 with a `type`
 The method `rectify()` is called to modify the host state.  The key thing is that when `rectify` finishes the next call to `assert` *must succeed*.  If rectify cannot ensure this, then it should throw a new `ScriptError` or some other `Error` with enough information for the user to be able to fix the problem.
 
 Finally, the `result()` method will always be called to output the result of the asserter.  This method should contain an object that helps the user understand what the assert checked or modified.
-
-## Test Plan
-
-```sh
-octopus --help
-```
-
-```sh
-octopus --version
-```
-
-```sh
-octopus example/bad-assertion.json5
-```
-
-```sh
-octopus example/basic.json5
-```
