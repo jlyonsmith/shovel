@@ -479,26 +479,17 @@ sudo apt -y -q install nodejs`
       assertions[i]._assertNode = assertionsNode.value[i]
     }
 
-    const startAsRoot = assertions.find((assertion) =>
-      assertion.hasOwnProperty("runAs")
-    )
-
     return {
       vars,
       options,
       assertions,
       vmContext,
-      startAsRoot,
       expandStringNode,
     }
   }
 
   async runScriptLocally(scriptPath, options) {
     const state = await this.compileScriptFile(scriptPath)
-
-    if (state.startAsRoot && !util.runningAsRoot(os)) {
-      throw new Error("This script needs to be run as root")
-    }
 
     if (options.verbose) {
       const vars = {}
@@ -526,12 +517,12 @@ sudo apt -y -q install nodejs`
         expandStringNode: state.expandStringNode,
       })
 
-      let ok = await asserter.assert(assertion._assertNode)
       let output = {}
+      let rectified = false
 
-      if (!ok) {
+      if (!(await asserter.assert(assertion._assertNode))) {
         await asserter.rectify()
-
+        rectified = true
         output.rectified = assertion.assert
       } else {
         output.asserted = assertion.assert
@@ -541,7 +532,7 @@ sudo apt -y -q install nodejs`
         output.description = assertion.description
       }
 
-      output.result = asserter.result()
+      output.result = asserter.result(rectified)
       this.log.output(JSON5.stringify(output))
     }
 
@@ -670,7 +661,7 @@ sudo apt -y -q install nodejs`
 
       this.log.info(`Running script on remote host`)
       await util.runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
-        sudo: state.runAs === "root",
+        sudo: options.runAsRoot,
         password: sshConfig.password,
         log: this.log.output,
         logError: this.log.outputError,
@@ -736,6 +727,7 @@ Options:
   --user, -u          Remote user name. Defaults to current user.
   --password, -P      Remote user password. Defaults is to just use PPK.
   --host-file, -f     JSON5 file containing multiple host names
+  --root, -r          Start Octopus on remote as root
   --verbose           Emit verbose output
 `)
       return 0
@@ -778,6 +770,7 @@ Options:
           user: args.user,
           password: args.password,
           port: parsePort(args.port),
+          runAsRoot: args.root,
         })
       }
     }
@@ -792,6 +785,7 @@ Options:
           password: host.password,
           port: parsePort(host.port),
           verbose: args.verbose,
+          runAsRoot: host.runAsRoot,
         })
 
         if (hostExitCode !== 0 && exitCode === 0) {

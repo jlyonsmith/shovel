@@ -56,7 +56,7 @@ export class FileAbsent {
     await this.fs.unlink(this.expandedPath)
   }
 
-  result() {
+  result(rectified) {
     return { path: this.expandedPath }
   }
 }

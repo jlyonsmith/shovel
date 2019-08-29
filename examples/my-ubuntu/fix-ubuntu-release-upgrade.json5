@@ -1,16 +1,12 @@
 {
   // This fixes the "failed to connect to http://changelogs.ubuntu.com/meta-release" mesasge in Ubuntu
   // See https://askubuntu.com/questions/919441/failed-to-connect-to-http-changelogs-ubuntu-com-meta-release
-  vars: {
-    motdDir: "/etc/update-motd.d"
-  },
   assertions: [
     {
       assert: "FileAbsent",
-      runAs: "root",
       with: {
-        path: "/var/lib/ubuntu-release-upgrader/release-upgrade-available"
-      }
-    }
-  ]
+        path: "/var/lib/ubuntu-release-upgrader/release-upgrade-available",
+      },
+    },
+  ],
 }

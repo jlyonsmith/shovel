@@ -14,6 +14,9 @@ Example:
 }
 */
 
+// TODO: Must require owner and group
+// TODO: Must require permissions
+
 export class FileExists {
   constructor(container) {
     this.fs = container.fs || fs
@@ -56,7 +59,8 @@ export class FileExists {
     this.fs.ensureFile(this.expandedPath)
   }
 
-  result() {
+  // TODO: Pass in rectified for different output
+  result(rectified) {
     return { path: this.expandedPath }
   }
 }

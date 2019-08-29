@@ -35,6 +35,7 @@ export class FilesAbsent {
       )
     }
 
+    this.unlinkedPaths = []
     this.expandedPaths = []
 
     let ok = true
@@ -45,12 +46,13 @@ export class FilesAbsent {
       }
 
       const expandedPath = this.expandStringNode(pathNode)
-
       let stat = null
+
+      this.expandedPaths.push(expandedPath)
 
       try {
         stat = await this.fs.lstat(expandedPath)
-        this.expandedPaths.push(expandedPath)
+        this.unlinkedPaths.push(expandedPath)
         ok = false
       } catch (e) {}
 
@@ -66,12 +68,12 @@ export class FilesAbsent {
   }
 
   async rectify() {
-    for (const expandedPath of this.expandedPaths) {
+    for (const expandedPath of this.unlinkedPaths) {
       await this.fs.unlink(expandedPath)
     }
   }
 
-  result() {
-    return { paths: this.expandedPaths }
+  result(rectified) {
+    return { paths: rectified ? this.unlinkedPaths : this.expandedPaths }
   }
 }
