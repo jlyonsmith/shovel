@@ -159,7 +159,7 @@ sudo apt -y -q install nodejs`
 
     if (
       result.exitCode !== 0 ||
-      !result.output.trim().startsWith(version.version)
+      !result.output.trim().startsWith(version.shortVersion)
     ) {
       throw new Error(
         `Unable to install Octopus ${version.version} on remote host`
@@ -167,13 +167,13 @@ sudo apt -y -q install nodejs`
     }
   }
 
-  async readScriptFile(scriptFile) {
-    const scriptNode = JSON5.parse(await fs.readFile(scriptFile), {
+  async readScriptFile(scriptPath) {
+    const scriptNode = JSON5.parse(await fs.readFile(scriptPath), {
       wantNodes: true,
     })
 
     const addFilename = (node) => {
-      node.filename = scriptFile
+      node.filename = scriptPath
 
       switch (node.type) {
         case "null":
@@ -328,34 +328,38 @@ sudo apt -y -q install nodejs`
     }
   }
 
-  async mergeIncludeNodes(scriptNode) {
-    const { includes: includesNode } = scriptNode
+  async mergeIncludeNodes(scriptNode, scriptDir, includesNode) {
+    if (includesNode) {
+      for (const includeNode of includesNode.value) {
+        const newScriptNode = await this.readScriptFile(
+          path.resolve(scriptDir, includeNode.value)
+        )
 
-    if (!includesNode) {
-      return scriptNode
-    }
-
-    const scriptDir = path.dirname(scriptNode.filename)
-
-    for (const includeNode of includesNodes) {
-      const fullScriptPath = path.resolve(scriptDir, path)
-      const newScriptNodes = await this.readScriptFile(fullScriptPath)
-
-      scriptNode = this.mergeIncludeNodes(
-        scriptNode,
-        newScriptNodes.includesNodes
-      )
-
-      scriptNode.options.concat(newScriptNodes.options)
-      scriptNode.vars.concat(newScriptNodes.vars)
-      scriptNode.assertions.concat(newScriptNodes.assertions)
+        scriptNode = await this.mergeIncludeNodes(
+          scriptNode,
+          newScriptNode.filename,
+          newScriptNode.includesNodes
+        )
+        scriptNode.value.options.value = {
+          ...scriptNode.value.options.value,
+          ...newScriptNode.options.value,
+        }
+        scriptNode.value.vars.value = {
+          ...scriptNode.value.vars.value,
+          ...newScriptNode.vars.value,
+        }
+        scriptNode.value.assertions.value = [
+          ...scriptNode.value.assertions.value,
+          ...newScriptNode.assertions,
+        ]
+      }
     }
 
     return scriptNode
   }
 
-  async compileScriptFile(scriptFile) {
-    const fullScriptPath = path.resolve(scriptFile)
+  async compileScriptFile(scriptPath) {
+    const fullScriptPath = path.resolve(scriptPath)
     const vmContext = {
       env: process.env,
       sys: {
@@ -386,19 +390,23 @@ sudo apt -y -q install nodejs`
     let scriptNode = await this.readScriptFile(fullScriptPath)
 
     const {
+      includes: includesNode,
       options: optionsNode,
       vars: varsNode,
       assertions: assertionsNode,
     } = scriptNode
 
-    scriptNode = this.mergeIncludeNodes(scriptNode)
-    scriptNode.includes = null
+    scriptNode = await this.mergeIncludeNodes(
+      scriptNode,
+      path.dirname(fullScriptPath),
+      includesNode
+    )
 
     const options = optionsNode ? JSON5.simplify(optionsNode) : {}
     let vars
 
     if (varsNode) {
-      vars = JSON5.simplify(scriptNode)
+      vars = JSON5.simplify(varsNode)
 
       for (const [key, varNode] of Object.entries(varsNode.value)) {
         if (vmContext[key] && typeof vmContext[key] === "object") {
@@ -441,12 +449,12 @@ sudo apt -y -q install nodejs`
         assertions[i]._assertNode = assertionsNode.value[i]
       }
     } else {
-      assertions = {}
+      assertions = []
     }
 
-    const runAsRoot =
-      assertions &&
-      assertions.find((assertion) => assertion.hasOwnProperty("runAs"))
+    const runAsRoot = assertions.find((assertion) =>
+      assertion.hasOwnProperty("runAs")
+    )
 
     return {
       vars,
@@ -458,8 +466,8 @@ sudo apt -y -q install nodejs`
     }
   }
 
-  async runScriptLocally(scriptFile, options) {
-    const state = await this.compileScriptFile(scriptFile)
+  async runScriptLocally(scriptPath, options) {
+    const state = await this.compileScriptFile(scriptPath)
 
     if (options.verbose) {
       const vars = {}
@@ -509,7 +517,7 @@ sudo apt -y -q install nodejs`
     return 0
   }
 
-  async runScriptRemotely(scriptFile, options) {
+  async runScriptRemotely(scriptPath, options) {
     let isConnected = false
     let ssh = null
     let remoteTempFile = null
@@ -576,7 +584,7 @@ sudo apt -y -q install nodejs`
 
       if (!(await this.assertHasOctopus(ssh))) {
         this.log.warning(
-          `Octopus with version ${version.version} not found on ${sshConfig.host}:${sshConfig.port}; attempting to rectify`
+          `Octopus with version ${version.shortVersion} not found on ${sshConfig.host}:${sshConfig.port}; attempting to rectify`
         )
         await this.rectifyHasOctopus(ssh, { canSudoOnHost: installedNode })
       } else if (options.verbose) {
@@ -592,23 +600,32 @@ sudo apt -y -q install nodejs`
 
       this.log.info(
         `Created remote host script file${
-          this.debug ? " - " + remoteTempFile : ""
+          this.debug ? " (" + remoteTempFile + ")" : ""
         }`
       )
 
-      const state = await this.compileScriptFile(scriptFile)
+      const state = await this.compileScriptFile(scriptPath)
 
-      for (const [key, value] of Object.entries(vmContext)) {
+      for (const [key, value] of Object.entries(state.vmContext)) {
         if (typeof value !== "object") {
           state.vars[key] = value
         }
       }
 
       const newScript = JSON.stringify(
-        { options, vars, assertions: originalAssertions },
-        null,
-        "  "
+        {
+          options: state.options,
+          vars: state.vars,
+          assertions: state.assertions,
+        },
+        (key, value) => (key.startsWith("_") ? undefined : value),
+        this.debug ? "  " : null
       )
+
+      if (this.debug) {
+        this.log.info(newScript)
+      }
+
       let readStream = new Readable({
         read(size) {
           this.push(newScript)
@@ -697,7 +714,7 @@ Options:
       throw new Error("Please specify just one script file")
     }
 
-    const scriptFile = args._[0]
+    const scriptPath = args._[0]
 
     if (!args.host && (args.port || args.user || args.password)) {
       this.log.warning(
@@ -738,7 +755,7 @@ Options:
 
     if (hosts) {
       for (const host of hosts) {
-        const hostExitCode = await this.runScriptRemotely(scriptFile, {
+        const hostExitCode = await this.runScriptRemotely(scriptPath, {
           host: host.host,
           user: host.user,
           password: host.password,
@@ -751,7 +768,7 @@ Options:
         }
       }
     } else {
-      exitCode = await this.runScriptLocally(scriptFile, {
+      exitCode = await this.runScriptLocally(scriptPath, {
         verbose: args.verbose,
       })
     }
