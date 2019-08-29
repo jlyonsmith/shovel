@@ -479,7 +479,7 @@ sudo apt -y -q install nodejs`
       assertions[i]._assertNode = assertionsNode.value[i]
     }
 
-    const runAsRoot = assertions.find((assertion) =>
+    const startAsRoot = assertions.find((assertion) =>
       assertion.hasOwnProperty("runAs")
     )
 
@@ -488,13 +488,17 @@ sudo apt -y -q install nodejs`
       options,
       assertions,
       vmContext,
-      runAsRoot,
+      startAsRoot,
       expandStringNode,
     }
   }
 
   async runScriptLocally(scriptPath, options) {
     const state = await this.compileScriptFile(scriptPath)
+
+    if (state.startAsRoot && !util.runningAsRoot(this.os)) {
+      throw new Error("This script needs to be run as root")
+    }
 
     if (options.verbose) {
       const vars = {}
