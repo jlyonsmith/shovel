@@ -496,7 +496,7 @@ sudo apt -y -q install nodejs`
   async runScriptLocally(scriptPath, options) {
     const state = await this.compileScriptFile(scriptPath)
 
-    if (state.startAsRoot && !util.runningAsRoot(this.os)) {
+    if (state.startAsRoot && !util.runningAsRoot(os)) {
       throw new Error("This script needs to be run as root")
     }
 
