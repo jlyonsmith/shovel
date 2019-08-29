@@ -339,24 +339,16 @@ sudo apt -y -q install nodejs`
 
     for (const includeNode of includesNodes) {
       const fullScriptPath = path.resolve(scriptDir, path)
+      const newScriptNodes = await this.readScriptFile(fullScriptPath)
 
-      try {
-        const newScriptNodes = await this.readScriptFile(fullScriptPath)
+      scriptNode = this.mergeIncludeNodes(
+        scriptNode,
+        newScriptNodes.includesNodes
+      )
 
-        scriptNode = this.mergeIncludeNodes(
-          scriptNode,
-          newScriptNodes.includesNodes
-        )
-
-        scriptNode.options.concat(newScriptNodes.options)
-        scriptNode.vars.concat(newScriptNodes.vars)
-        scriptNode.assertions.concat(newScriptNodes.assertions)
-      } catch (e) {
-        throw new ScriptError(
-          `Unable to read script file ${fullScriptPath}. ${e.message}`,
-          includeNode
-        )
-      }
+      scriptNode.options.concat(newScriptNodes.options)
+      scriptNode.vars.concat(newScriptNodes.vars)
+      scriptNode.assertions.concat(newScriptNodes.assertions)
     }
 
     return scriptNode
@@ -391,16 +383,7 @@ sudo apt -y -q install nodejs`
         throw new ScriptError(e.message, node)
       }
     }
-    let scriptNode = null
-
-    try {
-      scriptNode = await this.readScriptFile(fullScriptPath)
-    } catch (e) {
-      throw new ScriptError(
-        `Unable to read script file ${fullScriptPath}. ${e.message}`,
-        scriptNode
-      )
-    }
+    let scriptNode = await this.readScriptFile(fullScriptPath)
 
     const {
       options: optionsNode,
