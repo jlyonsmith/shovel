@@ -2,7 +2,7 @@
   vars: {
     bashProfile: {
       local: true,
-      value: "${fs.readFile(path.join(sys.SCRIPT_DIR,'/templates/bash-profile.sh'))}",
+      value: "${fs.readFile(path.join(sys.SCRIPT_DIR,'my-ubuntu/templates/bash-profile.sh'))}",
     },
   },
   assertions: [

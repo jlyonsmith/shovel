@@ -2,7 +2,7 @@
   vars: {
     bashRC: {
       local: true,
-      value: "${fs.readFile(path.join(sys.SCRIPT_DIR,'/templates/bash-rc.sh'))}",
+      value: "${fs.readFile(path.join(sys.SCRIPT_DIR,'my-ubuntu/templates/bash-rc.sh'))}",
     },
   },
   assertions: [
