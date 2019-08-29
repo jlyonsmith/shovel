@@ -171,7 +171,27 @@ sudo apt -y -q install nodejs`
     const scriptNode = JSON5.parse(await fs.readFile(scriptPath), {
       wantNodes: true,
     })
+    const createNode = (value) => {
+      let type = typeof value
+      let newValue
 
+      if (type === "object") {
+        if (Array.isArray(value)) {
+          type = "array"
+          newValue = value.map(createNode)
+        } else {
+          newValue = {}
+
+          Object.entries(value).map(([k, v]) => {
+            newValue[k] = createNode(v)
+          })
+        }
+      } else {
+        newValue = value
+      }
+
+      return { line: 0, column: 0, type, value }
+    }
     const addFilename = (node) => {
       node.filename = scriptPath
 
@@ -193,8 +213,6 @@ sudo apt -y -q install nodejs`
       }
     }
 
-    addFilename(scriptNode)
-
     if (scriptNode.type !== "object") {
       throw new ScriptError(
         "Script must have an object as the root",
@@ -202,130 +220,135 @@ sudo apt -y -q install nodejs`
       )
     }
 
-    const {
+    let {
       includes: includesNode,
       options: optionsNode,
       vars: varsNode,
       assertions: assertionsNode,
     } = scriptNode.value
 
-    if (includesNode) {
-      if (includeNodes.type !== "array") {
-        throw new ScriptError("'include' must be an array", includeNodes)
-      }
+    if (!includesNode) {
+      scriptNode.value.includes = includesNode = createNode([])
+    }
 
-      for (const includeNode of includesNode.value) {
-        if (includeNode.type !== "string") {
-          throw new ScriptError(
-            "'include' array item must be a string",
-            includeNode
-          )
-        }
+    if (!optionsNode) {
+      scriptNode.value.options = optionsNode = createNode({})
+    }
+
+    if (!varsNode) {
+      scriptNode.value.vars = varsNode = createNode({})
+    }
+
+    if (!assertionsNode) {
+      scriptNode.value.assertions = assertionsNode = createNode([])
+    }
+
+    addFilename(scriptNode)
+
+    if (includesNode.type !== "array") {
+      throw new ScriptError("'include' must be an array", includesNode)
+    }
+
+    for (const includeNode of includesNode.value) {
+      if (includeNode.type !== "string") {
+        throw new ScriptError(
+          "'include' array item must be a string",
+          includeNode
+        )
       }
     }
 
-    if (optionsNode) {
-      if (optionsNode.type !== "object") {
-        throw new ScriptError("'options' must be an object", optionsNode)
+    if (optionsNode.type !== "object") {
+      throw new ScriptError("'options' must be an object", optionsNode)
+    }
+
+    const { description: descriptionNode } = optionsNode.value
+
+    if (descriptionNode) {
+      if (descriptionNode.type !== "string") {
+        throw new ScriptError(
+          "'options.description' must be a string",
+          descriptionNode
+        )
+      }
+    }
+
+    if (varsNode.type !== "object") {
+      throw new ScriptError("'vars' must be an object", varsNode)
+    }
+
+    for (const varNode of Object.values(varsNode.value)) {
+      switch (varNode.type) {
+        case "null":
+        case "numeric":
+        case "boolean":
+        case "string":
+          break
+        case "object":
+          const { value: valueNode, local: localNode } = varNode.value
+
+          if (!valueNode || valueNode.type !== "string") {
+            throw new ScriptError(
+              `Variable object must have value field of type string`,
+              varNode
+            )
+          }
+
+          if (localNode && localNode.type !== "boolean") {
+            throw new ScriptError(
+              `Variable object 'local' switch must be boolean`,
+              localNode
+            )
+          }
+          break
+        default:
+          throw new ScriptError(
+            `Variable of type ${varNode.type} is invalid`,
+            varNode
+          )
+      }
+    }
+
+    if (assertionsNode.type !== "array") {
+      throw new ScriptError("'assertions' must be an array", assertionsNode)
+    }
+
+    for (const assertionNode of assertionsNode.value) {
+      if (assertionNode.type !== "object") {
+        throw new ScriptError("Assertion must be an object", assertionNode)
       }
 
-      const { description: descriptionNode } = optionsNode.value
+      const {
+        description: descriptionNode,
+        assert: assertNode,
+        with: withNode,
+      } = assertionNode.value
+
+      if (assertNode) {
+        if (assertNode.type !== "string") {
+          throw new ScriptError("'assert' must be a string", assertNode)
+        }
+      } else {
+        throw new ScriptError("'assert' property is not present", assertNode)
+      }
 
       if (descriptionNode) {
         if (descriptionNode.type !== "string") {
           throw new ScriptError(
-            "'options.description' must be a string",
+            "'description' must be a string",
             descriptionNode
           )
         }
       }
-    }
 
-    if (varsNode) {
-      if (varsNode.type !== "object") {
-        throw new ScriptError("'vars' must be an object", varsNode)
-      }
-
-      for (const varNode of Object.values(varsNode.value)) {
-        switch (varNode.type) {
-          case "null":
-          case "numeric":
-          case "boolean":
-          case "string":
-            break
-          case "object":
-            const { value: valueNode, local: localNode } = varNode.value
-
-            if (!valueNode || valueNode.type !== "string") {
-              throw new ScriptError(
-                `Variable object must have value field of type string`,
-                varNode
-              )
-            }
-
-            if (localNode && localNode.type !== "boolean") {
-              throw new ScriptError(
-                `Variable object 'local' switch must be boolean`,
-                localNode
-              )
-            }
-            break
-          default:
-            throw new ScriptError(
-              `Variable of type ${varNode.type} is invalid`,
-              varNode
-            )
+      if (withNode) {
+        if (withNode.type !== "object") {
+          throw new ScriptError("'with' must be an object", withNode)
         }
       }
     }
 
-    if (assertionsNode) {
-      if (assertionsNode.type !== "array") {
-        throw new ScriptError("'assertions' must be an array", assertionsNode)
-      }
-
-      for (const assertionNode of assertionsNode.value) {
-        if (assertionNode.type !== "object") {
-          throw new ScriptError("Assertion must be an object", assertionNode)
-        }
-
-        const {
-          description: descriptionNode,
-          assert: assertNode,
-          with: withNode,
-        } = assertionNode.value
-
-        if (assertNode) {
-          if (assertNode.type !== "string") {
-            throw new ScriptError("'assert' must be a string", assertNode)
-          }
-        } else {
-          throw new ScriptError("'assert' property is not present", assertNode)
-        }
-
-        if (descriptionNode) {
-          if (descriptionNode.type !== "string") {
-            throw new ScriptError(
-              "'description' must be a string",
-              descriptionNode
-            )
-          }
-        }
-
-        if (withNode) {
-          if (withNode.type !== "object") {
-            throw new ScriptError("'with' must be an object", withNode)
-          }
-        }
-      }
-    }
-
-    return {
-      includes: includesNode,
-      options: optionsNode,
-      vars: varsNode,
-      assertions: assertionsNode,
-    }
+    return scriptNode
   }
 
   async mergeIncludeNodes(scriptNode, scriptDir, includesNode) {
@@ -335,27 +358,43 @@ sudo apt -y -q install nodejs`
           path.resolve(scriptDir, includeNode.value)
         )
 
-        scriptNode = await this.mergeIncludeNodes(
+        await this.mergeIncludeNodes(
           scriptNode,
           newScriptNode.filename,
           newScriptNode.includesNodes
         )
-        scriptNode.value.options.value = {
-          ...scriptNode.value.options.value,
-          ...newScriptNode.options.value,
+
+        const {
+          options: optionsNode,
+          vars: varsNode,
+          assertions: assertionsNode,
+        } = scriptNode.value
+        const {
+          options: newOptionsNode,
+          vars: newVarsNode,
+          assertions: newAssertionsNode,
+        } = newScriptNode.value
+
+        if (newOptionsNode) {
+          optionsNode.value = {
+            ...optionsNode.value,
+            ...newOptionsNode.value,
+          }
         }
-        scriptNode.value.vars.value = {
-          ...scriptNode.value.vars.value,
-          ...newScriptNode.vars.value,
+        if (newVarsNode) {
+          varsNode.value = {
+            ...varsNode.value,
+            ...newVarsNode.value,
+          }
         }
-        scriptNode.value.assertions.value = [
-          ...scriptNode.value.assertions.value,
-          ...newScriptNode.assertions,
-        ]
+        if (newAssertionsNode) {
+          assertionsNode.value = [
+            ...assertionsNode.value,
+            ...newAssertionsNode.value,
+          ]
+        }
       }
     }
-
-    return scriptNode
   }
 
   async compileScriptFile(scriptPath) {
@@ -387,69 +426,57 @@ sudo apt -y -q install nodejs`
         throw new ScriptError(e.message, node)
       }
     }
-    let scriptNode = await this.readScriptFile(fullScriptPath)
 
+    const scriptNode = await this.readScriptFile(fullScriptPath)
     const {
       includes: includesNode,
       options: optionsNode,
       vars: varsNode,
       assertions: assertionsNode,
-    } = scriptNode
+    } = scriptNode.value
 
-    scriptNode = await this.mergeIncludeNodes(
+    await this.mergeIncludeNodes(
       scriptNode,
       path.dirname(fullScriptPath),
       includesNode
     )
 
-    const options = optionsNode ? JSON5.simplify(optionsNode) : {}
-    let vars
+    const options = JSON5.simplify(optionsNode)
+    const vars = JSON5.simplify(varsNode)
 
-    if (varsNode) {
-      vars = JSON5.simplify(varsNode)
-
-      for (const [key, varNode] of Object.entries(varsNode.value)) {
-        if (vmContext[key] && typeof vmContext[key] === "object") {
-          throw new ScriptError(
-            `Variable ${key} conflicts with a built-in object`,
-            varNode
-          )
-        }
-
-        switch (varNode.type) {
-          case "null":
-            delete vmContext[key]
-            break
-          case "numeric":
-          case "boolean":
-            vmContext[key] = varNode.value.toString()
-            break
-          case "string":
-            vmContext[key] = varNode.value
-            break
-          case "object":
-            const { value: valueNode, local: localNode } = varNode.value
-
-            if (localNode && localNode.value) {
-              vmContext[key] = expandStringNode(valueNode)
-            }
-            break
-        }
+    for (const [key, varNode] of Object.entries(varsNode.value)) {
+      if (vmContext[key] && typeof vmContext[key] === "object") {
+        throw new ScriptError(
+          `Variable ${key} conflicts with a built-in object`,
+          varNode
+        )
       }
-    } else {
-      vars = {}
+
+      switch (varNode.type) {
+        case "null":
+          delete vmContext[key]
+          break
+        case "numeric":
+        case "boolean":
+          vmContext[key] = varNode.value.toString()
+          break
+        case "string":
+          vmContext[key] = varNode.value
+          break
+        case "object":
+          const { value: valueNode, local: localNode } = varNode.value
+
+          if (localNode && localNode.value) {
+            vmContext[key] = expandStringNode(valueNode)
+          }
+          break
+      }
     }
 
-    let assertions
+    const assertions = JSON5.simplify(assertionsNode)
 
-    if (assertionsNode) {
-      assertions = JSON5.simplify(assertionsNode)
-
-      for (let i = 0; i < assertions.length; i++) {
-        assertions[i]._assertNode = assertionsNode.value[i]
-      }
-    } else {
-      assertions = []
+    for (let i = 0; i < assertions.length; i++) {
+      assertions[i]._assertNode = assertionsNode.value[i]
     }
 
     const runAsRoot = assertions.find((assertion) =>
