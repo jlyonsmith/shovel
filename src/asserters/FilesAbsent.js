@@ -46,12 +46,11 @@ export class FilesAbsent {
 
       const expandedPath = this.expandStringNode(pathNode)
 
-      this.expandedPaths.push(expandedPath)
-
       let stat = null
 
       try {
         stat = await this.fs.lstat(expandedPath)
+        this.expandedPaths.push(expandedPath)
         ok = false
       } catch (e) {}
 
