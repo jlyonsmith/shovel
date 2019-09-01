@@ -220,6 +220,8 @@ sudo apt -y -q install nodejs`
       )
     }
 
+    // TODO: Rename asserters to steps
+
     let {
       includes: includesNode,
       options: optionsNode,
@@ -272,6 +274,8 @@ sudo apt -y -q install nodejs`
         )
       }
     }
+
+    // TODO: Support 'id` in options and use to create SCRIPT_DIR_<id> vars
 
     if (varsNode.type !== "object") {
       throw new ScriptError("'vars' must be an object", varsNode)
