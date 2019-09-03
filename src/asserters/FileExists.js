@@ -59,7 +59,6 @@ export class FileExists {
     this.fs.ensureFile(this.expandedPath)
   }
 
-  // TODO: Pass in rectified for different output
   result(rectified) {
     return { path: this.expandedPath }
   }

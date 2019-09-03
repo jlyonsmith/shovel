@@ -19,6 +19,8 @@ Example:
 }
 */
 
+// TODO: Throw when existing file cannot be removed
+
 export class FileDownloaded {
   constructor(container) {
     this.fs = container.fs || fs
@@ -72,7 +74,6 @@ export class FileDownloaded {
   }
 
   async rectify() {
-    // TODO: Ensure this works when the file cannot be removed
     if (this.toFileExists) {
       await this.fs.remove(this.expandedToPath)
     }

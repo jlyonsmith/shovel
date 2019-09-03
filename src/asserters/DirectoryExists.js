@@ -10,14 +10,21 @@ Example:
   assert: "DirectoryExists",
   with: {
     path: <string>,
-    owner: <string>,
-    perms: <string>,
+    owner: {
+      user: <string>,
+      group: <string>
+    },
+    mode: {
+      user: <string>,
+      group: <string>,
+      other: <string>,
+    }
   }
 }
 */
 
 // TODO: support owner (as user:group)
-// TODO: Support perms (as ugo=rwx)
+// TODO: Support mode (as ugo=rwx)
 
 export class DirectoryExists {
   constructor(container) {

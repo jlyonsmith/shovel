@@ -6,19 +6,8 @@ let container = null
 beforeEach(() => {
   container = {
     expandStringNode: (node) => node.value,
-    fs: {
-      readFile: jest.fn(async (filePath) => {
-        expect(typeof filePath).toBe("string")
-        return `root:x:0:
-daemon:x:1:
-bin:x:2:
-sys:x:3:
-tty:x:5:
-disk:x:6:
-lp:x:7:
-mail:x:8:
-news:x:9:`
-      }),
+    util: {
+      getGroups: jest.fn(async (fs) => [{ name: "news", gid: 10, users: [] }]),
     },
     childProcess: {
       exec: jest.fn(async (path) => {

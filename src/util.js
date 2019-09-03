@@ -50,6 +50,43 @@ export const pipeToPromise = (readable, writeable) => {
 
 export const runningAsRoot = (os) => os.userInfo().uid === 0
 
+export const getUsers = async (fs) => {
+  const passwd = await fs.readFile("/etc/passwd", { encoding: "utf8" })
+
+  return passwd
+    .split("\n")
+    .filter((user) => user.length > 0 && user[0] !== "#")
+    .map((user) => {
+      const fields = user.split(":")
+      return {
+        userName: fields[0],
+        password: fields[1],
+        uid: parseInt(fields[2]),
+        gid: parseInt(fields[3]),
+        name: fields[4],
+        homeDir: fields[5],
+        shell: fields[6],
+      }
+    })
+}
+
+export const getGroups = async (fs) => {
+  const groups = await fs.readFile("/etc/group", { encoding: "utf8" })
+
+  return groups
+    .split("\n")
+    .filter((user) => user.length > 0 && user[0] !== "#")
+    .map((user) => {
+      const fields = user.split(":")
+      return {
+        groupName: fields[0],
+        password: fields[1],
+        gid: parseInt(fields[2]),
+        users: fields[3] ? fields[3].split(",") : [],
+      }
+    })
+}
+
 /*
   Run a command on the remote system. Options are:
 

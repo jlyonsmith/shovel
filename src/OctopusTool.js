@@ -220,8 +220,6 @@ sudo apt -y -q install nodejs`
       )
     }
 
-    // TODO: Rename asserters to steps
-
     let {
       includes: includesNode,
       options: optionsNode,

@@ -10,13 +10,13 @@ Example:
     {
       assert: "FileCopied",
       with: {
-        from: <string> | { path: <string>, origin: <bool> },
+        from: <string> | { path: <string>, local: <bool> },
         to: <string>,
       },
     },
 */
 
-// TODO: Support origin to copy file from the origin system
+// TODO: Support local to copy file from the local system
 
 export class FileCopied {
   constructor(container) {
