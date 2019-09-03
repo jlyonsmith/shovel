@@ -38,4 +38,5 @@ test("With group present", async () => {
     asserter.assert(createAssertNode(asserter, { name: "news" }))
   ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
+  expect(asserter.result()).toEqual({ name: "news" })
 })

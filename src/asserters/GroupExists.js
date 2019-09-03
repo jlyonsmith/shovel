@@ -23,6 +23,7 @@ Example:
 export class GroupExists {
   constructor(container) {
     this.fs = container.fs || fs
+    this.util = container.util || util
     this.childProcess = container.childProcess || childProcess
     this.os = container.os || os
     this.expandStringNode = container.expandStringNode
@@ -41,9 +42,9 @@ export class GroupExists {
 
     this.expandedName = this.expandStringNode(nameNode)
 
-    const ok = (await this.fs.readFile("/etc/groups")).includes(
-      this.expandedName + ":"
-    )
+    const groups = await this.util.getGroups(this.fs)
+    const ok =
+      groups.find((group) => group.name === this.expandedName) !== undefined
 
     if (!ok && !util.runningAsRoot(this.os)) {
       throw new ScriptError(
