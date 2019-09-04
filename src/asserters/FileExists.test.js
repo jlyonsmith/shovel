@@ -18,6 +18,9 @@ beforeEach(() => {
           return {
             isDirectory: jest.fn(() => false),
             isFile: jest.fn(() => true),
+            mode: 0o644,
+            uid: 0,
+            gid: 0,
           }
         } else {
           throw new Error("ENOENT")
@@ -26,15 +29,39 @@ beforeEach(() => {
       ensureFile: jest.fn(async (fileName) => {
         expect(typeof fileName).toBe("string")
       }),
+      chown: jest.fn(async (path, uid, gid) => null),
+      chmod: jest.fn(async (path, mode) => null),
+    },
+    os: {
+      userInfo: jest.fn(() => ({
+        uid: 0,
+        gid: 0,
+        name: "root",
+      })),
+    },
+    util: {
+      getUsers: jest.fn(async () => null),
+      getGroups: jest.fn(async () => null),
+      parseOwnerNode: jest.fn((userInfo, users, groups, ownerNode) => ({
+        uid: 0,
+        gid: 0,
+      })),
+      parseModeNode: jest.fn(() => 0o644),
     },
   }
 })
 
-test("FileExists with file existing", async () => {
+test("FileExists with file existing with owner and mode", async () => {
   const asserter = new FileExists(container)
 
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: "/somefile" }))
+    asserter.assert(
+      createAssertNode(asserter, {
+        path: "/somefile",
+        owner: { uid: 0, gid: 0 },
+        mode: { user: "rw-", group: "r--", other: "r--" },
+      })
+    )
   ).resolves.toBe(true)
 })
 

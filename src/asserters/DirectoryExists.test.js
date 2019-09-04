@@ -38,13 +38,13 @@ beforeEach(() => {
       })),
     },
     util: {
-      getUsers: jest.fn(async () => [
-        {
-          name: "root",
-          uid: 0,
-        },
-      ]),
-      getGroups: jest.fn(async () => [{ name: "root", password: "", gid: 0 }]),
+      getUsers: jest.fn(async () => null),
+      getGroups: jest.fn(async () => null),
+      parseOwnerNode: jest.fn((userInfo, users, groups, ownerNode) => ({
+        uid: 0,
+        gid: 0,
+      })),
+      parseModeNode: jest.fn(() => 0o754),
     },
   }
 })
@@ -61,6 +61,7 @@ test("DirectoryExists with good owner and perms", async () => {
       })
     )
   ).resolves.toBe(true)
+  expect(asserter.result()).toEqual({ path: "/somedir" })
 })
 
 test("DirectoryExists with no dir or file existing", async () => {
@@ -70,6 +71,7 @@ test("DirectoryExists with no dir or file existing", async () => {
     asserter.assert(createAssertNode(asserter, { path: "/notthere" }))
   ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
+  expect(asserter.result()).toEqual({ path: "/notthere" })
 })
 
 test("DirectoryExists with file instead of dir existing", async () => {
@@ -77,31 +79,5 @@ test("DirectoryExists with file instead of dir existing", async () => {
 
   await expect(
     asserter.assert(createAssertNode(asserter, { path: "/somefile" }))
-  ).rejects.toThrow(ScriptError)
-})
-
-test("DirectoryExists with bad owner", async () => {
-  const asserter = new DirectoryExists(container)
-
-  await expect(
-    asserter.assert(
-      createAssertNode(asserter, {
-        path: "/somedir",
-        owner: { user: "notreal" },
-      })
-    )
-  ).rejects.toThrow(ScriptError)
-})
-
-test("DirectoryExists with bad perm", async () => {
-  const asserter = new DirectoryExists(container)
-
-  await expect(
-    asserter.assert(
-      createAssertNode(asserter, {
-        path: "/somedir",
-        mode: { user: "xyz" },
-      })
-    )
   ).rejects.toThrow(ScriptError)
 })

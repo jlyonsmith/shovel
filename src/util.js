@@ -1,4 +1,5 @@
 import crypto from "crypto"
+import { ScriptError } from "./ScriptError"
 
 export const generateDigestFromFile = (fs, path) =>
   new Promise((resolve, reject) => {
@@ -85,6 +86,121 @@ export const getGroups = async (fs) => {
         users: fields[3] ? fields[3].split(",") : [],
       }
     })
+}
+
+export const parseOwnerNode = (users, groups, ownerNode) => {
+  let owner = {}
+
+  if (ownerNode) {
+    if (ownerNode.type !== "object") {
+      throw new ScriptError("'owner' must be of type object", ownerNode)
+    }
+
+    const { user: userNode, group: groupNode } = ownerNode.value
+
+    if (userNode) {
+      if (userNode.type !== "string" && userNode.type !== "number") {
+        throw new ScriptError(
+          "'user' must be of type string or number",
+          userNode
+        )
+      }
+
+      const func =
+        userNode.type === "string"
+          ? (u) => u.name === userNode.value
+          : (u) => u.uid === userNode.value
+      const user = users.find(func)
+
+      if (user === undefined) {
+        throw new ScriptError(
+          `'user' value '${userNode.value}' not valid`,
+          userNode
+        )
+      }
+
+      owner.uid = user.uid
+    }
+
+    if (groupNode) {
+      if (groupNode.type !== "string" && groupNode.type !== "number") {
+        throw new ScriptError(
+          "'group' must be of type string or number",
+          groupNode
+        )
+      }
+
+      const func =
+        groupNode.type === "string"
+          ? (g) => g.name === groupNode.value
+          : (g) => g.gid === groupNode.value
+      const group = groups.find(func)
+
+      if (group === undefined) {
+        throw new ScriptError(
+          `'group' value ${groupNode.value} not valid`,
+          groupNode
+        )
+      }
+
+      owner.gid = group.gid
+    }
+  }
+
+  return owner
+}
+
+export const parseModeNode = (modeNode) => {
+  let mode = 0o644 // Default to -rw-r--r-- mode
+
+  const parsePerms = (node) => {
+    const s = node.value
+
+    if (
+      node.type === "string" &&
+      s.length === 3 &&
+      (s[0] === "r" || s[0] === "-") &&
+      (s[1] === "w" || s[1] === "-") &&
+      (s[2] === "x" || s[2] === "-")
+    ) {
+      return (
+        (s[0] === "r" ? 4 : 0) | (s[1] === "w" ? 2 : 0) | (s[2] === "x" ? 1 : 0)
+      )
+    } else {
+      throw new ScriptError(
+        `Mode must be a string in the order 'rwx', with a dash if a permission is not present`,
+        node
+      )
+    }
+  }
+
+  if (modeNode) {
+    if (modeNode.type !== "object") {
+      throw new ScriptError(`'mode' flags must be specified`, node)
+    }
+
+    const {
+      user: userNode,
+      group: groupNode,
+      other: otherNode,
+    } = modeNode.value
+
+    mode = 0
+
+    if (userNode) {
+      mode |= parsePerms(userNode) << 6
+    }
+
+    if (groupNode) {
+      mode |= parsePerms(groupNode) << 3
+    }
+
+    if (otherNode) {
+      mode |= parsePerms(otherNode)
+    }
+  }
+
+  return mode
 }
 
 /*

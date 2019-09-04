@@ -47,123 +47,17 @@ export class DirectoryExists {
     }
 
     const userInfo = this.os.userInfo()
-
-    this.uid = userInfo.uid
-    this.gid = userInfo.gid
-
-    if (ownerNode) {
-      if (ownerNode.type !== "object") {
-        throw new ScriptError("'owner' must be of type object", ownerNode)
-      }
-
-      const { user: userNode, group: groupNode } = ownerNode.value
-
-      if (userNode) {
-        if (userNode.type !== "string" && userNode.type !== "number") {
-          throw new ScriptError(
-            "'user' must be of type string or number",
-            userNode
-          )
-        }
-
-        const users = await this.util.getUsers(this.fs)
-        const func =
-          userNode.type === "string"
-            ? (u) => u.name === userNode.value
-            : (u) => u.uid === userNode.value
-        const user = users.find(func)
-
-        if (user === undefined) {
-          throw new ScriptError(
-            `'user' value '${userNode.value}' not valid`,
-            userNode
-          )
-        }
-
-        this.uid = user.uid
-      }
-
-      if (groupNode) {
-        if (groupNode.type !== "string" && groupNode.type !== "number") {
-          throw new ScriptError(
-            "'group' must be of type string or number",
-            groupNode
-          )
-        }
-
-        const groups = await this.util.getGroups(this.fs)
-        const func =
-          groupNode.type === "string"
-            ? (g) => g.name === groupNode.value
-            : (g) => g.gid === groupNode.value
-        const group = groups.find(func)
-
-        if (group === undefined) {
-          throw new ScriptError(
-            `'group' value ${groupNode.value} not valid`,
-            groupNode
-          )
-        }
-
-        this.gid = group.gid
-      }
-    }
-
-    this.mode = 0o644 // Default to -rw-r--r-- mode
-
-    const parseModeNode = (node) => {
-      const s = node.value
-
-      if (
-        node.type === "string" &&
-        s.length === 3 &&
-        (s[0] === "r" || s[0] === "-") &&
-        (s[1] === "w" || s[1] === "-") &&
-        (s[2] === "x" || s[2] === "-")
-      ) {
-        return (
-          (s[0] === "r" ? 4 : 0) |
-          (s[1] === "w" ? 2 : 0) |
-          (s[2] === "x" ? 1 : 0)
-        )
-      } else {
-        throw new ScriptError(
-          `Mode must be a string in the order 'rwx', with a dash if a permission is not present`,
-          node
-        )
-      }
-    }
-
-    if (modeNode) {
-      if (modeNode.type !== "object") {
-        throw new ScriptError(`'mode' flags must be specified`)
-      }
-
-      const {
-        user: userNode,
-        group: groupNode,
-        other: otherNode,
-      } = modeNode.value
-      let mode = 0
-
-      if (userNode) {
-        mode |= parseModeNode(userNode) << 6
-      }
-
-      if (groupNode) {
-        mode |= parseModeNode(groupNode) << 3
-      }
-
-      if (otherNode) {
-        mode |= parseModeNode(otherNode)
-      }
-
-      this.mode = mode
-    }
-
-    this.expandedPath = this.expandStringNode(pathNode)
-
+    const users = await this.util.getUsers(this.fs)
+    const groups = await this.util.getGroups(this.fs)
     let stat = null
+    let owner = { uid: userInfo.uid, gid: userInfo.gid }
+
+    this.owner = Object.assign(
+      owner,
+      this.util.parseOwnerNode(users, groups, ownerNode)
+    )
+    this.mode = this.util.parseModeNode(modeNode)
+    this.expandedPath = this.expandStringNode(pathNode)
 
     try {
       stat = await this.fs.lstat(this.expandedPath)
@@ -177,7 +71,7 @@ export class DirectoryExists {
           `A file with the name '${this.expandedPath}' exists`,
           pathNode
         )
-      } else if (stat.uid !== this.uid || stat.gid !== this.gid) {
+      } else if (stat.uid !== this.owner.uid || stat.gid !== this.owner.gid) {
         if (userInfo.uid !== 0) {
           throw new ScriptError(
             "User does not have permission to modify existing directory owner",
@@ -189,7 +83,7 @@ export class DirectoryExists {
       } else if ((stat.mode & 0o777) !== this.mode) {
         if (userInfo.uid !== stat.uid || userInfo.gid !== stat.gid) {
           throw new ScriptError(
-            "User does not have permission to existing modify permisions"
+            "User does not have permission to modify existing directory mode"
           )
         }
 
@@ -203,10 +97,10 @@ export class DirectoryExists {
   async rectify() {
     await this.fs.ensureDir(this.expandedPath)
     await this.fs.chmod(this.expandedPath, this.mode)
-    await this.fs.chown(this.expandedPath, this.uid, this.gid)
+    await this.fs.chown(this.expandedPath, this.owner.uid, this.owner.gid)
   }
 
-  result() {
+  result(rectified) {
     return { path: this.expandedPath }
   }
 }

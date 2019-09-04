@@ -1,4 +1,6 @@
 import fs from "fs-extra"
+import os from "os"
+import * as util from "../util"
 import { ScriptError } from "../ScriptError"
 
 /*
@@ -14,19 +16,18 @@ Example:
 }
 */
 
-// TODO: Must require owner and group
-// TODO: Must require permissions
-
 export class FileExists {
   constructor(container) {
     this.fs = container.fs || fs
+    this.os = container.os || os
+    this.util = container.util || util
     this.expandStringNode = container.expandStringNode
     this.stat = null
   }
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { path: pathNode } = withNode.value
+    const { path: pathNode, owner: ownerNode, mode: modeNode } = withNode.value
 
     if (!pathNode || pathNode.type !== "string") {
       throw new ScriptError(
@@ -35,9 +36,18 @@ export class FileExists {
       )
     }
 
-    this.expandedPath = this.expandStringNode(pathNode)
-
+    const userInfo = this.os.userInfo()
+    const users = await this.util.getUsers(this.fs)
+    const groups = await this.util.getGroups(this.fs)
     let stat = null
+    let owner = { uid: userInfo.uid, gid: userInfo.gid }
+
+    this.owner = Object.assign(
+      owner,
+      this.util.parseOwnerNode(users, groups, ownerNode)
+    )
+    this.mode = this.util.parseModeNode(modeNode)
+    this.expandedPath = this.expandStringNode(pathNode)
 
     try {
       stat = await this.fs.lstat(this.expandedPath)
@@ -50,13 +60,32 @@ export class FileExists {
         `A directory exists with the name '${this.expandedPath}'`,
         pathNode
       )
+    } else if (stat.uid !== this.owner.uid || stat.gid !== this.owner.gid) {
+      if (userInfo.uid !== 0) {
+        throw new ScriptError(
+          "User does not have permission to modify existing file owner",
+          assertNode
+        )
+      }
+
+      return false
+    } else if ((stat.mode & 0o777) !== this.mode) {
+      if (userInfo.uid !== stat.uid || userInfo.gid !== stat.gid) {
+        throw new ScriptError(
+          "User does not have permission to modify existing file mode"
+        )
+      }
+
+      return false
     }
 
     return true
   }
 
   async rectify() {
-    this.fs.ensureFile(this.expandedPath)
+    await this.fs.ensureFile(this.expandedPath)
+    await this.fs.chmod(this.expandedPath, this.mode)
+    await this.fs.chown(this.expandedPath, this.owner.uid, this.owner.gid)
   }
 
   result(rectified) {

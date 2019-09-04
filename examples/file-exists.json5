@@ -1,0 +1,19 @@
+{
+  assertions: [
+    {
+      assert: "FileExists",
+      with: {
+        path: "scratch/some-file",
+        owner: {
+          user: "root",
+          group: "wheel",
+        },
+        mode: {
+          user: "rw-",
+          group: "r--",
+          other: "r--",
+        },
+      },
+    },
+  ],
+}
