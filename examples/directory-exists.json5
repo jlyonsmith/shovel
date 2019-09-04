@@ -1,0 +1,19 @@
+{
+  assertions: [
+    {
+      assert: "DirectoryExists",
+      with: {
+        path: "scratch/some-dir",
+        owner: {
+          user: "root",
+          group: "wheel",
+        },
+        mode: {
+          user: "rwx",
+          group: "r-x",
+          other: "r--",
+        },
+      },
+    },
+  ],
+}

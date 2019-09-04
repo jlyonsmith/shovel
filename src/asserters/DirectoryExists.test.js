@@ -13,6 +13,9 @@ beforeEach(() => {
           return {
             isDirectory: jest.fn(() => true),
             isFile: jest.fn(() => false),
+            mode: 0o754,
+            uid: 0,
+            gid: 0,
           }
         } else if (dirName === "/somefile") {
           return {
@@ -23,16 +26,40 @@ beforeEach(() => {
           throw new Error("ENOENT")
         }
       }),
-      ensureDir: jest.fn(async (dirName) => null),
+      ensureDir: jest.fn(async (path, options) => null),
+      chown: jest.fn(async (path, uid, gid) => null),
+      chmod: jest.fn(async (path, mode) => null),
+    },
+    os: {
+      userInfo: jest.fn(() => ({
+        uid: 0,
+        gid: 0,
+        name: "root",
+      })),
+    },
+    util: {
+      getUsers: jest.fn(async () => [
+        {
+          name: "root",
+          uid: 0,
+        },
+      ]),
+      getGroups: jest.fn(async () => [{ name: "root", password: "", gid: 0 }]),
     },
   }
 })
 
-test("DirectoryExists with dir existing", async () => {
+test("DirectoryExists with good owner and perms", async () => {
   const asserter = new DirectoryExists(container)
 
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: "/somedir" }))
+    asserter.assert(
+      createAssertNode(asserter, {
+        path: "/somedir",
+        owner: { user: "root", group: "root" },
+        mode: { user: "rwx", group: "r-x", other: "r--" },
+      })
+    )
   ).resolves.toBe(true)
 })
 
@@ -50,5 +77,31 @@ test("DirectoryExists with file instead of dir existing", async () => {
 
   await expect(
     asserter.assert(createAssertNode(asserter, { path: "/somefile" }))
+  ).rejects.toThrow(ScriptError)
+})
+
+test("DirectoryExists with bad owner", async () => {
+  const asserter = new DirectoryExists(container)
+
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        path: "/somedir",
+        owner: { user: "notreal" },
+      })
+    )
+  ).rejects.toThrow(ScriptError)
+})
+
+test("DirectoryExists with bad perm", async () => {
+  const asserter = new DirectoryExists(container)
+
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        path: "/somedir",
+        mode: { user: "xyz" },
+      })
+    )
   ).rejects.toThrow(ScriptError)
 })

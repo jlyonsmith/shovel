@@ -78,7 +78,7 @@ test("dirExists with directory not existing", async () => {
 
 test("getUsers when root", async () => {
   await expect(util.getUsers(container.fs)).resolves.toContainEqual({
-    userName: "mail",
+    name: "mail",
     password: "x",
     uid: 8,
     gid: 8,
@@ -90,7 +90,7 @@ test("getUsers when root", async () => {
 
 test("getGroups when root", async () => {
   await expect(util.getGroups(container.fs)).resolves.toContainEqual({
-    groupName: "adm",
+    name: "adm",
     password: "x",
     gid: 4,
     users: ["syslog", "someuser"],

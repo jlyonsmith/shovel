@@ -59,11 +59,11 @@ export const getUsers = async (fs) => {
     .map((user) => {
       const fields = user.split(":")
       return {
-        userName: fields[0],
+        name: fields[0],
         password: fields[1],
         uid: parseInt(fields[2]),
         gid: parseInt(fields[3]),
-        name: fields[4],
+        fullName: fields[4],
         homeDir: fields[5],
         shell: fields[6],
       }
@@ -79,7 +79,7 @@ export const getGroups = async (fs) => {
     .map((user) => {
       const fields = user.split(":")
       return {
-        groupName: fields[0],
+        name: fields[0],
         password: fields[1],
         gid: parseInt(fields[2]),
         users: fields[3] ? fields[3].split(",") : [],
