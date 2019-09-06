@@ -18,8 +18,6 @@ Example:
 }
 */
 
-// TODO: Support gid
-
 export class GroupExists {
   constructor(container) {
     this.fs = container.fs || fs
@@ -31,7 +29,7 @@ export class GroupExists {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { name: nameNode } = withNode.value
+    const { name: nameNode, gid: gidNode } = withNode.value
 
     if (!nameNode || nameNode.type !== "string") {
       throw new ScriptError(
@@ -40,27 +38,59 @@ export class GroupExists {
       )
     }
 
-    this.expandedName = this.expandStringNode(nameNode)
-
-    const groups = await this.util.getGroups(this.fs)
-    const ok =
-      groups.find((group) => group.name === this.expandedName) !== undefined
-
-    if (!ok && !util.runningAsRoot(this.os)) {
-      throw new ScriptError(
-        "Only root user can add or modify groups",
-        assertNode
-      )
+    if (gidNode && gidNode.type !== "number") {
+      throw new ScriptError("'group' must be a number", gidNode)
     }
 
-    return ok
+    this.expandedName = this.expandStringNode(nameNode)
+
+    const group = (await this.util.getGroups(this.fs)).find(
+      (group) => group.name === this.expandedName
+    )
+    const runningAsRoot = util.runningAsRoot(this.os)
+
+    if (group) {
+      if (gidNode && gidNode.value !== group.gid) {
+        if (!runningAsRoot) {
+          throw new ScriptError("Only root user can  modify groups", assertNode)
+        }
+
+        this.gid = gidNode.value
+        this.modify = true
+        return false
+      } else {
+        return true
+      }
+    } else {
+      if (!runningAsRoot) {
+        throw new ScriptError("Only root user can add groups", assertNode)
+      }
+
+      return false
+    }
   }
 
   async rectify() {
-    await this.childProcess.exec(`groupadd ${this.expandedName}`)
+    await this.childProcess.exec(
+      `${this.modify ? "groupmod" : "groupadd"} ${
+        this.gid ? "-g " + this.gid : ""
+      } ${this.expandedName}`
+    )
+
+    if (!this.modify || !this.gid) {
+      const group = (await this.util.getGroups(this.fs)).find(
+        (group) => group.name === this.expandedName
+      )
+
+      if (!group) {
+        throw new Error("Group not present in /etc/groups after groupadd")
+      }
+
+      this.gid = group.gid
+    }
   }
 
-  result() {
-    return { name: this.expandedName }
+  result(rectified) {
+    return { name: this.expandedName, gid: this.gid }
   }
 }

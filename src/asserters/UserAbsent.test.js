@@ -6,23 +6,14 @@ let container = null
 beforeEach(() => {
   container = {
     expandStringNode: (node) => node.value,
-    fs: {
-      readFile: jest.fn(async (filePath) => {
-        expect(typeof filePath).toBe("string")
-        return `root:x:0:0:root:/root:/bin/bash
-daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
-bin:x:2:2:bin:/bin:/usr/sbin/nologin
-sys:x:3:3:sys:/dev:/usr/sbin/nologin
-sync:x:4:65534:sync:/bin:/bin/sync
-games:x:5:60:games:/usr/games:/usr/sbin/nologin
-man:x:6:12:man:/var/cache/man:/usr/sbin/nologin`
-      }),
-    },
     childProcess: {
       exec: jest.fn(async (path) => {
         expect(typeof path).toBe("string")
         return 0
       }),
+    },
+    util: {
+      getUsers: jest.fn(async () => [{ name: "games" }]),
     },
     os: {
       userInfo: jest.fn(() => ({

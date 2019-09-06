@@ -28,8 +28,9 @@ Example:
 export class UserExists {
   constructor(container) {
     this.fs = container.fs || fs
-    this.childProcess = container.childProcess || childProcess
     this.os = container.os || os
+    this.util = container.util || util
+    this.childProcess = container.childProcess || childProcess
     this.expandStringNode = container.expandStringNode
   }
 
@@ -46,9 +47,10 @@ export class UserExists {
 
     this.expandedName = this.expandStringNode(nameNode)
 
-    const ok = (await this.fs.readFile("/etc/passwd")).includes(
-      this.expandedName + ":"
-    )
+    const ok =
+      (await this.util.getUsers(this.fs)).find(
+        (user) => user.name === this.expandedName
+      ) !== undefined
 
     if (!ok && !util.runningAsRoot(this.os)) {
       throw new ScriptError(
