@@ -64,7 +64,7 @@ export const getUsers = async (fs) => {
         password: fields[1],
         uid: parseInt(fields[2]),
         gid: parseInt(fields[3]),
-        fullName: fields[4],
+        comment: fields[4],
         homeDir: fields[5],
         shell: fields[6],
       }

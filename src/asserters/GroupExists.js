@@ -38,8 +38,12 @@ export class GroupExists {
       )
     }
 
-    if (gidNode && gidNode.type !== "number") {
-      throw new ScriptError("'group' must be a number", gidNode)
+    if (gidNode) {
+      if (gidNode.type !== "number") {
+        throw new ScriptError("'gid' must be a number", gidNode)
+      }
+
+      this.gid = gidNode.value
     }
 
     this.expandedName = this.expandStringNode(nameNode)
@@ -47,15 +51,19 @@ export class GroupExists {
     const group = (await this.util.getGroups(this.fs)).find(
       (group) => group.name === this.expandedName
     )
+
     const runningAsRoot = util.runningAsRoot(this.os)
 
     if (group) {
-      if (gidNode && gidNode.value !== group.gid) {
+      if (this.gid === undefined) {
+        this.gid = group.gid
+      }
+
+      if (this.gid !== group.gid) {
         if (!runningAsRoot) {
-          throw new ScriptError("Only root user can  modify groups", assertNode)
+          throw new ScriptError("Only root user can modify groups", assertNode)
         }
 
-        this.gid = gidNode.value
         this.modify = true
         return false
       } else {
@@ -71,23 +79,23 @@ export class GroupExists {
   }
 
   async rectify() {
-    await this.childProcess.exec(
-      `${this.modify ? "groupmod" : "groupadd"} ${
-        this.gid ? "-g " + this.gid : ""
-      } ${this.expandedName}`
+    const command =
+      (this.modify ? "groupmod" : "groupadd") +
+      (this.gid ? " -g " + this.gid : "") +
+      " " +
+      this.expandedName
+
+    await this.childProcess.exec(command)
+
+    const group = (await this.util.getGroups(this.fs)).find(
+      (group) => group.name === this.expandedName
     )
 
-    if (!this.modify || !this.gid) {
-      const group = (await this.util.getGroups(this.fs)).find(
-        (group) => group.name === this.expandedName
-      )
-
-      if (!group) {
-        throw new Error("Group not present in /etc/groups after groupadd")
-      }
-
-      this.gid = group.gid
+    if (!group) {
+      throw new Error(`Group ${this.expandedName} not present in /etc/groups`)
     }
+
+    this.gid = group.gid
   }
 
   result(rectified) {

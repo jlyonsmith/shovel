@@ -16,8 +16,6 @@ Example:
     },
 */
 
-// TODO: Support local to copy file from the local system
-
 export class FileCopied {
   constructor(container) {
     this.fs = container.fs || fs
@@ -67,6 +65,7 @@ export class FileCopied {
   async rectify() {
     const toPathDir = path.dirname(this.expandedToPath)
 
+    // TODO: Don't do this - require DirExists instead
     if (!(await util.dirExists(this.fs, toPathDir))) {
       await this.fs.ensureDir(toPathDir)
     }

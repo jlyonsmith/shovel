@@ -85,6 +85,7 @@ test("getUsers when root", async () => {
     name: "mail",
     homeDir: "/var/mail",
     shell: "/usr/sbin/nologin",
+    comment: "mail",
   })
 })
 

@@ -43,6 +43,8 @@ export class FileContains {
     this.expandedPath = this.expandStringNode(pathNode)
     this.expandedContents = this.expandStringNode(contentsNode)
 
+    // TODO: Ensure directory & file exists, else throw
+
     let pathDigest = null
 
     try {

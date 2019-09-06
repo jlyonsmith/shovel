@@ -13,11 +13,19 @@ beforeEach(() => {
     childProcess: {
       exec: jest.fn(async (path) => {
         expect(typeof path).toBe("string")
+
+        const parts = path.split(" ")
+
         if (path.startsWith("groupadd")) {
-          const parts = path.split(" ")
-          const group = { name: parts[2], gid: 12 }
+          const group = { name: parts[1], gid: 12 }
 
           container._groups.push(group)
+        } else {
+          const group = container._groups.find(
+            (group) => group.name === parts[3]
+          )
+
+          group.gid = parseInt(parts[2])
         }
         return 0
       }),
