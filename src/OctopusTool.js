@@ -17,7 +17,9 @@ import { ScriptError } from "./ScriptError"
 export class OctopusTool {
   constructor(container) {
     this.toolName = container.toolName
+    this.fs = container.fs || fs
     this.log = container.log
+    this.util = container.util || util
     this.debug = container.debug
   }
 
@@ -28,23 +30,25 @@ sudo apt -y -q install nodejs`
   static minNodeVersion = "v10"
 
   async assertCanSudoOnHost(ssh) {
-    const result = await util.runRemoteCommand(ssh, "bash -c 'echo /$EUID'", {
-      sudo: true,
-      password: ssh.config[0].password,
-      noThrow: true,
-    })
+    const result = await this.util.runRemoteCommand(
+      ssh,
+      "bash -c 'echo /$EUID'", // Make output look like a path
+      {
+        sudo: true,
+        password: ssh.config[0].password,
+        noThrow: true,
+      }
+    )
 
     if (result.exitCode !== 0 || result.output !== "/0") {
       throw new Error(
         `User ${ssh.config[0].username} does not have sudo ability on remote system`
       )
     }
-    return true
   }
 
-  // Assert the remote system has Node 10 installed
   async assertHasNode(ssh) {
-    let result = await util.runRemoteCommand(ssh, "node --version", {
+    let result = await this.util.runRemoteCommand(ssh, "node --version", {
       noThrow: true,
     })
 
@@ -59,7 +63,7 @@ sudo apt -y -q install nodejs`
     let result = null
 
     this.log.info("Checking remote system clock")
-    result = await util.runRemoteCommand(ssh, 'bash -c "echo /$(date)"', {
+    result = await this.util.runRemoteCommand(ssh, 'bash -c "echo /$(date)"', {
       noThrow: true,
     })
 
@@ -81,13 +85,13 @@ sudo apt -y -q install nodejs`
     this.assertCanSudoOnHost(ssh)
 
     this.log.info("Creating /opt/octopus directory")
-    await util.runRemoteCommand(ssh, "mkdir -p /opt/octopus", {
+    await this.util.runRemoteCommand(ssh, "mkdir -p /opt/octopus", {
       sudo: true,
       password,
     })
 
     this.log.info("Creating /opt/octopus/install_node.sh script")
-    await util.runRemoteCommand(
+    await this.util.runRemoteCommand(
       ssh,
       `bash -c 'echo "${OctopusTool.installNodeScript}" > ./install_node.sh'`,
       {
@@ -98,7 +102,7 @@ sudo apt -y -q install nodejs`
     )
 
     this.log.info("Running /opt/octopus/install_node.sh script")
-    result = await util.runRemoteCommand(ssh, "bash ./install_node.sh", {
+    result = await this.util.runRemoteCommand(ssh, "bash ./install_node.sh", {
       cwd: "/opt/octopus",
       sudo: true,
       password,
@@ -108,14 +112,14 @@ sudo apt -y -q install nodejs`
     if (result.exitCode !== 0) {
       // If the Node install fails it may just need an upgrade
       this.log.info("Trying to upgrade Node.js")
-      result = await util.runRemoteCommand(ssh, "apt install -y nodejs", {
+      result = await this.util.runRemoteCommand(ssh, "apt install -y nodejs", {
         cwd: "/opt/octopus",
         sudo: true,
         password,
       })
     }
 
-    result = await util.runRemoteCommand(ssh, "node --version", {
+    result = await this.util.runRemoteCommand(ssh, "node --version", {
       noThrow: true,
     })
 
@@ -130,7 +134,7 @@ sudo apt -y -q install nodejs`
   }
 
   async assertHasOctopus(ssh) {
-    let result = await util.runRemoteCommand(ssh, "octopus --version", {
+    let result = await this.util.runRemoteCommand(ssh, "octopus --version", {
       noThrow: true,
     })
 
@@ -148,12 +152,12 @@ sudo apt -y -q install nodejs`
     const password = ssh.config[0].password
 
     this.log.info("Installing Octopus")
-    await util.runRemoteCommand(ssh, "npm install -g @johnls/octopus", {
+    await this.util.runRemoteCommand(ssh, "npm install -g @johnls/octopus", {
       sudo: true,
       password,
     })
 
-    const result = await util.runRemoteCommand(ssh, "octopus --version", {
+    const result = await this.util.runRemoteCommand(ssh, "octopus --version", {
       noThrow: true,
     })
 
@@ -168,7 +172,7 @@ sudo apt -y -q install nodejs`
   }
 
   async readScriptFile(scriptPath) {
-    const scriptNode = JSON5.parse(await fs.readFile(scriptPath), {
+    const scriptNode = JSON5.parse(await this.fs.readFile(scriptPath), {
       wantNodes: true,
     })
     const createNode = (value) => {
@@ -616,7 +620,7 @@ sudo apt -y -q install nodejs`
         )
       }
 
-      remoteTempFile = (await util.runRemoteCommand(
+      remoteTempFile = (await this.util.runRemoteCommand(
         ssh,
         "mktemp"
       )).output.trim()
@@ -661,7 +665,7 @@ sudo apt -y -q install nodejs`
       await util.pipeToPromise(readStream, writeStream)
 
       this.log.info(`Running script on remote host`)
-      await util.runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
+      await this.util.runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
         sudo: options.runAsRoot,
         password: sshConfig.password,
         log: this.log.output,
@@ -672,7 +676,7 @@ sudo apt -y -q install nodejs`
       if (isConnected) {
         if (remoteTempFile && !this.debug) {
           this.log.info("Deleting remote temp file")
-          await util.runRemoteCommand(ssh, `rm ${remoteTempFile}`)
+          await this.util.runRemoteCommand(ssh, `rm ${remoteTempFile}`)
         }
 
         ssh.close()

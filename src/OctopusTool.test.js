@@ -1,4 +1,5 @@
 import { OctopusTool } from "./OctopusTool"
+import { Script } from "vm"
 
 let container = null
 
@@ -10,6 +11,8 @@ beforeEach(() => {
       warning: jest.fn(),
       error: jest.fn(),
     },
+    util: {},
+    fs: {},
   }
 })
 
@@ -19,7 +22,7 @@ const getOutput = (fn) => {
   return calls.length > 0 && calls[0].length > 0 ? calls[0][0] : ""
 }
 
-test("--help", async () => {
+test("help", async () => {
   const tool = new OctopusTool(container)
   const exitCode = await tool.run(["--help"])
 
@@ -29,7 +32,7 @@ test("--help", async () => {
   )
 })
 
-test("--version", async () => {
+test("version", async () => {
   const tool = new OctopusTool(container)
   const exitCode = await tool.run(["--version"])
 
@@ -39,8 +42,86 @@ test("--version", async () => {
   )
 })
 
-// TODO: Add a test for assertHasNode
-// TODO: Add a test for rectifyHasNode
+test("assertHasNode", async () => {
+  container.util.runRemoteCommand = async (ssh, command, options) => ({
+    exitCode: 0,
+    output: OctopusTool.minNodeVersion,
+  })
+
+  const tool = new OctopusTool(container)
+  const ssh = {}
+
+  await expect(tool.assertHasNode(ssh)).resolves.toBe(true)
+})
+
+test("assertCanSudoOnHost", async () => {
+  const result = {
+    exitCode: 0,
+    output: "/0",
+  }
+  container.util.runRemoteCommand = async (ssh, command, options) => result
+
+  const tool = new OctopusTool(container)
+  const ssh = {
+    config: [{ password: "", username: "test" }],
+  }
+
+  await expect(tool.assertCanSudoOnHost(ssh)).resolves.toBeUndefined()
+
+  result.output = "/500"
+
+  //await expect(tool.assertCanSudoOnHost(ssh)).rejects.toThrow(Error)
+})
+
+test("rectifyHasNode", async () => {
+  container.util.runRemoteCommand = async (ssh, command, options) => {
+    if (command === 'bash -c "echo /$(date)"') {
+      return {
+        exitCode: 0,
+        output: "/" + new Date().toString(),
+      }
+    } else if (command === "node --version") {
+      return {
+        exitCode: 0,
+        output: OctopusTool.minNodeVersion,
+      }
+    } else if (command === "bash -c 'echo /$EUID'") {
+      return {
+        exitCode: 0,
+        output: "/0",
+      }
+    } else {
+      return {
+        exitCode: 0,
+        output: "",
+      }
+    }
+  }
+
+  const tool = new OctopusTool(container)
+  const ssh = {
+    config: [{ password: "", username: "test" }],
+  }
+
+  await expect(tool.rectifyHasNode(ssh)).resolves.toBeUndefined()
+})
+
+test("readScriptFile", async () => {
+  container.fs.readFile = (path) => {
+    if (path === "test1.json5") {
+      return `{
+        options: {},
+        vars: {},
+        scripts: [],
+        assertions: [],
+      }`
+    }
+  }
+
+  const tool = new OctopusTool(container)
+
+  await expect(tool.readScriptFile("test1.json5")).not.toBeNull()
+})
 // TODO: Add a test for assertHasOctopus
 // TODO: Add a test for rectifyHasOctopus
 // TODO: Add a test for processScriptFile
