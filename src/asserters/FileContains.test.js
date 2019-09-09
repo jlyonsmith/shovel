@@ -1,6 +1,6 @@
 import { FileContains } from "./FileContains"
 import stream from "stream"
-import { createAssertNode } from "./testUtil"
+import { createAssertNode } from "../testUtil"
 
 let container = null
 const testString = "The quick brown fox jumps over the lazy dog\n"

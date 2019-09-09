@@ -1,6 +1,6 @@
 import { FileCopied } from "./FileCopied"
 import stream from "stream"
-import { createAssertNode } from "./testUtil"
+import { createAssertNode } from "../testUtil"
 
 let container = null
 

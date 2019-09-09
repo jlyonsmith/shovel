@@ -1,5 +1,5 @@
 import { FilesAbsent } from "./FilesAbsent"
-import { createAssertNode } from "./testUtil"
+import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
 
 let container = null

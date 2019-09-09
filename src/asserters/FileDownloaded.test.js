@@ -1,6 +1,6 @@
 import { FileDownloaded } from "./FileDownloaded"
 import stream from "stream"
-import { createAssertNode } from "./testUtil"
+import { createAssertNode } from "../testUtil"
 
 let container = null
 const testUrl = "http://localhost/somefile.txt"

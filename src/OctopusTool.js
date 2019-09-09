@@ -412,7 +412,7 @@ sudo apt -y -q install nodejs`
         SCRIPT_DIR: path.dirname(fullScriptPath),
       },
       fs: {
-        readFile: (fileName) => fs.readFileSync(fileName),
+        readFile: (fileName) => this.fs.readFileSync(fileName),
       },
       path: {
         join: (...paths) => path.join(...paths),

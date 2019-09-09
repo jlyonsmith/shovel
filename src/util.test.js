@@ -1,4 +1,5 @@
 import * as util from "./util"
+import { createNode } from "./testUtil"
 
 let container = null
 
@@ -64,19 +65,16 @@ sudo:x:27:someuser`
   }
 })
 
-test("runnAsRoot when root", async () => {
+test("runningAsRoot", async () => {
   expect(util.runningAsRoot(container.os)).toBe(true)
 })
 
-test("dirExists with directory existing", async () => {
+test("dirExists", async () => {
   await expect(util.dirExists(container.fs, "somedir")).resolves.toBe(true)
-})
-
-test("dirExists with directory not existing", async () => {
   await expect(util.dirExists(container.fs, "notthere")).resolves.toBe(false)
 })
 
-test("getUsers when root", async () => {
+test("getUsers", async () => {
   await expect(util.getUsers(container.fs)).resolves.toContainEqual({
     name: "mail",
     password: "x",
@@ -89,11 +87,34 @@ test("getUsers when root", async () => {
   })
 })
 
-test("getGroups when root", async () => {
+test("getGroups", async () => {
   await expect(util.getGroups(container.fs)).resolves.toContainEqual({
     name: "adm",
     password: "x",
     gid: 4,
     users: ["syslog", "someuser"],
   })
+})
+
+test("parseModeNode", async () => {
+  const node = createNode("test.json5", {
+    user: "rwx",
+    group: "r-x",
+    other: "r--",
+  })
+  expect(util.parseModeNode(node)).toBe(0o754)
+})
+
+test("parseOwnerNode", async () => {
+  const node = createNode("test.json5", {
+    user: "root",
+    group: "wheel",
+  })
+  expect(
+    util.parseOwnerNode(
+      [{ name: "root", uid: 0 }],
+      [{ name: "wheel", gid: 0 }],
+      node
+    )
+  ).toEqual({ uid: 0, gid: 0 })
 })

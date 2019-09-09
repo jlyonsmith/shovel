@@ -1,6 +1,6 @@
 import { DirectoryUnzipped } from "./DirectoryUnzipped"
 import stream from "stream"
-import { createAssertNode } from "./testUtil"
+import { createAssertNode } from "../testUtil"
 
 let container = null
 

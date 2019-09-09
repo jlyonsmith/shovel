@@ -1,5 +1,5 @@
 import { UserAbsent } from "./UserAbsent"
-import { createAssertNode } from "./testUtil"
+import { createAssertNode } from "../testUtil"
 
 let container = null
 

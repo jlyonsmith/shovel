@@ -1,5 +1,6 @@
 import { OctopusTool } from "./OctopusTool"
-import { Script } from "vm"
+import { createNode, createScriptNode } from "./testUtil"
+import * as version from "./version"
 
 let container = null
 
@@ -14,32 +15,6 @@ beforeEach(() => {
     util: {},
     fs: {},
   }
-})
-
-const getOutput = (fn) => {
-  const calls = fn.mock.calls
-
-  return calls.length > 0 && calls[0].length > 0 ? calls[0][0] : ""
-}
-
-test("help", async () => {
-  const tool = new OctopusTool(container)
-  const exitCode = await tool.run(["--help"])
-
-  expect(exitCode).toBe(0)
-  expect(getOutput(container.log.info)).toEqual(
-    expect.stringContaining("--help")
-  )
-})
-
-test("version", async () => {
-  const tool = new OctopusTool(container)
-  const exitCode = await tool.run(["--version"])
-
-  expect(exitCode).toBe(0)
-  expect(getOutput(container.log.info)).toEqual(
-    expect.stringMatching(/\d\.\d\.\d/)
-  )
 })
 
 test("assertHasNode", async () => {
@@ -106,6 +81,46 @@ test("rectifyHasNode", async () => {
   await expect(tool.rectifyHasNode(ssh)).resolves.toBeUndefined()
 })
 
+test("assertHasOctopus", async () => {
+  container.util.runRemoteCommand = async (ssh, command, options) => ({
+    exitCode: 0,
+    output: version.shortVersion,
+  })
+
+  const tool = new OctopusTool(container)
+  const ssh = {}
+
+  await expect(tool.assertHasOctopus(ssh)).resolves.toBe(true)
+})
+
+test("rectifyHasOctopus", async () => {
+  container.util.runRemoteCommand = async (ssh, command, options) => {
+    if (command === "octopus --version") {
+      return {
+        exitCode: 0,
+        output: version.shortVersion,
+      }
+    } else if (command === "bash -c 'echo /$EUID'") {
+      return {
+        exitCode: 0,
+        output: "/0",
+      }
+    } else {
+      return {
+        exitCode: 0,
+        output: "",
+      }
+    }
+  }
+
+  const tool = new OctopusTool(container)
+  const ssh = {
+    config: [{ password: "", username: "test" }],
+  }
+
+  await expect(tool.rectifyHasOctopus(ssh)).resolves.toBeUndefined()
+})
+
 test("readScriptFile", async () => {
   container.fs.readFile = (path) => {
     if (path === "test1.json5") {
@@ -122,11 +137,70 @@ test("readScriptFile", async () => {
 
   await expect(tool.readScriptFile("test1.json5")).not.toBeNull()
 })
-// TODO: Add a test for assertHasOctopus
-// TODO: Add a test for rectifyHasOctopus
-// TODO: Add a test for processScriptFile
-// TODO: Add a test for runScript
-// TODO: Add a test for runScriptOnHost
-// TODO: Add a test for run with local only script
-// TODO: Add a test for run with host and script
-// TODO: Add a test for run with multiple hosts and script
+
+test("mergeIncludeNodes", async () => {
+  container.fs.readFile = (path) => {
+    return `{
+      options: { blah: "x"},
+      vars: { blah : "y"},
+      scripts: [],
+      assertions: [{ assert: "something" }],
+    }`
+  }
+
+  const tool = new OctopusTool(container)
+  const scriptNode = createScriptNode("a.json5")
+
+  scriptNode.value.includes.value.push(
+    createNode(scriptNode.filename, "b.json5")
+  )
+
+  await expect(
+    tool.mergeIncludeNodes(scriptNode, ".", scriptNode.value.includes)
+  ).resolves.toBeUndefined()
+})
+
+test("compileScriptFile", async () => {
+  container.fs.readFile = (path) => {
+    return `{
+      options: { blah: "x"},
+      vars: { blah : "y"},
+      scripts: [],
+      assertions: [{ assert: "something", with: {} }],
+    }`
+  }
+
+  const tool = new OctopusTool(container)
+
+  await expect(tool.compileScriptFile("test.json5")).resolves.toMatchObject({
+    vars: { blah: "y" },
+    options: { blah: "x" },
+  })
+})
+
+test("runScriptLocally", async () => {
+  // TODO: runScriptLocally test
+})
+
+test("runScriptRemotely", async () => {
+  // TODO: runScriptRemotely test
+})
+
+test("run", async () => {
+  const tool = new OctopusTool(container)
+
+  await expect(tool.run(["--help"])).resolves.toBe(0)
+
+  expect(container.log.info.mock.calls[0][0]).toEqual(
+    expect.stringContaining("--help")
+  )
+
+  container.log.info.mockClear()
+
+  await expect(tool.run(["--version"])).resolves.toBe(0)
+  expect(container.log.info.mock.calls[0][0]).toEqual(
+    expect.stringMatching(/\d\.\d\.\d/)
+  )
+
+  // TODO: More run tests
+})
