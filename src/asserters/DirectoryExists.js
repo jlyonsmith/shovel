@@ -2,8 +2,6 @@ import fs from "fs-extra"
 import os from "os"
 import { ScriptError } from "../ScriptError"
 import * as util from "../util"
-import { Script } from "vm"
-import { statement } from "@babel/template"
 
 /*
 Checks and ensures that a directory exists.

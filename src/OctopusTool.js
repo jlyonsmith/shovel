@@ -191,8 +191,11 @@ export class OctopusTool {
       {
         sudo: true,
         password,
+        noThrown: true,
       }
     )
+
+    console.log(result)
 
     if (result.exitCode === 0) {
       result = await this.util.runRemoteCommand(ssh, "octopus --version", {
