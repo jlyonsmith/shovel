@@ -27,9 +27,26 @@ export class OctopusTool {
   }
 
   static installNodeScript = `#!/bin/bash
-curl -sL https://deb.nodesource.com/setup_10.x -o ./nodesource_setup.sh
-sudo bash ./nodesource_setup.sh
-sudo apt -y -q install nodejs`
+  VERSION=$(grep -Eo "\\(Red Hat|\\(Ubuntu" /proc/version)
+  case $VERSION in
+    "(Red Hat")
+      curl -sL https://rpm.nodesource.com/setup_10.x | bash -
+      yum clean all
+      yum makecache fast
+      yum install -y -q gcc-c++ make
+      yum install -y -q nodejs
+      ;;
+    "(Ubuntu")
+      curl -sL https://deb.nodesource.com/setup_10.x | bash -
+      apt update
+      apt install -y -q nodejs
+      ;;
+    *)
+      echo Unsupported Linux distro
+      exit 255
+      ;;
+  esac
+`
   static minNodeVersion = "v10"
 
   async assertCanSudoOnHost(ssh) {
@@ -43,11 +60,24 @@ sudo apt -y -q install nodejs`
       }
     )
 
-    if (result.exitCode !== 0 || result.output !== "/0") {
+    if (result.exitCode !== 0 || result.output[0] !== "/0") {
       throw new Error(
         `User ${ssh.config[0].username} does not have sudo ability on remote system`
       )
     }
+  }
+
+  async uploadFile(ssh, remotePath, contents) {
+    const readStream = new Readable({
+      read(size) {
+        this.push(contents)
+        this.push(null)
+      },
+    })
+    const sftp = ssh.sftp()
+    const writeStream = await sftp.createWriteStream(remotePath)
+
+    await util.pipeToPromise(readStream, writeStream)
   }
 
   async assertHasNode(ssh) {
@@ -57,7 +87,8 @@ sudo apt -y -q install nodejs`
 
     return (
       result.exitCode === 0 &&
-      result.output.trim().startsWith(OctopusTool.minNodeVersion)
+      result.output.length > 0 &&
+      result.output[0].startsWith(OctopusTool.minNodeVersion)
     )
   }
 
@@ -70,11 +101,15 @@ sudo apt -y -q install nodejs`
       noThrow: true,
     })
 
-    if (result.exitCode !== 0 || !result.output.startsWith("/")) {
+    if (
+      result.exitCode !== 0 ||
+      result.output.length === 0 ||
+      !result.output[0].startsWith("/")
+    ) {
       throw new Error("Unable to get remote host date & time")
     }
 
-    const remoteDate = new Date(result.output.substring(1))
+    const remoteDate = new Date(result.output[0].substring(1))
     const localDate = new Date()
 
     if (
@@ -85,55 +120,49 @@ sudo apt -y -q install nodejs`
       throw new Error("Remote system clock is more than 24 hours out of sync.")
     }
 
-    this.assertCanSudoOnHost(ssh)
+    await this.assertCanSudoOnHost(ssh)
 
-    this.log.info("Creating /opt/octopus directory")
-    await this.util.runRemoteCommand(ssh, "mkdir -p /opt/octopus", {
-      sudo: true,
-      password,
-    })
+    const remoteTempFilePath = (await this.util.runRemoteCommand(ssh, "mktemp"))
+      .output[0]
 
-    this.log.info("Creating /opt/octopus/install_node.sh script")
-    await this.util.runRemoteCommand(
+    this.log.info(
+      `Created remote Node.js install script${
+        this.debug ? " (" + remoteTempFilePath + ")" : ""
+      }`
+    )
+
+    await this.uploadFile(
       ssh,
-      `bash -c 'echo "${OctopusTool.installNodeScript}" > ./install_node.sh'`,
+      remoteTempFilePath,
+      OctopusTool.installNodeScript
+    )
+
+    this.log.info(`Running Node.js install script`)
+    result = await this.util.runRemoteCommand(
+      ssh,
+      `bash ${remoteTempFilePath}`,
       {
-        cwd: "/opt/octopus",
         sudo: true,
         password,
       }
     )
 
-    this.log.info("Running /opt/octopus/install_node.sh script")
-    result = await this.util.runRemoteCommand(ssh, "bash ./install_node.sh", {
-      cwd: "/opt/octopus",
-      sudo: true,
-      password,
-      noThrow: true,
-    })
-
-    if (result.exitCode !== 0) {
-      // If the Node install fails it may just need an upgrade
-      this.log.info("Trying to upgrade Node.js")
-      result = await this.util.runRemoteCommand(ssh, "apt install -y nodejs", {
-        cwd: "/opt/octopus",
-        sudo: true,
-        password,
+    if (result.exitCode === 0) {
+      result = await this.util.runRemoteCommand(ssh, "node --version", {
+        noThrow: true,
       })
+
+      if (
+        result.exitCode === 0 &&
+        result.output[0].startsWith(OctopusTool.minNodeVersion)
+      ) {
+        return
+      }
     }
 
-    result = await this.util.runRemoteCommand(ssh, "node --version", {
-      noThrow: true,
-    })
-
-    if (
-      result.exitCode !== 0 ||
-      !result.output.trim().startsWith(OctopusTool.minNodeVersion)
-    ) {
-      throw new Error(
-        `Unable to install Node.js ${OctopusTool.minNodeVersion} on remote host`
-      )
-    }
+    throw new Error(
+      `Unable to install Node.js ${OctopusTool.minNodeVersion} on remote host`
+    )
   }
 
   async assertHasOctopus(ssh) {
@@ -143,13 +172,14 @@ sudo apt -y -q install nodejs`
 
     return (
       result.exitCode === 0 &&
-      result.output.trim().startsWith(version.shortVersion)
+      result.output.length > 0 &&
+      result.output[0].startsWith(version.shortVersion)
     )
   }
 
   async rectifyHasOctopus(ssh, options = {}) {
     if (!options.canSudoOnHost) {
-      this.assertCanSudoOnHost(ssh)
+      await this.assertCanSudoOnHost(ssh)
     }
 
     const password = ssh.config[0].password
@@ -160,18 +190,26 @@ sudo apt -y -q install nodejs`
       password,
     })
 
-    const result = await this.util.runRemoteCommand(ssh, "octopus --version", {
-      noThrow: true,
-    })
-
-    if (
-      result.exitCode !== 0 ||
-      !result.output.trim().startsWith(version.shortVersion)
-    ) {
-      throw new Error(
-        `Unable to install Octopus ${version.version} on remote host`
+    if (result.exitCode === 0) {
+      const result = await this.util.runRemoteCommand(
+        ssh,
+        "octopus --version",
+        {
+          noThrow: true,
+        }
       )
+
+      if (
+        result.exitCode === 0 &&
+        !result.output[0].startsWith(version.shortVersion)
+      ) {
+        return
+      }
     }
+
+    throw new Error(
+      `Unable to install Octopus ${version.shortVersion} on remote host`
+    )
   }
 
   async readScriptFile(scriptPath) {
@@ -620,17 +658,6 @@ sudo apt -y -q install nodejs`
         )
       }
 
-      remoteTempFile = (await this.util.runRemoteCommand(
-        ssh,
-        "mktemp"
-      )).output.trim()
-
-      this.log.info(
-        `Created remote host script file${
-          this.debug ? " (" + remoteTempFile + ")" : ""
-        }`
-      )
-
       const state = await this.compileScriptFile(scriptPath)
 
       for (const [key, value] of Object.entries(state.vmContext)) {
@@ -653,16 +680,16 @@ sudo apt -y -q install nodejs`
         this.log.info(newScript)
       }
 
-      let readStream = new Readable({
-        read(size) {
-          this.push(newScript)
-          this.push(null)
-        },
-      })
-      const sftp = ssh.sftp()
-      let writeStream = await sftp.createWriteStream(remoteTempFile)
+      const remoteTempFile = (await this.util.runRemoteCommand(ssh, "mktemp"))
+        .output[0]
 
-      await util.pipeToPromise(readStream, writeStream)
+      this.log.info(
+        `Created remote host script file${
+          this.debug ? " (" + remoteTempFile + ")" : ""
+        }`
+      )
+
+      await this.uploadFile(ssh, remoteTempFile, newScript)
 
       this.log.info(`Running script on remote host`)
       await this.util.runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
@@ -691,7 +718,7 @@ sudo apt -y -q install nodejs`
 
   async run(argv) {
     const options = {
-      boolean: ["help", "version", "debug", "verbose"],
+      boolean: ["help", "version", "debug", "verbose", "root"],
       string: ["host", "host-file", "user", "port", "password"],
       alias: {
         h: "host",
@@ -700,6 +727,7 @@ sudo apt -y -q install nodejs`
         f: "host-file",
         P: "password",
         v: "verbose",
+        r: "root",
       },
     }
     const args = parseArgs(argv, options)

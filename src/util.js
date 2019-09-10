@@ -220,7 +220,7 @@ export const runRemoteCommand = async (ssh, command, options = {}) => {
   )
   const stripAnsiEscapes = (s) => s.replace(ansiEscapeRegex, "")
 
-  let output = ""
+  const output = []
   let firstLine = true
   let exitCode = 0
 
@@ -237,6 +237,10 @@ export const runRemoteCommand = async (ssh, command, options = {}) => {
       pty: true,
     })
 
+    if (options.debug) {
+      console.log(commandLine)
+    }
+
     if (options.password) {
       socket.write(options.password + "\n")
       socket.end()
@@ -248,29 +252,32 @@ export const runRemoteCommand = async (ssh, command, options = {}) => {
         .on("error", reject)
         // We have to read data or the socket will block
         .on("data", (data) => {
-          const s = stripAnsiEscapes(data.toString()).trim()
+          let lines = stripAnsiEscapes(data.toString()).match(
+            /^.*((\r\n|\n|\r)|$)/gm
+          )
 
-          if (options.password && firstLine) {
-            // Password will be output to first line if supplied
-            firstLine = false
-            return
-          } else if (
-            (options.logError && s.startsWith("error:")) ||
-            s.startsWith("warning:")
-          ) {
-            options.logError(s)
-          } else if (/^\d+$/.test(s)) {
-            exitCode = parseInt(s)
-            return
-          } else if (/^v?\d+\.\d+\.\d+/.test(s)) {
-            // Version numbers
-            output += s
-          } else if (s.startsWith("/")) {
-            // Paths
-            output += s
-          } else if (options.log && s.startsWith("{")) {
-            // Log output as we go otherwise we keep the user guessing about what's happening
-            for (const line of s.split("\n")) {
+          lines = lines.map((line) => line.trim())
+
+          for (const line of lines) {
+            if (options.password && firstLine) {
+              // Password will be output to first line if supplied
+              firstLine = false
+            } else if (!line) {
+              continue
+            } else if (
+              (options.logError && line.startsWith("error:")) ||
+              line.startsWith("warning:")
+            ) {
+              options.logError(line)
+            } else if (/^\d+$/.test(line)) {
+              exitCode = parseInt(line)
+            } else if (/^v?\d+\.\d+\.\d+/.test(line)) {
+              // Version numbers
+              output.push(line)
+            } else if (line.startsWith("/")) {
+              // Paths
+              output.push(line)
+            } else if (options.log && s.startsWith("{")) {
               options.log(line)
             }
           }
