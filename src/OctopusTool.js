@@ -20,6 +20,9 @@ export class OctopusTool {
     this.fs = container.fs || fs
     this.log = container.log
     this.util = container.util || util
+    this.asserters = container.asserters || asserters
+    this.createSSH =
+      container.createSSH || ((sshConfig) => new SSH2Promise(sshConfig))
     this.debug = container.debug
   }
 
@@ -493,7 +496,7 @@ sudo apt -y -q install nodejs`
     }
   }
 
-  async runScriptLocally(scriptPath, options) {
+  async runScriptLocally(scriptPath, options = {}) {
     const state = await this.compileScriptFile(scriptPath)
 
     if (options.verbose) {
@@ -518,7 +521,7 @@ sudo apt -y -q install nodejs`
     }
 
     for (const assertion of state.assertions) {
-      const asserter = new asserters[assertion.assert]({
+      const asserter = new this.asserters[assertion.assert]({
         expandStringNode: state.expandStringNode,
       })
 
@@ -540,15 +543,12 @@ sudo apt -y -q install nodejs`
       output.result = asserter.result(rectified)
       this.log.output(JSON5.stringify(output))
     }
-
-    return 0
   }
 
-  async runScriptRemotely(scriptPath, options) {
+  async runScriptRemotely(scriptPath, options = {}) {
     let isConnected = false
     let ssh = null
     let remoteTempFile = null
-
     const showPrompts = async (name, instructions, lang, prompts) => {
       const rl = readlinePassword.createInstance(process.stdin, process.stdout)
       let responses = []
@@ -587,7 +587,7 @@ sudo apt -y -q install nodejs`
         sshConfig.password = answers[0]
       }
 
-      ssh = new SSH2Promise(sshConfig)
+      ssh = this.createSSH(sshConfig)
 
       await ssh.connect()
 
@@ -708,7 +708,7 @@ sudo apt -y -q install nodejs`
 
     if (args.version) {
       this.log.info(`${version.fullVersion}`)
-      return 0
+      return
     }
 
     if (args.help) {
@@ -735,7 +735,7 @@ Options:
   --root, -r          Start Octopus on remote as root
   --verbose           Emit verbose output
 `)
-      return 0
+      return
     }
 
     if (args._.length !== 1) {
@@ -780,29 +780,31 @@ Options:
       }
     }
 
-    let exitCode = 0
-
     if (hosts) {
-      for (const host of hosts) {
-        const hostExitCode = await this.runScriptRemotely(scriptPath, {
-          host: host.host,
-          user: host.user,
-          password: host.password,
-          port: parsePort(host.port),
-          verbose: args.verbose,
-          runAsRoot: host.runAsRoot,
-        })
+      let failures = 0
 
-        if (hostExitCode !== 0 && exitCode === 0) {
-          exitCode = hostExitCode
+      for (const host of hosts) {
+        if (
+          (await this.runScriptRemotely(scriptPath, {
+            host: host.host,
+            user: host.user,
+            password: host.password,
+            port: parsePort(host.port),
+            verbose: args.verbose,
+            runAsRoot: host.runAsRoot,
+          })) !== 0
+        ) {
+          failures += 1
         }
       }
+
+      if (failures > 0) {
+        throw new Error(`${failures} hosts were not updated`)
+      }
     } else {
-      exitCode = await this.runScriptLocally(scriptPath, {
+      await this.runScriptLocally(scriptPath, {
         verbose: args.verbose,
       })
     }
-
-    return exitCode
   }
 }

@@ -1,6 +1,7 @@
 import { OctopusTool } from "./OctopusTool"
 import { createNode, createScriptNode } from "./testUtil"
 import * as version from "./version"
+import stream from "stream"
 
 let container = null
 
@@ -11,6 +12,7 @@ beforeEach(() => {
       info: jest.fn(),
       warning: jest.fn(),
       error: jest.fn(),
+      output: jest.fn(),
     },
     util: {},
     fs: {},
@@ -165,7 +167,7 @@ test("compileScriptFile", async () => {
     return `{
       options: { blah: "x"},
       vars: { blah : "y"},
-      scripts: [],
+      includes: [],
       assertions: [{ assert: "something", with: {} }],
     }`
   }
@@ -179,17 +181,72 @@ test("compileScriptFile", async () => {
 })
 
 test("runScriptLocally", async () => {
-  // TODO: runScriptLocally test
+  container.asserters = {
+    TestAssert: class TestAssert {
+      constructor() {}
+      assert() {}
+      rectify() {}
+      result() {}
+    },
+  }
+
+  const tool = new OctopusTool(container)
+
+  tool.compileScriptFile = jest.fn(async () => ({
+    vars: {},
+    options: {},
+    assertions: [{ assert: "TestAssert", with: {} }],
+    vmContext: {},
+    expandStringNode: jest.fn(),
+  }))
+
+  await expect(tool.runScriptLocally("test.json5")).resolves.toBeUndefined()
 })
 
 test("runScriptRemotely", async () => {
-  // TODO: runScriptRemotely test
+  container.util.runRemoteCommand = async (ssh, command, options) => ({
+    exitCode: 0,
+    output: "",
+  })
+  container.createSSH = (sshConfig) => ({
+    connect: jest.fn(async () => null),
+    sftp: jest.fn(() => ({
+      createWriteStream: async (path) =>
+        new stream.Writable({
+          write(chunk, encoding, callback) {
+            callback()
+          },
+        }),
+    })),
+    close: jest.fn(),
+    config: [{ password: "", username: "test" }],
+  })
+
+  const tool = new OctopusTool(container)
+
+  tool.assertHasNode = jest.fn(() => true)
+  tool.assertHasOctopus = jest.fn(() => true)
+  tool.compileScriptFile = jest.fn(async () => ({
+    vars: {},
+    options: {},
+    assertions: [{ assert: "TestAssert", with: {} }],
+    vmContext: {},
+    expandStringNode: jest.fn(),
+  }))
+
+  await expect(
+    tool.runScriptRemotely("test.json5", {
+      user: "test",
+      password: "test",
+      host: "somehost",
+    })
+  ).resolves.toBeUndefined()
 })
 
 test("run", async () => {
   const tool = new OctopusTool(container)
 
-  await expect(tool.run(["--help"])).resolves.toBe(0)
+  await expect(tool.run(["--help"])).resolves.toBeUndefined()
 
   expect(container.log.info.mock.calls[0][0]).toEqual(
     expect.stringContaining("--help")
@@ -197,7 +254,7 @@ test("run", async () => {
 
   container.log.info.mockClear()
 
-  await expect(tool.run(["--version"])).resolves.toBe(0)
+  await expect(tool.run(["--version"])).resolves.toBeUndefined()
   expect(container.log.info.mock.calls[0][0]).toEqual(
     expect.stringMatching(/\d\.\d\.\d/)
   )
