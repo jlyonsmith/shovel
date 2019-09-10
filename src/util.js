@@ -277,7 +277,7 @@ export const runRemoteCommand = async (ssh, command, options = {}) => {
             } else if (line.startsWith("/")) {
               // Paths
               output.push(line)
-            } else if (options.log && s.startsWith("{")) {
+            } else if (options.log && line.startsWith("{")) {
               options.log(line)
             }
           }

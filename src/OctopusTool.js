@@ -195,8 +195,6 @@ export class OctopusTool {
       }
     )
 
-    console.log(result)
-
     if (result.exitCode === 0) {
       result = await this.util.runRemoteCommand(ssh, "octopus --version", {
         noThrow: true,
