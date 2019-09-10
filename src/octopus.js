@@ -41,7 +41,6 @@ tool
     process.exitCode = 200
 
     if (error) {
-      // ssh2-promise throws strings!
       log.error(error.message || error)
 
       if (tool.debug) {

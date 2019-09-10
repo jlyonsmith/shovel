@@ -1,7 +1,7 @@
 import parseArgs from "minimist"
 import * as version from "./version"
 import readlinePassword from "@johnls/readline-password"
-import SSH2Promise from "ssh2-promise"
+import SSH2Promise from "@johnls/ssh2-promise"
 import os from "os"
 import fs from "fs-extra"
 import vm from "vm"
@@ -185,23 +185,23 @@ export class OctopusTool {
     const password = ssh.config[0].password
 
     this.log.info("Installing Octopus")
-    await this.util.runRemoteCommand(ssh, "npm install -g @johnls/octopus", {
-      sudo: true,
-      password,
-    })
+    let result = await this.util.runRemoteCommand(
+      ssh,
+      "npm install -g @johnls/octopus",
+      {
+        sudo: true,
+        password,
+      }
+    )
 
     if (result.exitCode === 0) {
-      const result = await this.util.runRemoteCommand(
-        ssh,
-        "octopus --version",
-        {
-          noThrow: true,
-        }
-      )
+      result = await this.util.runRemoteCommand(ssh, "octopus --version", {
+        noThrow: true,
+      })
 
       if (
         result.exitCode === 0 &&
-        !result.output[0].startsWith(version.shortVersion)
+        result.output[0].startsWith(version.shortVersion)
       ) {
         return
       }
