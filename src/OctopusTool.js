@@ -450,6 +450,7 @@ export class OctopusTool {
     const vmContext = {
       env: process.env,
       sys: {
+        // TODO: Add a variable for the LINUX_DISTRO
         SCRIPT_FILE: fullScriptPath,
         SCRIPT_DIR: path.dirname(fullScriptPath),
       },

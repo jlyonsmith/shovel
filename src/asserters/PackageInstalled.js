@@ -17,6 +17,7 @@ Example:
 */
 
 // TODO: Support version number
+// TODO: Support CentOS
 
 export class PackageInstalled {
   constructor(container) {

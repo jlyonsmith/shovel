@@ -55,6 +55,8 @@ export class FileExists {
       return false
     }
 
+    // TODO: If the directory does not exist, error
+
     if (stat && stat.isDirectory()) {
       throw new ScriptError(
         `A directory exists with the name '${this.expandedPath}'`,
