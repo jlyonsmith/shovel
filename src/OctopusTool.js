@@ -813,16 +813,24 @@ Options:
       let failures = 0
 
       for (const host of hosts) {
-        if (
-          (await this.runScriptRemotely(scriptPath, {
+        try {
+          await this.runScriptRemotely(scriptPath, {
             host: host.host,
             user: host.user,
             password: host.password,
             port: parsePort(host.port),
             verbose: args.verbose,
             runAsRoot: host.runAsRoot,
-          })) !== 0
-        ) {
+          })
+        } catch (error) {
+          if (error) {
+            log.error(error.message || error)
+
+            if (tool.debug) {
+              console.error(error)
+            }
+          }
+
           failures += 1
         }
       }
