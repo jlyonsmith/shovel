@@ -1,24 +1,23 @@
 export const createNode = (filename, value) => {
-  const innerCreateNode = (value) => {
-    let type = typeof value
-    let newValue
+  const innerCreateNode = (v) => {
+    let t = typeof v
+    let nv
 
-    if (type === "object") {
-      if (Array.isArray(value)) {
-        type = "array"
-        newValue = value.map((i) => innerCreateNode(i))
+    if (v !== null && t === "object") {
+      if (Array.isArray(v)) {
+        t = "array"
+        nv = v.map((i) => innerCreateNode(i))
       } else {
-        newValue = {}
-
-        Object.entries(value).map(([k, v]) => {
-          newValue[k] = innerCreateNode(v)
+        nv = {}
+        Object.entries(v).map(([k, v]) => {
+          nv[k] = innerCreateNode(v)
         })
       }
     } else {
-      newValue = value
+      nv = v
     }
 
-    return { filename, line: 0, column: 0, type, value: newValue }
+    return { filename, line: 0, column: 0, type: t, value: nv }
   }
 
   return innerCreateNode(value)

@@ -47,15 +47,15 @@ export class DirectoryExists {
     const userInfo = this.os.userInfo()
     const users = await this.util.getUsers(this.fs)
     const groups = await this.util.getGroups(this.fs)
-    let stat = null
-    let owner = { uid: userInfo.uid, gid: userInfo.gid }
 
     this.owner = Object.assign(
-      owner,
+      { uid: userInfo.uid, gid: userInfo.gid },
       this.util.parseOwnerNode(users, groups, ownerNode)
     )
     this.mode = this.util.parseModeNode(modeNode)
     this.expandedPath = this.expandStringNode(pathNode)
+
+    let stat = null
 
     try {
       stat = await this.fs.lstat(this.expandedPath)
@@ -63,30 +63,33 @@ export class DirectoryExists {
       return false
     }
 
-    if (stat) {
-      if (stat.isFile()) {
+    if (stat.isFile()) {
+      throw new ScriptError(
+        `A file with the name '${this.expandedPath}' exists`,
+        pathNode
+      )
+    } else if (stat.uid !== this.owner.uid || stat.gid !== this.owner.gid) {
+      if (userInfo.uid !== 0) {
         throw new ScriptError(
-          `A file with the name '${this.expandedPath}' exists`,
-          pathNode
+          "User does not have permission to modify existing directory owner",
+          assertNode
         )
-      } else if (stat.uid !== this.owner.uid || stat.gid !== this.owner.gid) {
-        if (userInfo.uid !== 0) {
-          throw new ScriptError(
-            "User does not have permission to modify existing directory owner",
-            assertNode
-          )
-        }
-
-        return false
-      } else if ((stat.mode & 0o777) !== this.mode) {
-        if (userInfo.uid !== stat.uid || userInfo.gid !== stat.gid) {
-          throw new ScriptError(
-            "User does not have permission to modify existing directory mode"
-          )
-        }
-
-        return false
       }
+
+      return false
+    } else if ((stat.mode & 0o777) !== this.mode) {
+      if (
+        userInfo.uid !== 0 &&
+        userInfo.uid !== stat.uid &&
+        userInfo.gid !== stat.gid
+      ) {
+        throw new ScriptError(
+          "User does not have permission to modify existing directory mode",
+          assertNode
+        )
+      }
+
+      return false
     }
 
     return true

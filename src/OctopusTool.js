@@ -12,6 +12,7 @@ import autobind from "autobind-decorator"
 import * as asserters from "./asserters"
 import * as util from "./util"
 import { ScriptError } from "./ScriptError"
+import osInfo from "linux-os-info"
 
 @autobind
 export class OctopusTool {
@@ -399,83 +400,134 @@ export class OctopusTool {
     return scriptNode
   }
 
-  async mergeIncludeNodes(scriptNode, scriptDir, includesNode) {
-    if (includesNode) {
-      for (const includeNode of includesNode.value) {
-        const newScriptNode = await this.readScriptFile(
-          path.resolve(scriptDir, includeNode.value)
-        )
-
-        await this.mergeIncludeNodes(
-          scriptNode,
-          newScriptNode.filename,
-          newScriptNode.includesNodes
-        )
-
-        const {
-          options: optionsNode,
-          vars: varsNode,
-          assertions: assertionsNode,
-        } = scriptNode.value
-        const {
-          options: newOptionsNode,
-          vars: newVarsNode,
-          assertions: newAssertionsNode,
-        } = newScriptNode.value
-
-        if (newOptionsNode) {
-          optionsNode.value = {
-            ...optionsNode.value,
-            ...newOptionsNode.value,
-          }
-        }
-        if (newVarsNode) {
-          varsNode.value = {
-            ...varsNode.value,
-            ...newVarsNode.value,
-          }
-        }
-        if (newAssertionsNode) {
-          assertionsNode.value = [
-            ...assertionsNode.value,
-            ...newAssertionsNode.value,
-          ]
-        }
-      }
-    }
-  }
-
-  async compileScriptFile(scriptPath) {
-    const fullScriptPath = path.resolve(scriptPath)
-    const vmContext = {
+  async createRunContext(scriptNode, options = {}) {
+    const { varsNode } = scriptNode
+    const runContext = {
+      options: {},
       env: process.env,
+      os: {
+        platform: osInfo.platform,
+        versionId: osInfo.version_id,
+        id: osInfo.id,
+      },
       sys: {
-        // TODO: Add a variable for the LINUX_DISTRO
-        SCRIPT_FILE: fullScriptPath,
-        SCRIPT_DIR: path.dirname(fullScriptPath),
+        scriptFile: scriptNode.filename,
+        scriptDir: path.dirname(scriptNode.filename),
       },
       fs: {
-        readFile: (fileName) => this.fs.readFileSync(fileName),
+        readFile: (fileName) => fs.readFileSync(fileName),
       },
       path: {
         join: (...paths) => path.join(...paths),
+        dirname: (filename) => path.dirname(filename),
       },
+      vars: {},
     }
     const expandStringNode = (node) => {
       if (!node.type || node.type !== "string") {
         throw new Error("Must pass in a string node to expand")
       }
 
+      // TODO: Switch to '{...}' wrapper that indicates a Javascript expression or not
+
       try {
         return new vm.Script("`" + node.value + "`").runInContext(
-          vm.createContext(vmContext)
+          vm.createContext(runContext)
         )
       } catch (e) {
         throw new ScriptError(e.message, node)
       }
     }
 
-    const scriptNode = await this.readScriptFile(fullScriptPath)
+    const processNode = (node, expand) => {
+      if (node.type === "object") {
+        if (Array.isArray(node.value)) {
+          return node.value.map((i) => processNode(i, expand))
+        } else {
+          newValue = {}
+
+          Object.entries(node.value).map(([k, v]) => {
+            newValue[k] = processNode(
+              item.value,
+              k === "local" && !options.inRunScriptLocally ? true : expand
+            )
+          })
+
+          return newValue
+        }
+      } else if (node.type === "string") {
+        if (expand) {
+          const newValue = expandStringNode(node)
+
+          node.value = newValue
+          return newValue
+        } else {
+          return item.value
+        }
+      } else {
+        return item.value
+      }
+    }
+
+    if (varsNode) {
+      runContext.vars = processNode(
+        varsNode,
+        options.inRunScriptLocally === "local"
+      )
+    }
+
+    return { runContext, expandStringNode }
+  }
+
+  async mergeIncludeNodes(scriptNode, scriptDir, includesNode) {
+    if (!includesNode) {
+      return
+    }
+
+    for (const includeNode of includesNode.value) {
+      const newScriptNode = await this.readScriptFile(
+        path.resolve(scriptDir, includeNode.value)
+      )
+
+      await this.mergeIncludeNodes(
+        scriptNode,
+        newScriptNode.filename,
+        newScriptNode.includesNodes
+      )
+
+      const {
+        options: optionsNode,
+        vars: varsNode,
+        assertions: assertionsNode,
+      } = scriptNode.value
+      const {
+        options: newOptionsNode,
+        vars: newVarsNode,
+        assertions: newAssertionsNode,
+      } = newScriptNode.value
+
+      if (newOptionsNode) {
+        optionsNode.value = {
+          ...optionsNode.value,
+          ...newOptionsNode.value,
+        }
+      }
+      if (newVarsNode) {
+        varsNode.value = {
+          ...varsNode.value,
+          ...newVarsNode.value,
+        }
+      }
+      if (newAssertionsNode) {
+        assertionsNode.value = [
+          ...assertionsNode.value,
+          ...newAssertionsNode.value,
+        ]
+      }
+    }
+  }
+
+  async flattenScript(scriptNode) {
     const {
       includes: includesNode,
       options: optionsNode,
@@ -485,42 +537,12 @@ export class OctopusTool {
 
     await this.mergeIncludeNodes(
       scriptNode,
-      path.dirname(fullScriptPath),
+      path.dirname(scriptNode.filename),
       includesNode
     )
 
     const options = JSON5.simplify(optionsNode)
     const vars = JSON5.simplify(varsNode)
-
-    for (const [key, varNode] of Object.entries(varsNode.value)) {
-      if (vmContext[key] && typeof vmContext[key] === "object") {
-        throw new ScriptError(
-          `Variable ${key} conflicts with a built-in object`,
-          varNode
-        )
-      }
-
-      switch (varNode.type) {
-        case "null":
-          delete vmContext[key]
-          break
-        case "numeric":
-        case "boolean":
-          vmContext[key] = varNode.value.toString()
-          break
-        case "string":
-          vmContext[key] = varNode.value
-          break
-        case "object":
-          const { value: valueNode, local: localNode } = varNode.value
-
-          if (localNode && localNode.value) {
-            vmContext[key] = expandStringNode(valueNode)
-          }
-          break
-      }
-    }
-
     const assertions = JSON5.simplify(assertionsNode)
 
     for (let i = 0; i < assertions.length; i++) {
@@ -531,27 +553,18 @@ export class OctopusTool {
       vars,
       options,
       assertions,
-      vmContext,
-      expandStringNode,
     }
   }
 
   async runScriptLocally(scriptPath, options = {}) {
-    const state = await this.compileScriptFile(scriptPath)
+    const scriptNode = await this.readScriptFile(scriptPath)
+    const state = Object.assign(
+      await this.flattenScript(scriptNode),
+      await this.createRunContext(scriptNode, { inRunScriptLocally: true })
+    )
 
-    if (options.verbose) {
-      const vars = {}
-
-      Object.keys(state.vmContext).forEach((key) => {
-        if (
-          key === "env" ||
-          key === "sys" ||
-          typeof state.vmContext[key] !== "object"
-        ) {
-          vars[key] = state.vmContext[key]
-        }
-      })
-      this.log.info(JSON5.stringify(vars, null, "  "))
+    if (this.debug) {
+      this.log.info(JSON5.stringify(state.runContext.vars, null, "  "))
     }
 
     if (state.options && state.options.description) {
@@ -612,6 +625,8 @@ export class OctopusTool {
         //debug: this.debug ? (detail) => this.log.info(detail) : null,
       }
 
+      // TODO: Support connecting through a jump box
+
       this.log.info(
         `Connecting to ${sshConfig.host}:${sshConfig.port} as ${sshConfig.username}`
       )
@@ -643,7 +658,7 @@ export class OctopusTool {
         )
         await this.rectifyHasNode(ssh)
         installedNode = true
-      } else if (options.verbose) {
+      } else if (this.debug) {
         this.log.info(
           `Node.js is installed on ${sshConfig.host}:${sshConfig.port}`
         )
@@ -654,20 +669,17 @@ export class OctopusTool {
           `Octopus with version ${version.shortVersion} not found on ${sshConfig.host}:${sshConfig.port}; attempting to rectify`
         )
         await this.rectifyHasOctopus(ssh, { canSudoOnHost: installedNode })
-      } else if (options.verbose) {
+      } else if (this.debug) {
         this.log.info(
           `Octopus is installed on ${sshConfig.host}:${sshConfig.port}`
         )
       }
 
-      const state = await this.compileScriptFile(scriptPath)
-
-      for (const [key, value] of Object.entries(state.vmContext)) {
-        if (typeof value !== "object") {
-          state.vars[key] = value
-        }
-      }
-
+      const scriptNode = await this.readScriptFile(scriptPath)
+      const state = Object.assign(
+        await this.flattenScript(scriptNode),
+        await this.createRunContext(scriptNode, { inRunScriptLocally: false })
+      )
       const newScript = JSON.stringify(
         {
           options: state.options,
@@ -692,6 +704,8 @@ export class OctopusTool {
       )
 
       await this.uploadFile(ssh, remoteTempFile, newScript)
+
+      // TODO: Need ability to run local and remote asserters in order!
 
       this.log.info(`Running script on remote host`)
       await this.util.runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
@@ -720,7 +734,7 @@ export class OctopusTool {
 
   async run(argv) {
     const options = {
-      boolean: ["help", "version", "debug", "verbose", "root"],
+      boolean: ["help", "version", "debug", "root"],
       string: ["host", "host-file", "user", "port", "password"],
       alias: {
         h: "host",
@@ -728,7 +742,6 @@ export class OctopusTool {
         p: "port",
         f: "host-file",
         P: "password",
-        v: "verbose",
         r: "root",
       },
     }
@@ -763,7 +776,6 @@ Options:
   --password, -P      Remote user password. Defaults is to just use PPK.
   --host-file, -f     JSON5 file containing multiple host names
   --root, -r          Start Octopus on remote as root
-  --verbose           Emit verbose output
 `)
       return
     }
@@ -772,7 +784,7 @@ Options:
       throw new Error("Please specify just one script file")
     }
 
-    const scriptPath = args._[0]
+    const scriptPath = path.resolve(args._[0])
 
     if (!args.host && (args.port || args.user || args.password)) {
       this.log.warning(
@@ -820,14 +832,13 @@ Options:
             user: host.user,
             password: host.password,
             port: parsePort(host.port),
-            verbose: args.verbose,
             runAsRoot: host.runAsRoot,
           })
         } catch (error) {
           if (error) {
-            log.error(error.message || error)
+            this.log.error(error.message || error)
 
-            if (tool.debug) {
+            if (this.debug) {
               console.error(error)
             }
           }
@@ -840,9 +851,7 @@ Options:
         throw new Error(`${failures} hosts were not updated`)
       }
     } else {
-      await this.runScriptLocally(scriptPath, {
-        verbose: args.verbose,
-      })
+      await this.runScriptLocally(scriptPath)
     }
   }
 }

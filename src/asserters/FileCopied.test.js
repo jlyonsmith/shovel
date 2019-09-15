@@ -49,8 +49,8 @@ test("FileCopied with files the same", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        fromPath: "/somefile",
-        toPath: "/otherfile",
+        from: "/somefile",
+        to: "/otherfile",
       })
     )
   ).resolves.toBe(true)
@@ -63,8 +63,8 @@ test("FileCopied with from file non-existent", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        fromPath: "/notthere",
-        toPath: "/otherfile",
+        from: "/notthere",
+        to: "/otherfile",
       })
     )
   ).resolves.toBe(false)
@@ -76,8 +76,8 @@ test("FileCopied with to file non-existent", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        fromPath: "/somefile",
-        toPath: "/notthere",
+        from: "/somefile",
+        to: "/notthere",
       })
     )
   ).resolves.toBe(false)
@@ -90,8 +90,8 @@ test("FileCopied with different files", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        fromPath: "/somefile",
-        toPath: "/badfile",
+        from: "/somefile",
+        to: "/badfile",
       })
     )
   ).resolves.toBe(false)

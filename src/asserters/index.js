@@ -14,4 +14,4 @@ export { UserAbsent } from "./UserAbsent"
 export { UserExists } from "./UserExists"
 
 // TODO: Add support for Shell asserter with assert/rectify/result as shell scripts
-// TODO: Add a FileCopiedToRemote using SSH2 and an SFTP stream
+// TODO: Add FileCopiedToRemote which copies file from local to remote

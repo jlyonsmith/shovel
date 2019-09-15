@@ -1,0 +1,11 @@
+{
+  assertions: [
+    {
+      assert: "FileCopied",
+      with: {
+        from: "scratch/some-file",
+        to: "scratch/copied-file",
+      },
+    },
+  ],
+}

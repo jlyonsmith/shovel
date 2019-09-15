@@ -1,16 +1,15 @@
 {
   vars: {
-    bashProfile: {
-      local: true,
-      value: "${fs.readFile(path.join(sys.SCRIPT_DIR,'my-ubuntu/templates/bash-profile.sh'))}",
+    local: {
+      bashProfile: "{fs.readFile(path.join(sys.scriptDir,'my-ubuntu/templates/bash-profile.sh'))}",
     },
   },
   assertions: [
     {
       assert: "FileContains",
       with: {
-        path: "${env.HOME}/.bash_profile",
-        contents: "${bashProfile}",
+        path: "{path.join(env.HOME, '/.bash_profile')}",
+        contents: "{bashProfile}",
       },
     },
   ],

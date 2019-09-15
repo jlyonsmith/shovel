@@ -10,7 +10,7 @@ Example:
     {
       assert: "FileCopied",
       with: {
-        from: <string> | { path: <string>, local: <bool> },
+        from: <string>,
         to: <string>,
       },
     },
@@ -24,18 +24,18 @@ export class FileCopied {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { fromPath: fromPathNode, toPath: toPathNode } = withNode.value
+    const { from: fromPathNode, to: toPathNode } = withNode.value
 
     if (!fromPathNode || fromPathNode.type !== "string") {
       throw new ScriptError(
-        "'fromPath' must be supplied and be a string",
+        "'from' must be supplied and be a string",
         fromPathNode || withNode
       )
     }
 
     if (!toPathNode || toPathNode.type !== "string") {
       throw new ScriptError(
-        "'toPath' must be supplied and be a string",
+        "'to' must be supplied and be a string",
         toPathNode || withNode
       )
     }

@@ -1,0 +1,11 @@
+{
+  assertions: [
+    {
+      assert: "FileCopiedFromLocal",
+      with: {
+        from: "scratch/some-file", // On local file system
+        to: "scratch/copied-file", // On remote file system
+      },
+    },
+  ],
+}

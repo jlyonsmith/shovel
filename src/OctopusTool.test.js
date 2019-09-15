@@ -1,5 +1,5 @@
 import { OctopusTool } from "./OctopusTool"
-import { createNode, createScriptNode } from "./testUtil"
+import * as testUtil from "./testUtil"
 import * as version from "./version"
 import stream from "stream"
 
@@ -164,19 +164,23 @@ test("readScriptFile", async () => {
 
 test("mergeIncludeNodes", async () => {
   container.fs.readFile = (path) => {
-    return `{
+    if (path.endsWith("b.json5")) {
+      return `{
       options: { blah: "x"},
       vars: { blah : "y"},
       scripts: [],
       assertions: [{ assert: "something" }],
     }`
+    } else {
+      return ""
+    }
   }
 
   const tool = new OctopusTool(container)
-  const scriptNode = createScriptNode("a.json5")
+  const scriptNode = testUtil.createScriptNode("a.json5")
 
   scriptNode.value.includes.value.push(
-    createNode(scriptNode.filename, "b.json5")
+    testUtil.createNode(scriptNode.filename, "b.json5")
   )
 
   await expect(
@@ -184,21 +188,33 @@ test("mergeIncludeNodes", async () => {
   ).resolves.toBeUndefined()
 })
 
-test("compileScriptFile", async () => {
-  container.fs.readFile = (path) => {
-    return `{
-      options: { blah: "x"},
-      vars: { blah : "y"},
-      includes: [],
-      assertions: [{ assert: "something", with: {} }],
-    }`
-  }
-
+test("flattenScript", async () => {
   const tool = new OctopusTool(container)
+  const scriptNode = testUtil.createScriptNode("a.json5")
 
-  await expect(tool.compileScriptFile("test.json5")).resolves.toMatchObject({
-    vars: { blah: "y" },
-    options: { blah: "x" },
+  await expect(tool.flattenScript(scriptNode)).resolves.toMatchObject({
+    vars: {},
+    options: {},
+    assertions: [],
+  })
+})
+
+test("createRunContext", async () => {
+  const tool = new OctopusTool(container)
+  const scriptNode = testUtil.createScriptNode("a.json5")
+
+  scriptNode.vars = testUtil.createNode(scriptNode.filename, {
+    s: "b",
+    n: 1,
+    x: null,
+    b: true,
+    a: [1, 2, 3],
+    o: { s: "a", n: 2 },
+    local: { s: "c" },
+  })
+
+  await expect(tool.createRunContext(scriptNode)).resolves.toMatchObject({
+    runContext: {},
   })
 })
 
@@ -214,10 +230,13 @@ test("runScriptLocally", async () => {
 
   const tool = new OctopusTool(container)
 
-  tool.compileScriptFile = jest.fn(async () => ({
+  tool.readScriptFile = jest.fn(async () => {})
+  tool.flattenScript = jest.fn(async () => ({
     vars: {},
     options: {},
     assertions: [{ assert: "TestAssert", with: {} }],
+  }))
+  tool.createRunContext = jest.fn(async () => ({
     vmContext: {},
     expandStringNode: jest.fn(),
   }))
