@@ -402,7 +402,7 @@ export class OctopusTool {
 
   async createRunContext(scriptNode, options = {}) {
     const { varsNode } = scriptNode
-    const runContext = {
+    const runContext = vm.createContext({
       options: {},
       env: process.env,
       os: {
@@ -422,20 +422,20 @@ export class OctopusTool {
         dirname: (filename) => path.dirname(filename),
       },
       vars: {},
-    }
+    })
     const expandStringNode = (node) => {
       if (!node.type || node.type !== "string") {
         throw new Error("Must pass in a string node to expand")
       }
 
-      // TODO: Switch to '{...}' wrapper that indicates a Javascript expression or not
-
-      try {
-        return new vm.Script("`" + node.value + "`").runInContext(
-          vm.createContext(runContext)
-        )
-      } catch (e) {
-        throw new ScriptError(e.message, node)
+      if (node.value.startsWith("{") && node.value.endsWith("}")) {
+        try {
+          return new vm.Script("`" + node.value + "`").runInContext(runContext)
+        } catch (e) {
+          throw new ScriptError(e.message, node)
+        }
+      } else {
+        return node.value
       }
     }
 
