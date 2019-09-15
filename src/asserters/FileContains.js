@@ -19,6 +19,7 @@ Example:
 export class FileContains {
   constructor(container) {
     this.fs = container.fs || fs
+    this.util = container.util || util
     this.expandStringNode = container.expandStringNode
   }
 
@@ -43,16 +44,23 @@ export class FileContains {
     this.expandedPath = this.expandStringNode(pathNode)
     this.expandedContents = this.expandStringNode(contentsNode)
 
-    // TODO: Ensure directory & file exists, else throw
-
-    let pathDigest = null
-
     try {
-      pathDigest = await util.generateDigestFromFile(this.fs, this.expandedPath)
-    } catch (e) {
-      return false
+      await this.fs.access(
+        this.expandedPath,
+        fs.constants.W_OK | fs.constants.R_OK
+      )
+    } catch {
+      throw new ScriptError(
+        `File ${this.expandedPath} cannot be accessed`,
+        pathNode
+      )
     }
-    const contentsDigest = util.generateDigest(this.expandedContents)
+
+    const pathDigest = await this.util.generateDigestFromFile(
+      this.fs,
+      this.expandedPath
+    )
+    const contentsDigest = this.util.generateDigest(this.expandedContents)
 
     return pathDigest === contentsDigest
   }
