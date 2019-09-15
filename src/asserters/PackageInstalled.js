@@ -16,9 +16,6 @@ Example:
 
 */
 
-// TODO: Support version number
-// TODO: Support CentOS
-
 export class PackageInstalled {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
@@ -37,11 +34,37 @@ export class PackageInstalled {
       )
     }
 
+    const info = await this.util.getOSInfo()
+
+    if (
+      info.platform !== "linux" ||
+      (info.id !== "ubuntu" && info.id !== "centos")
+    ) {
+      throw new ScriptError("Only supported on Ubuntu and CentOS", assertNode)
+    }
+
     this.expandedName = this.expandStringNode(nameNode)
 
+    let command
+
+    if (info.id === "ubuntu") {
+      command = `dpkg --list ${this.expandedName}`
+      this.installCommand = `apt install -y ${this.expandedName}`
+    } else {
+      command = `rpm -qa | grep '^${this.expandedName}-[0-9]'`
+      this.installCommand = `yum install -y ${this.expandedName}`
+    }
+
     try {
-      await this.childProcess.exec(`dpkg --list ${this.expandedName}`)
-    } catch (e) {
+      await this.childProcess.exec(command)
+    } catch {
+      if (!this.util.runningAsRoot()) {
+        throw new ScriptError(
+          "Must be running as root to install packages",
+          withNode
+        )
+      }
+
       return false
     }
 
@@ -49,14 +72,7 @@ export class PackageInstalled {
   }
 
   async rectify() {
-    if (!this.util.runningAsRoot()) {
-      throw new ScriptError(
-        "Must be running as root to install packages",
-        withNode
-      )
-    }
-
-    await this.childProcess.exec(`apt install -y ${this.expandedName}`)
+    await this.childProcess.exec(this.installCommand)
   }
 
   result() {

@@ -12,7 +12,6 @@ import autobind from "autobind-decorator"
 import * as asserters from "./asserters"
 import * as util from "./util"
 import { ScriptError } from "./ScriptError"
-import osInfo from "linux-os-info"
 
 @autobind
 export class OctopusTool {
@@ -402,14 +401,11 @@ export class OctopusTool {
 
   async createRunContext(scriptNode, options = {}) {
     const { varsNode } = scriptNode
+    const osInfo = await this.util.getOSInfo()
     const runContext = vm.createContext({
       options: {},
       env: process.env,
-      os: {
-        platform: osInfo.platform,
-        versionId: osInfo.version_id,
-        id: osInfo.id,
-      },
+      os: osInfo,
       sys: {
         scriptFile: scriptNode.filename,
         scriptDir: path.dirname(scriptNode.filename),

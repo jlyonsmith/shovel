@@ -1,5 +1,6 @@
 import crypto from "crypto"
 import { ScriptError } from "./ScriptError"
+import osInfo from "linux-os-info"
 
 export const generateDigestFromFile = (fs, path) =>
   new Promise((resolve, reject) => {
@@ -203,6 +204,15 @@ export const parseModeNode = (modeNode) => {
   return mode
 }
 
+export const getOSInfo = async () => {
+  const info = await osInfo()
+
+  return {
+    platform: info.platform,
+    id: info.id,
+    versionId: info.version_id,
+  }
+}
 /*
   Run a command on the remote system. Options are:
 

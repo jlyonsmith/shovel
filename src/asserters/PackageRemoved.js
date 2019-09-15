@@ -16,6 +16,8 @@ Example:
 
 */
 
+// TODO: Support CentOS
+
 export class PackageRemoved {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
