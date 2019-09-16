@@ -400,7 +400,7 @@ export class OctopusTool {
   }
 
   async createRunContext(scriptNode, options = {}) {
-    const { varsNode } = scriptNode
+    const { vars: varsNode } = scriptNode.value
     const osInfo = await this.util.getOSInfo()
     const runContext = vm.createContext({
       options: {},
@@ -426,9 +426,9 @@ export class OctopusTool {
 
       if (node.value.startsWith("{") && node.value.endsWith("}")) {
         try {
-          return new vm.Script("`" + node.value + "`").runInContext(runContext)
+          return new vm.Script(node.value).runInContext(runContext)
         } catch (e) {
-          throw new ScriptError(e.message, node)
+          throw new ScriptError(`Bad script. ${e.message}`, node)
         }
       } else {
         return node.value
@@ -437,20 +437,15 @@ export class OctopusTool {
 
     const processNode = (node, expand) => {
       if (node.type === "object") {
-        if (Array.isArray(node.value)) {
-          return node.value.map((i) => processNode(i, expand))
-        } else {
-          newValue = {}
+        const newValue = {}
 
-          Object.entries(node.value).map(([k, v]) => {
-            newValue[k] = processNode(
-              item.value,
-              k === "local" && !options.inRunScriptLocally ? true : expand
-            )
-          })
+        Object.entries(node.value).map(([k, v]) => {
+          newValue[k] = processNode(v, k === "local" ? true : expand)
+        })
 
-          return newValue
-        }
+        return newValue
+      } else if (node.type === "array") {
+        return node.value.map((i) => processNode(i, expand))
       } else if (node.type === "string") {
         if (expand) {
           const newValue = expandStringNode(node)
@@ -466,10 +461,7 @@ export class OctopusTool {
     }
 
     if (varsNode) {
-      runContext.vars = processNode(
-        varsNode,
-        options.inRunScriptLocally === "local"
-      )
+      runContext.vars = processNode(varsNode, options.inRunScriptLocally)
     }
 
     return { runContext, expandStringNode }
