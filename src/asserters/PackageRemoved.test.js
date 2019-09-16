@@ -1,59 +1,96 @@
 import { PackageRemoved } from "./PackageRemoved"
 import { createAssertNode } from "../testUtil"
+import { ScriptError } from "../ScriptError"
 
 let container = null
 
-beforeEach(() => {
-  container = {
+test("assert", async () => {
+  const container = {
     expandStringNode: (node) => node.value,
-    withNode: { line: 0, column: 0 },
-    assertNode: { line: 0, column: 0 },
-    childProcess: {
-      exec: jest.fn(async (command) => {
-        expect(typeof command).toBe("string")
+    childProcess: {},
+    util: {
+      runningAsRoot: jest.fn(() => true),
+    },
+  }
+  const asserter = new PackageRemoved(container)
 
-        if (command === "dpkg --list package") {
-          return {
-            stdout: `Desired=Unknown/Install/Remove/Purge/Hold
-| Status=Not/Inst/Conf-files/Unpacked/halF-conf/Half-inst/trig-aWait/Trig-pend
-|/ Err?=(none)/Reinst-required (Status,Err: uppercase=bad)
-||/ Name                       Version            Architecture       Description
-+++-==========================-==================-==================-=========================================================
-ii  package                    1:2.3.xyz          amd64              Some package or other`,
-            stderr: "",
-          }
-        } else if (command.startsWith("apt remove")) {
-          return {
-            stdout: "",
-            stderr: "",
-          }
-        } else {
-          const e = new Error()
-          e.code = 1
-          throw e
-        }
-      }),
+  // Not supported OS
+  container.util.getOSInfo = jest.fn(async () => ({ platform: "windows" }))
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "test" }))
+  ).rejects.toThrow(ScriptError)
+
+  // Missing name
+  container.util.getOSInfo = jest.fn(async () => ({
+    platform: "linux",
+    id: "ubuntu",
+  }))
+  await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
+    ScriptError
+  )
+
+  // Bad name
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: 1 }))
+  ).rejects.toThrow(ScriptError)
+
+  // Package not present on Ubuntu
+  container.childProcess.exec = jest.fn(async (command) => {
+    throw new Error()
+  })
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "there" }))
+  ).resolves.toBe(true)
+
+  // Package not present on CentOS
+  container.util.getOSInfo = jest.fn(async () => ({
+    platform: "linux",
+    id: "centos",
+  }))
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "there" }))
+  ).resolves.toBe(true)
+
+  // Package present and running as root
+  container.childProcess.exec = jest.fn(async (command) => ({
+    stdout: "",
+    stderr: "",
+  }))
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
+  ).resolves.toBe(false)
+
+  // Package present and not running as root
+  container.util.runningAsRoot = jest.fn(() => false)
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "there" }))
+  ).rejects.toThrow(ScriptError)
+})
+
+test("rectify", async () => {
+  const container = {
+    expandStringNode: (node) => node.value,
+    childProcess: {
+      exec: jest.fn(async (command) => ({
+        stdout: "",
+        stderr: "",
+      })),
     },
     util: {
       runningAsRoot: jest.fn(() => true),
     },
   }
-})
-
-test("With package removed", async () => {
   const asserter = new PackageRemoved(container)
 
-  await expect(
-    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
-  ).resolves.toBe(true)
-})
+  asserter.expandedName = "somepackage"
 
-test("With package not removed", async () => {
-  const asserter = new PackageRemoved(container)
-
-  await expect(
-    asserter.assert(createAssertNode(asserter, { name: "package" }))
-  ).resolves.toBe(false)
   await expect(asserter.rectify()).resolves.toBeUndefined()
-  await expect(asserter.result()).toEqual({ name: "package" })
+})
+
+test("result", () => {
+  const asserter = new PackageRemoved({})
+
+  asserter.expandedName = "somepackage"
+
+  expect(asserter.result()).toEqual({ name: asserter.expandedName })
 })

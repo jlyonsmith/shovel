@@ -65,10 +65,10 @@ test("assert", async () => {
   ).resolves.toBe(false)
 
   // Package not present and not running as root
-  ;(container.util.runningAsRoot = jest.fn(() => false)),
-    await expect(
-      asserter.assert(createAssertNode(asserter, { name: "notthere" }))
-    ).rejects.toThrow(ScriptError)
+  container.util.runningAsRoot = jest.fn(() => false)
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
+  ).rejects.toThrow(ScriptError)
 })
 
 test("rectify", async () => {
