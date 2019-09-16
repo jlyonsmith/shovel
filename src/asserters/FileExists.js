@@ -1,5 +1,6 @@
 import fs from "fs-extra"
 import os from "os"
+import path from "path"
 import * as util from "../util"
 import { ScriptError } from "../ScriptError"
 
@@ -52,10 +53,17 @@ export class FileExists {
     try {
       stat = await this.fs.lstat(this.expandedPath)
     } catch (e) {
+      // Check if required directory exists and is accessible
+      const dirPath = path.dirname(this.expandedPath)
+
+      try {
+        await this.fs.access(dirPath, fs.constants.W_OK | fs.constants.R_OK)
+      } catch (e) {
+        throw new ScriptError(e.message, pathNode)
+      }
+
       return false
     }
-
-    // TODO: If the directory does not exist, error
 
     if (stat && stat.isDirectory()) {
       throw new ScriptError(
@@ -66,15 +74,20 @@ export class FileExists {
       if (userInfo.uid !== 0) {
         throw new ScriptError(
           "User does not have permission to modify existing file owner",
-          assertNode
+          pathNode
         )
       }
 
       return false
     } else if ((stat.mode & 0o777) !== this.mode) {
-      if (userInfo.uid !== stat.uid || userInfo.gid !== stat.gid) {
+      if (
+        userInfo.uid !== 0 &&
+        userInfo.uid !== stat.uid &&
+        userInfo.gid !== stat.gid
+      ) {
         throw new ScriptError(
-          "User does not have permission to modify existing file mode"
+          "User does not have permission to modify existing file mode",
+          pathNode
         )
       }
 
@@ -90,7 +103,7 @@ export class FileExists {
     await this.fs.chown(this.expandedPath, this.owner.uid, this.owner.gid)
   }
 
-  result(rectified) {
+  result() {
     return { path: this.expandedPath }
   }
 }

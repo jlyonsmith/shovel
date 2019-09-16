@@ -49,11 +49,8 @@ export class FileContains {
         this.expandedPath,
         fs.constants.W_OK | fs.constants.R_OK
       )
-    } catch {
-      throw new ScriptError(
-        `File ${this.expandedPath} cannot be accessed`,
-        pathNode
-      )
+    } catch (e) {
+      throw new ScriptError(e.message, pathNode)
     }
 
     const pathDigest = await this.util.generateDigestFromFile(

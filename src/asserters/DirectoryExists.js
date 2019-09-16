@@ -25,6 +25,8 @@ Example:
 }
 */
 
+// TODO: Ensure root directory is accessible or throw
+
 export class DirectoryExists {
   constructor(container) {
     this.fs = container.fs || fs
@@ -101,7 +103,7 @@ export class DirectoryExists {
     await this.fs.chown(this.expandedPath, this.owner.uid, this.owner.gid)
   }
 
-  result(rectified) {
+  result() {
     return { path: this.expandedPath }
   }
 }

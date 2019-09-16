@@ -3,12 +3,10 @@
     description: "Set file contents",
   },
   vars: {
-    fileContents: {
-      value: "${fs.readFile('./examples/much-content.txt')}",
-      local: true,
-    },
+    local: { fileContents: "{fs.readFile('examples/much-content.txt')}" },
   },
   assertions: [
+    { assert: "FileExists", with: { path: "scratch/my-bashrc" } },
     {
       assert: "FileContains",
       with: {
@@ -19,10 +17,13 @@ source /usr/local/etc/bash_completion.d/git-prompt.sh\\n\
 source /usr/local/etc/bash_completion.d/git-completion.bash\\n\
 ",
       },
+    },
+    { assert: "FileExists", with: { path: "scratch/my-otherfile.sh" } },
+    {
       assert: "FileContains",
       with: {
         path: "scratch/my-otherfile.sh",
-        contents: "${fileContents}",
+        contents: "{vars.local.fileContents}",
       },
     },
   ],

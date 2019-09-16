@@ -325,38 +325,6 @@ export class OctopusTool {
       throw new ScriptError("'vars' must be an object", varsNode)
     }
 
-    for (const varNode of Object.values(varsNode.value)) {
-      switch (varNode.type) {
-        case "null":
-        case "numeric":
-        case "boolean":
-        case "string":
-          break
-        case "object":
-          const { value: valueNode, local: localNode } = varNode.value
-
-          if (!valueNode || valueNode.type !== "string") {
-            throw new ScriptError(
-              `Variable object must have value field of type string`,
-              varNode
-            )
-          }
-
-          if (localNode && localNode.type !== "boolean") {
-            throw new ScriptError(
-              `Variable object 'local' switch must be boolean`,
-              localNode
-            )
-          }
-          break
-        default:
-          throw new ScriptError(
-            `Variable of type ${varNode.type} is invalid`,
-            varNode
-          )
-      }
-    }
-
     if (assertionsNode.type !== "array") {
       throw new ScriptError("'assertions' must be an array", assertionsNode)
     }
@@ -411,7 +379,7 @@ export class OctopusTool {
         scriptDir: path.dirname(scriptNode.filename),
       },
       fs: {
-        readFile: (fileName) => fs.readFileSync(fileName),
+        readFile: (fileName) => fs.readFileSync(fileName, { encoding: "utf8" }),
       },
       path: {
         join: (...paths) => path.join(...paths),
