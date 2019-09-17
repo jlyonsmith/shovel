@@ -200,6 +200,11 @@ test("flattenScript", async () => {
 })
 
 test("createRunContext", async () => {
+  container.util.getOSInfo = jest.fn(() => ({
+    platform: "blah",
+    id: "blah",
+    versionId: "1.2.3",
+  }))
   const tool = new OctopusTool(container)
   const scriptNode = testUtil.createScriptNode("a.json5")
 
