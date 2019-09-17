@@ -1,6 +1,6 @@
 {
   vars: {
-    motdDir: "/etc/update-motd.d"
+    motdDir: "/etc/update-motd.d",
   },
   assertions: [
     {
@@ -8,14 +8,14 @@
       runAs: "root",
       with: {
         paths: [
-          "${motdDir}/10-help-text",
-          "${motdDir}/50-motd-news",
-          "${motdDir}/80-esm",
-          "${motdDir}/80-livepatch",
-          "${motdDir}/95-hwe-eol",
-          "${motdDir}/97-overlayroot"
-        ]
-      }
-    }
-  ]
+          "{vars.motdDir + '/10-help-text'}",
+          "{vars.motdDir + '/50-motd-news'}",
+          "{vars.motdDir + '/80-esm'}",
+          "{vars.motdDir + '/80-livepatch'}",
+          "{vars.motdDir + '/95-hwe-eol'}",
+          "{vars.motdDir + '/97-overlayroot'}",
+        ],
+      },
+    },
+  ],
 }

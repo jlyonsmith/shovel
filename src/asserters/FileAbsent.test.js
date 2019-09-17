@@ -1,10 +1,11 @@
 import { FileAbsent } from "./FileAbsent"
 import { createAssertNode } from "../testUtil"
+import { ScriptError } from "../ScriptError"
 
 let container = null
 
-beforeEach(() => {
-  container = {
+test("assert", async () => {
+  const container = {
     expandStringNode: (node) => node.value,
     fs: {
       lstat: jest.fn(async (fileName) => {
@@ -22,32 +23,50 @@ beforeEach(() => {
           throw new Error("ENOENT")
         }
       }),
-      unlink: jest.fn(async (fileName) => null),
     },
   }
-})
 
-test("FileAbsent with no dir or file existing", async () => {
   const asserter = new FileAbsent(container)
 
+  // Missing args
+  await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
+    ScriptError
+  )
+
+  // Bad path
+  await expect(
+    asserter.assert(createAssertNode(asserter, { path: 1 }))
+  ).rejects.toThrow(ScriptError)
+
+  // File absent
   await expect(
     asserter.assert(createAssertNode(asserter, { path: "/notthere" }))
   ).resolves.toBe(true)
-})
 
-test("FileAbsent with file existing", async () => {
-  const asserter = new FileAbsent(container)
-
+  // File exists
   await expect(
     asserter.assert(createAssertNode(asserter, { path: "/somefile" }))
   ).resolves.toBe(false)
-  await expect(asserter.rectify()).resolves.toBeUndefined()
-})
 
-test("FileAbsent with dir instead of file existing", async () => {
-  const asserter = new FileAbsent(container)
-
+  // Directory existing instead of file
   await expect(
     asserter.assert(createAssertNode(asserter, { path: "/somedir" }))
   ).rejects.toThrow(Error)
+})
+
+test("rectify", async () => {
+  const container = { fs: { unlink: jest.fn(async () => null) } }
+  const asserter = new FileAbsent(container)
+
+  asserter.expandedPath = "foo.txt"
+
+  await expect(asserter.rectify()).resolves.toBeUndefined()
+})
+
+test("result", () => {
+  const asserter = new FileAbsent({})
+
+  asserter.expandedPath = "foo.txt"
+
+  expect(asserter.result()).toEqual({ path: asserter.expandedPath })
 })
