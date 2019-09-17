@@ -20,11 +20,13 @@ Example:
 */
 
 // TODO: Throw when existing file cannot be removed
+// TODO: Throw if toPath directory does not exist
 
 export class FileDownloaded {
   constructor(container) {
     this.fs = container.fs || fs
     this.fetch = container.fetch || fetch
+    this.util = container.util || util
     this.expandStringNode = container.expandStringNode
   }
 
@@ -65,6 +67,16 @@ export class FileDownloaded {
       return false
     }
 
+    // Ensure we can access the download directory
+    try {
+      await this.fs.access(
+        path.dirname(this.expandedToPath),
+        fs.constants.W_OK | fs.constants.R_OK
+      )
+    } catch (e) {
+      throw new ScriptError(e.message, toPathNode)
+    }
+
     const toFileDigest = await util.generateDigestFromFile(
       this.fs,
       this.expandedToPath
@@ -78,16 +90,10 @@ export class FileDownloaded {
       await this.fs.remove(this.expandedToPath)
     }
 
-    const toDirPath = path.dirname(this.expandedToPath)
-
-    if (!(await util.dirExists(fs, toDirPath))) {
-      await this.fs.ensureDir(toDirPath)
-    }
-
     const result = await this.fetch(this.expandedUrl)
     const writeable = this.fs.createWriteStream(this.expandedToPath)
 
-    await util.pipeToPromise(result.body, writeable)
+    await this.util.pipeToPromise(result.body, writeable)
   }
 
   result() {

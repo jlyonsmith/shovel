@@ -8,7 +8,7 @@
     {
       assert: "FileContains",
       with: {
-        path: "{path.join(env.HOME, '/.bash_profile')}",
+        path: "{path.join(env.HOME,'.bash_profile')}",
         contents: "{bashProfile}",
       },
     },
