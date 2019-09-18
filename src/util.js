@@ -2,10 +2,10 @@ import crypto from "crypto"
 import { ScriptError } from "./ScriptError"
 import osInfo from "linux-os-info"
 
-export const generateDigestFromFile = (fs, path) =>
+export const generateDigestFromFile = (fs, filePath) =>
   new Promise((resolve, reject) => {
     const hash = crypto.createHash("sha256")
-    const rs = fs.createReadStream(path)
+    const rs = fs.createReadStream(filePath)
 
     rs.on("error", reject)
     rs.on("data", (chunk) => hash.update(chunk))
@@ -18,9 +18,9 @@ export const generateDigest = (data) => {
   return hash.digest("hex")
 }
 
-export const fileExists = async (fs, path) => {
+export const fileExists = async (fs, filePath) => {
   try {
-    return (await fs.lstat(path)).isFile()
+    return (await fs.lstat(filePath)).isFile()
   } catch (e) {
     return false
   }

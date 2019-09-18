@@ -1,7 +1,11 @@
 import * as util from "./util"
+import stream from "stream"
 import { createNode } from "./testUtil"
+import { ScriptError } from "./ScriptError"
 
 let container = null
+
+// TODO: Get coverage to 100%
 
 beforeEach(() => {
   container = {
@@ -56,22 +60,112 @@ sudo:x:27:someuser`
       }),
     },
     childProcess: {},
-    os: {
-      userInfo: jest.fn(() => ({
-        uid: container._runningAsUid,
-      })),
-    },
-    _runningAsUid: 0,
   }
 })
+const testString = "the quick brown fox jumps over the lazy dog"
 
-test("runningAsRoot", async () => {
-  expect(util.runningAsRoot(container.os)).toBe(true)
+test("generateDigestFromFile", async () => {
+  const fs = {
+    createReadStream: jest.fn((fileName) => {
+      return new stream.Readable({
+        read(size) {
+          this.push(testString)
+          this.push(null)
+        },
+      })
+    }),
+  }
+
+  await expect(util.generateDigestFromFile(fs, testString)).resolves.toBe(
+    "05c6e08f1d9fdafa03147fcb8f82f124c76d2f70e3d989dc8aadb5e7d7450bec"
+  )
+})
+
+test("generateDigest", () => {
+  expect(util.generateDigest(testString)).toBe(
+    "05c6e08f1d9fdafa03147fcb8f82f124c76d2f70e3d989dc8aadb5e7d7450bec"
+  )
+})
+
+test("fileExists", async () => {
+  const fs = {
+    lstat: jest.fn((path) => {
+      if (path === "there") {
+        return {
+          isFile: () => true,
+        }
+      } else {
+        throw new Error()
+      }
+    }),
+  }
+  await expect(util.fileExists(fs, "there")).resolves.toBe(true)
+  await expect(util.fileExists(fs, "notthere")).resolves.toBe(false)
 })
 
 test("dirExists", async () => {
-  await expect(util.dirExists(container.fs, "somedir")).resolves.toBe(true)
-  await expect(util.dirExists(container.fs, "notthere")).resolves.toBe(false)
+  const fs = {
+    lstat: jest.fn((path) => {
+      if (path === "there") {
+        return {
+          isDirectory: () => true,
+        }
+      } else {
+        throw new Error()
+      }
+    }),
+  }
+  await expect(util.dirExists(fs, "there")).resolves.toBe(true)
+  await expect(util.dirExists(fs, "notthere")).resolves.toBe(false)
+})
+
+test("pipeToPromise", async () => {
+  let readable = new stream.Readable({
+    read(size) {
+      this.push(testString)
+      this.push(null)
+    },
+  })
+  let writeable = new stream.Writable({
+    write(chunk, encoding, callback) {
+      callback()
+    },
+  })
+
+  await expect(util.pipeToPromise(readable, writeable)).resolves.toBeUndefined()
+
+  readable = new stream.Readable({
+    read(size) {
+      process.nextTick(() => this.emit("error", new Error()))
+    },
+  })
+
+  await expect(util.pipeToPromise(readable, writeable)).rejects.toThrow(Error)
+
+  // Readable is only useful once
+  readable = new stream.Readable({
+    read(size) {
+      this.push(testString)
+      this.push(null)
+    },
+  })
+  writeable = new stream.Writable({
+    write(chunk, encoding, callback) {
+      callback(new Error())
+    },
+  })
+
+  await expect(util.pipeToPromise(readable, writeable)).rejects.toThrow(Error)
+})
+
+test("runningAsRoot", async () => {
+  const os = {
+    userInfo: jest.fn(() => ({
+      uid: 0,
+    })),
+  }
+
+  expect(util.runningAsRoot(os)).toBe(true)
 })
 
 test("getUsers", async () => {
@@ -96,6 +190,66 @@ test("getGroups", async () => {
   })
 })
 
+test("parseOwnerNode", async () => {
+  expect(util.parseOwnerNode([], [], null)).toEqual({})
+
+  expect(util.parseOwnerNode([], [], createNode("test.json5", {}))).toEqual({})
+
+  expect(
+    util.parseOwnerNode(
+      [{ name: "root", uid: 0 }],
+      [{ name: "wheel", gid: 0 }],
+      createNode("test.json5", {
+        user: "root",
+        group: "wheel",
+      })
+    )
+  ).toEqual({ uid: 0, gid: 0 })
+
+  expect(
+    util.parseOwnerNode(
+      [{ name: "root", uid: 0 }],
+      [{ name: "wheel", gid: 0 }],
+      createNode("test.json5", {
+        user: 0,
+        group: 0,
+      })
+    )
+  ).toEqual({ uid: 0, gid: 0 })
+
+  expect(() => util.parseOwnerNode([], [], createNode("test.json5"))).toThrow(
+    ScriptError
+  )
+
+  expect(() =>
+    util.parseOwnerNode([], [], createNode("test.json5", { user: true }))
+  ).toThrow(ScriptError)
+
+  expect(() =>
+    util.parseOwnerNode(
+      [],
+      [],
+      createNode("test.json5", {
+        user: 0,
+      })
+    )
+  ).toThrow(Error)
+
+  expect(() =>
+    util.parseOwnerNode([], [], createNode("test.json5", { group: true }))
+  ).toThrow(ScriptError)
+
+  expect(() =>
+    util.parseOwnerNode(
+      [],
+      [],
+      createNode("test.json5", {
+        group: 0,
+      })
+    )
+  ).toThrow(Error)
+})
+
 test("parseModeNode", async () => {
   const node = createNode("test.json5", {
     user: "rwx",
@@ -103,18 +257,4 @@ test("parseModeNode", async () => {
     other: "r--",
   })
   expect(util.parseModeNode(node)).toBe(0o754)
-})
-
-test("parseOwnerNode", async () => {
-  const node = createNode("test.json5", {
-    user: "root",
-    group: "wheel",
-  })
-  expect(
-    util.parseOwnerNode(
-      [{ name: "root", uid: 0 }],
-      [{ name: "wheel", gid: 0 }],
-      node
-    )
-  ).toEqual({ uid: 0, gid: 0 })
 })
