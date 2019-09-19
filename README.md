@@ -23,8 +23,8 @@ Here is a valid Octopus script that creates some directories and files on a remo
 
 ```json5
 {
-  // Global options for the script go here
-  options: {
+  // Global settings for the script go here
+  settings: {
     description: "A basic script",
   },
   // Global variables go here

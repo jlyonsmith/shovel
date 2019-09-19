@@ -268,8 +268,7 @@ export class OctopusTool {
 
     let {
       includes: includesNode,
-      // TODO: Change options to script
-      options: optionsNode,
+      settings: settingsNode,
       vars: varsNode,
       assertions: assertionsNode,
     } = scriptNode.value
@@ -278,8 +277,8 @@ export class OctopusTool {
       scriptNode.value.includes = includesNode = createNode([])
     }
 
-    if (!optionsNode) {
-      scriptNode.value.options = optionsNode = createNode({})
+    if (!settingsNode) {
+      scriptNode.value.settings = settingsNode = createNode({})
     }
 
     if (!varsNode) {
@@ -305,11 +304,11 @@ export class OctopusTool {
       }
     }
 
-    if (optionsNode.type !== "object") {
-      throw new ScriptError("'options' must be an object", optionsNode)
+    if (settingsNode.type !== "object") {
+      throw new ScriptError("'settings' must be an object", settingsNode)
     }
 
-    const { description: descriptionNode } = optionsNode.value
+    const { description: descriptionNode } = settingsNode.value
 
     if (descriptionNode && descriptionNode.type !== "string") {
       throw new ScriptError("'description' must be a string", descriptionNode)
@@ -366,7 +365,7 @@ export class OctopusTool {
     const { vars: varsNode } = scriptNode.value
     const osInfo = await this.util.getOSInfo()
     const runContext = vm.createContext({
-      options: {},
+      settings: {},
       env: process.env,
       os: osInfo,
       user: {}, // TODO: Add current user information
@@ -448,20 +447,20 @@ export class OctopusTool {
       )
 
       const {
-        options: optionsNode,
+        settings: settingsNode,
         vars: varsNode,
         assertions: assertionsNode,
       } = scriptNode.value
       const {
-        options: newOptionsNode,
+        settings: newSettingsNode,
         vars: newVarsNode,
         assertions: newAssertionsNode,
       } = newScriptNode.value
 
-      if (newOptionsNode) {
-        optionsNode.value = {
-          ...optionsNode.value,
-          ...newOptionsNode.value,
+      if (newSettingsNode) {
+        settingsNode.value = {
+          ...settingsNode.value,
+          ...newSettingsNode.value,
         }
       }
       if (newVarsNode) {
@@ -482,7 +481,7 @@ export class OctopusTool {
   async flattenScript(scriptNode) {
     const {
       includes: includesNode,
-      options: optionsNode,
+      settings: settingsNode,
       vars: varsNode,
       assertions: assertionsNode,
     } = scriptNode.value
@@ -493,7 +492,7 @@ export class OctopusTool {
       includesNode
     )
 
-    const options = JSON5.simplify(optionsNode)
+    const settings = JSON5.simplify(settingsNode)
     const vars = JSON5.simplify(varsNode)
     const assertions = JSON5.simplify(assertionsNode)
 
@@ -503,7 +502,7 @@ export class OctopusTool {
 
     return {
       vars,
-      options,
+      settings,
       assertions,
     }
   }
@@ -519,9 +518,9 @@ export class OctopusTool {
       this.log.info(JSON5.stringify(state.runContext.vars, null, "  "))
     }
 
-    if (state.options && state.options.description) {
+    if (state.settings && state.settings.description) {
       this.log.output(
-        JSON5.stringify({ description: state.options.description })
+        JSON5.stringify({ description: state.settings.description })
       )
     }
 
@@ -573,7 +572,7 @@ export class OctopusTool {
     )
     const newScript = JSON.stringify(
       {
-        options: state.options,
+        settings: state.settings,
         vars: state.runContext.vars,
         assertions: state.assertions,
       },

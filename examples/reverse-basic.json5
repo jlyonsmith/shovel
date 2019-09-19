@@ -1,5 +1,5 @@
 {
-  options: {
+  settings: {
     description: "A script to reverse the basic script",
   },
   vars: {

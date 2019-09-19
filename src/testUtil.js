@@ -32,7 +32,7 @@ export const createAssertNode = (asserter, args) => {
 
 export const createScriptNode = (filename) => {
   return createNode(filename, {
-    options: {},
+    settings: {},
     vars: {},
     includes: [],
     assertions: [],

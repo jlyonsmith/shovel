@@ -1,5 +1,5 @@
 {
-  options: {
+  settings: {
     description: "Set file contents",
   },
   vars: {

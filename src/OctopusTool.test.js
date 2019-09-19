@@ -149,7 +149,7 @@ test("readScriptFile", async () => {
   container.fs.readFile = (path) => {
     if (path === "test1.json5") {
       return `{
-        options: {},
+        settings: {},
         vars: {},
         scripts: [],
         assertions: [],
@@ -166,7 +166,7 @@ test("mergeIncludeNodes", async () => {
   container.fs.readFile = (path) => {
     if (path.endsWith("b.json5")) {
       return `{
-      options: { blah: "x"},
+      settings: { blah: "x"},
       vars: { blah : "y"},
       scripts: [],
       assertions: [{ assert: "something" }],
@@ -194,7 +194,7 @@ test("flattenScript", async () => {
 
   await expect(tool.flattenScript(scriptNode)).resolves.toMatchObject({
     vars: {},
-    options: {},
+    settings: {},
     assertions: [],
   })
 })
@@ -238,7 +238,7 @@ test("runScriptLocally", async () => {
   tool.readScriptFile = jest.fn(async () => {})
   tool.flattenScript = jest.fn(async () => ({
     vars: {},
-    options: {},
+    settings: {},
     assertions: [{ assert: "TestAssert", with: {} }],
   }))
   tool.createRunContext = jest.fn(async () => ({
@@ -274,7 +274,7 @@ test("runScriptRemotely", async () => {
   tool.assertHasOctopus = jest.fn(() => true)
   tool.compileScriptFile = jest.fn(async () => ({
     vars: {},
-    options: {},
+    settings: {},
     assertions: [{ assert: "TestAssert", with: {} }],
     runContext: { vars: {} },
     expandStringNode: jest.fn(),

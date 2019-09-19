@@ -1,4 +1,4 @@
-// This file has no options object
+// This file has no settings object
 {
-  options: [],
+  settings: [],
 }

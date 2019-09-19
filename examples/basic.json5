@@ -1,5 +1,5 @@
 {
-  options: {
+  settings: {
     description: "A basic script",
   },
   vars: {

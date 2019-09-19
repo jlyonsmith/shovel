@@ -1,5 +1,5 @@
 {
-  options: {
+  settings: {
     description: "Empty script",
   },
   assertions: [],
