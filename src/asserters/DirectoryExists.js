@@ -25,8 +25,6 @@ Example:
 }
 */
 
-// TODO: Ensure root directory is accessible or throw
-
 export class DirectoryExists {
   constructor(container) {
     this.fs = container.fs || fs
@@ -62,6 +60,8 @@ export class DirectoryExists {
     try {
       stat = await this.fs.lstat(this.expandedPath)
     } catch (e) {
+      // TODO: Ensure root directory is accessible or throw
+
       return false
     }
 

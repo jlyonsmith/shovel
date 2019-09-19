@@ -529,7 +529,17 @@ export class OctopusTool {
         expandStringNode: state.expandStringNode,
       })
 
-      // TODO: Check when clause to see if asserter should run
+      const { when: whenNode } = assertion._assertNode.value
+
+      if (whenNode) {
+        if (
+          (whenNode.type === "boolean" && !whenNode.value) ||
+          (whenNode.type === "string" &&
+            !state.expandStringNode(assertion._assertNode.value.when))
+        ) {
+          continue
+        }
+      }
 
       let output = {}
       let rectified = false
