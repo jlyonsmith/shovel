@@ -1,15 +1,16 @@
 {
   vars: {
+    bashrc: "{path.join(env.HOME,'.bashrc')}",
     local: {
-      bashRC: "{fs.readFile(path.join(sys.SCRIPT_DIR,'my-ubuntu/templates/bash-rc.sh'))}",
+      bashrcContent: "{fs.readFile(path.join(sys.scriptDir,'templates/bash-rc.sh'))}",
     },
   },
   assertions: [
     {
       assert: "FileContains",
       with: {
-        path: "{env.HOME + '.bashrc'}",
-        contents: "{bashRC}",
+        path: "{vars.bashrc}",
+        contents: "{vars.local.bashrcContent}",
       },
     },
   ],

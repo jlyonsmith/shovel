@@ -13,5 +13,4 @@ export { GroupExists } from "./GroupExists"
 export { UserAbsent } from "./UserAbsent"
 export { UserExists } from "./UserExists"
 
-// TODO: Add support for Shell asserter with assert/rectify/result as shell scripts
 // TODO: Add FileCopiedToRemote which copies file from local to remote

@@ -568,6 +568,24 @@ export class OctopusTool {
       rl.close()
       return responses
     }
+    const scriptNode = await this.readScriptFile(scriptPath)
+    const state = Object.assign(
+      await this.flattenScript(scriptNode),
+      await this.createRunContext(scriptNode, { inRunScriptLocally: false })
+    )
+    const newScript = JSON.stringify(
+      {
+        options: state.options,
+        vars: state.runContext.vars,
+        assertions: state.assertions,
+      },
+      (key, value) => (key.startsWith("_") ? undefined : value),
+      this.debug ? "  " : null
+    )
+
+    if (this.debug) {
+      this.log.info("Script after local processing:\n" + newScript)
+    }
 
     try {
       const userInfo = os.userInfo()
@@ -629,25 +647,6 @@ export class OctopusTool {
         this.log.info(
           `Octopus is installed on ${sshConfig.host}:${sshConfig.port}`
         )
-      }
-
-      const scriptNode = await this.readScriptFile(scriptPath)
-      const state = Object.assign(
-        await this.flattenScript(scriptNode),
-        await this.createRunContext(scriptNode, { inRunScriptLocally: false })
-      )
-      const newScript = JSON.stringify(
-        {
-          options: state.options,
-          vars: state.vars,
-          assertions: state.assertions,
-        },
-        (key, value) => (key.startsWith("_") ? undefined : value),
-        this.debug ? "  " : null
-      )
-
-      if (this.debug) {
-        this.log.info(newScript)
       }
 
       const remoteTempFile = (await this.util.runRemoteCommand(ssh, "mktemp"))
@@ -718,9 +717,9 @@ Description:
 
 Runs an Octopus configuration script. If a host or host-file file is
 given then the script will be run on those hosts using SSH. Node.js
-and Octopus will be installed on the remote hosts if it is not already
-present.  For this to work the given user must have sudo privileges on
-the remote host.
+and Octopus will be installed on the remote hosts if not already
+present. For this installation to work the --root option must be
+specified and the user must have sudo permissions on the remote host.
 
 Options:
   --help              Shows this help
@@ -731,7 +730,7 @@ Options:
   --user, -u          Remote user name. Defaults to current user.
   --password, -P      Remote user password. Defaults is to just use PPK.
   --host-file, -f     JSON5 file containing multiple host names
-  --root, -r          Start Octopus on remote as root
+  --root, -r          Start Octopus as root on remote host
 `)
       return
     }

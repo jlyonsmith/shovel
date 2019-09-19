@@ -5,17 +5,21 @@
   assertions: [
     {
       assert: "DirectoryExists",
-      runAs: "root",
       with: {
-        path: "{bashCompletionDir}",
+        path: "{vars.bashCompletionDir}",
+        mode: {
+          user: "rwx",
+          group: "rwx",
+          other: "r-x",
+        },
       },
     },
     {
       assert: "FileDownloaded",
       with: {
         url: "https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash",
-        digest: "c5ae20282e52103f3775cba158df5b380b853cdffa024b7f7495069682d2b4ee",
-        toPath: "{path.join(bashCompletionDir,'git-completion.bash')}",
+        digest: "f7a2681797ae0361098b9af014761cd1fd0413a2efde2a3f49dbaae19be2885c",
+        toPath: "{path.join(vars.bashCompletionDir,'git-completion.bash')}",
       },
     },
     {
@@ -23,7 +27,7 @@
       with: {
         url: "https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh",
         digest: "7a0e409206671e3cdf6544641b29cbdd2cd2dab4a07af70339b9b590db16447f",
-        toPath: "{path.join(bashCompletionDir,'git-prompt.sh')}",
+        toPath: "{path.join(vars.bashCompletionDir,'git-prompt.sh')}",
       },
     },
   ],

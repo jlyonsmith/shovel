@@ -1,6 +1,6 @@
 {
   includes: [
-    "./fix-motd.json5",
+    "./fix-ubuntu-motd.json5",
     "./fix-ubuntu-release-upgrade.json5",
     "./set-vimrc.json5",
     "./install-git-completion.json5",

@@ -19,9 +19,6 @@ Example:
 }
 */
 
-// TODO: Throw when existing file cannot be removed
-// TODO: Throw if toPath directory does not exist
-
 export class FileDownloaded {
   constructor(container) {
     this.fs = container.fs || fs
@@ -94,9 +91,12 @@ export class FileDownloaded {
     const writeable = this.fs.createWriteStream(this.expandedToPath)
 
     await this.util.pipeToPromise(result.body, writeable)
+
+    // TODO: Owner and mode if provided
   }
 
   result() {
+    // TODO: Add hash to output of actual file or the asserted hash
     return { toPath: this.expandedToPath }
   }
 }

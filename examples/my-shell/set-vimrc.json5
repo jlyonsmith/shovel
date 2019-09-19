@@ -1,11 +1,15 @@
 {
+  vars: {
+    vimrc: "{path.join(env.HOME,'.vimrc')}", // This will work locally or remotely
+  },
   assertions: [
+    { assert: "FileExists", with: { path: "{vars.vimrc}" } },
     {
       assert: "FileContains",
       with: {
-        path: "{env.HOME + '/.vimrc'}",
-        contents: "color desert\\n\
-set shiftwidth=2 tabstop=2 expandtab\\n",
+        path: "{vars.vimrc}",
+        contents: "color desert\n\
+set shiftwidth=2 tabstop=2 expandtab\n",
       },
     },
   ],

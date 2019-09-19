@@ -4,9 +4,6 @@ import { createNode } from "./testUtil"
 import { ScriptError } from "./ScriptError"
 import { EventEmitter } from "events"
 
-let container = null
-
-// TODO: Get coverage to 100%
 const testString = "the quick brown fox jumps over the lazy dog"
 
 test("generateDigestFromFile", async () => {
