@@ -5,7 +5,6 @@
   assertions: [
     {
       assert: "FilesAbsent",
-      runAs: "root",
       with: {
         paths: [
           "{vars.motdDir + '/10-help-text'}",
@@ -16,6 +15,7 @@
           "{vars.motdDir + '/97-overlayroot'}",
         ],
       },
+      when: "{sys.id === 'ubuntu'}",
     },
   ],
 }

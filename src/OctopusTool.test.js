@@ -242,7 +242,7 @@ test("runScriptLocally", async () => {
     assertions: [{ assert: "TestAssert", with: {} }],
   }))
   tool.createRunContext = jest.fn(async () => ({
-    vmContext: {},
+    runContext: { vars: {} },
     expandStringNode: jest.fn(),
   }))
 
@@ -276,7 +276,7 @@ test("runScriptRemotely", async () => {
     vars: {},
     options: {},
     assertions: [{ assert: "TestAssert", with: {} }],
-    vmContext: {},
+    runContext: { vars: {} },
     expandStringNode: jest.fn(),
   }))
 

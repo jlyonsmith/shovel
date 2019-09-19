@@ -268,6 +268,7 @@ export class OctopusTool {
 
     let {
       includes: includesNode,
+      // TODO: Change options to script
       options: optionsNode,
       vars: varsNode,
       assertions: assertionsNode,
@@ -310,16 +311,9 @@ export class OctopusTool {
 
     const { description: descriptionNode } = optionsNode.value
 
-    if (descriptionNode) {
-      if (descriptionNode.type !== "string") {
-        throw new ScriptError(
-          "'options.description' must be a string",
-          descriptionNode
-        )
-      }
+    if (descriptionNode && descriptionNode.type !== "string") {
+      throw new ScriptError("'description' must be a string", descriptionNode)
     }
-
-    // TODO: Support 'id` in options and use to create SCRIPT_DIR_<id> vars
 
     if (varsNode.type !== "object") {
       throw new ScriptError("'vars' must be an object", varsNode)
@@ -336,6 +330,7 @@ export class OctopusTool {
 
       const {
         description: descriptionNode,
+        when: whenNode,
         assert: assertNode,
         with: withNode,
       } = assertionNode.value
@@ -348,19 +343,19 @@ export class OctopusTool {
         throw new ScriptError("'assert' property is not present", assertNode)
       }
 
-      if (descriptionNode) {
-        if (descriptionNode.type !== "string") {
-          throw new ScriptError(
-            "'description' must be a string",
-            descriptionNode
-          )
-        }
+      if (descriptionNode && descriptionNode.type !== "string") {
+        throw new ScriptError("'description' must be a string", descriptionNode)
       }
 
-      if (withNode) {
-        if (withNode.type !== "object") {
-          throw new ScriptError("'with' must be an object", withNode)
-        }
+      if (
+        whenNode &&
+        !(whenNode.type === "string" || whenNode.type === "boolean")
+      ) {
+        throw new ScriptError("'when' must be a string or boolean", whenNode)
+      }
+
+      if (withNode && withNode.type !== "object") {
+        throw new ScriptError("'with' must be an object", withNode)
       }
     }
 
@@ -374,6 +369,7 @@ export class OctopusTool {
       options: {},
       env: process.env,
       os: osInfo,
+      user: {}, // TODO: Add current user information
       sys: {
         scriptFile: scriptNode.filename,
         scriptDir: path.dirname(scriptNode.filename),
@@ -533,6 +529,8 @@ export class OctopusTool {
       const asserter = new this.asserters[assertion.assert]({
         expandStringNode: state.expandStringNode,
       })
+
+      // TODO: Check when clause to see if asserter should run
 
       let output = {}
       let rectified = false
