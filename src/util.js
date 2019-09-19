@@ -177,7 +177,7 @@ export const parseModeNode = (modeNode) => {
 
   if (modeNode) {
     if (modeNode.type !== "object") {
-      throw new ScriptError(`'mode' flags must be specified`, node)
+      throw new ScriptError(`'mode' flags must be specified`, modeNode)
     }
 
     const {
@@ -218,7 +218,7 @@ export const getOSInfo = async () => {
 
  {
     noThrow: boolean    // Do not throw on bad exit code
-    log: boolean  // Send script output on STDOUT directly to this.log
+    log: boolean        // Send script output on STDOUT directly to this.log
     sudo: boolean       // Run this command under sudo
     password: string    // Password (if needed for sudo)
  }
@@ -247,10 +247,6 @@ export const runRemoteCommand = async (ssh, command, options = {}) => {
       pty: true,
     })
 
-    if (options.debug) {
-      console.log(commandLine)
-    }
-
     if (options.password) {
       socket.write(options.password + "\n")
       socket.end()
@@ -275,8 +271,8 @@ export const runRemoteCommand = async (ssh, command, options = {}) => {
             } else if (!line) {
               continue
             } else if (
-              (options.logError && line.startsWith("error:")) ||
-              line.startsWith("warning:")
+              options.logError &&
+              (line.startsWith("error:") || line.startsWith("warning:"))
             ) {
               options.logError(line)
             } else if (/^\d+$/.test(line)) {

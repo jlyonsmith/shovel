@@ -421,10 +421,10 @@ export class OctopusTool {
           node.value = newValue
           return newValue
         } else {
-          return item.value
+          return node.value
         }
       } else {
-        return item.value
+        return node.value
       }
     }
 
