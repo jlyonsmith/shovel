@@ -669,7 +669,11 @@ export class OctopusTool {
 
       // TODO: Need ability to run local and remote asserters in order!
 
-      this.log.info(`Running script on remote host`)
+      this.log.info(
+        `Running script on remote host as ${
+          options.runAsRoot ? "root" : sshConfig.username
+        }`
+      )
       await this.util.runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
         sudo: options.runAsRoot,
         password: sshConfig.password,

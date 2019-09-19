@@ -237,13 +237,22 @@ test("runScriptLocally", async () => {
 
   tool.readScriptFile = jest.fn(async () => {})
   tool.flattenScript = jest.fn(async () => ({
-    vars: {},
     settings: {},
-    assertions: [{ assert: "TestAssert", with: {} }],
+    vars: {},
+    assertions: [
+      {
+        assert: "TestAssert",
+        with: {},
+        _assertNode: testUtil.createNode("test.json5", {
+          assert: "TestAssert",
+          with: {},
+        }),
+      },
+    ],
   }))
   tool.createRunContext = jest.fn(async () => ({
     runContext: { vars: {} },
-    expandStringNode: jest.fn(),
+    expandStringNode: jest.fn((s) => s),
   }))
 
   await expect(tool.runScriptLocally("test.json5")).resolves.toBeUndefined()
