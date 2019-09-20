@@ -65,6 +65,7 @@
     "command-exists": "^1.2.8",
     "fs-extra": "^8.1.0",
     "linux-os-info": "^2.0.0",
+    "merge": "^1.2.1",
     "minimist": "^1.2.0",
     "node-fetch": "^2.6.0",
     "node-ssh": "^6.0.0",

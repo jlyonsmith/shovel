@@ -12,6 +12,7 @@ import autobind from "autobind-decorator"
 import * as asserters from "./asserters"
 import * as util from "./util"
 import { ScriptError } from "./ScriptError"
+import merge from "merge"
 
 @autobind
 export class OctopusTool {
@@ -458,16 +459,13 @@ export class OctopusTool {
       } = newScriptNode.value
 
       if (newSettingsNode) {
-        settingsNode.value = {
-          ...settingsNode.value,
-          ...newSettingsNode.value,
-        }
+        settingsNode.value = merge.recursive(
+          settingsNode.value,
+          newSettingsNode.value
+        )
       }
       if (newVarsNode) {
-        varsNode.value = {
-          ...varsNode.value,
-          ...newVarsNode.value,
-        }
+        varsNode.value = merge.recursive(varsNode.value, newVarsNode.value)
       }
       if (newAssertionsNode) {
         assertionsNode.value = [
