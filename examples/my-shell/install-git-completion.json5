@@ -13,6 +13,7 @@
           other: "r-x",
         },
       },
+      become: "root",
     },
     {
       assert: "FileDownloaded",
@@ -21,6 +22,7 @@
         digest: "f7a2681797ae0361098b9af014761cd1fd0413a2efde2a3f49dbaae19be2885c",
         toPath: "{path.join(vars.bashCompletionDir,'git-completion.bash')}",
       },
+      become: "root",
     },
     {
       assert: "FileDownloaded",
@@ -29,6 +31,7 @@
         digest: "7a0e409206671e3cdf6544641b29cbdd2cd2dab4a07af70339b9b590db16447f",
         toPath: "{path.join(vars.bashCompletionDir,'git-prompt.sh')}",
       },
+      become: "root",
     },
   ],
 }

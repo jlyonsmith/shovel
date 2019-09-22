@@ -1,7 +1,7 @@
 import crypto from "crypto"
 import { ScriptError } from "./ScriptError"
 import osInfo from "linux-os-info"
-import fs from "fs"
+import fs from "fs-extra"
 import os from "os"
 
 export class Utility {
@@ -84,11 +84,13 @@ export class Utility {
     return promise
   }
 
+  // TODO: Return userInfo object with uid, euid, name, etc.
   runningAsRoot() {
     return this.os.userInfo().uid === 0
   }
 
   async getUsers() {
+    // TODO: Add /etc/shadow for disabled users?
     const passwd = await this.fs.readFile("/etc/passwd", { encoding: "utf8" })
 
     return passwd

@@ -8,6 +8,7 @@
         path: "/var/lib/ubuntu-release-upgrader/release-upgrade-available",
       },
       when: "{sys.id === 'ubuntu'}",
+      become: "root",
     },
   ],
 }

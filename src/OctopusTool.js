@@ -511,6 +511,20 @@ export class OctopusTool {
       await this.flattenScript(scriptNode),
       await this.createRunContext(scriptNode, { inRunScriptLocally: true })
     )
+    let sudo = null
+
+    if (state.assertions.find((assertion) => assertion.become) !== null) {
+      if (!this.util.runningAsRoot()) {
+        throw new Error(
+          "Script requires becoming another user and it is not running as root"
+        )
+      }
+
+      sudo = {
+        uid: parseInt(process.env["SUDO_UID"]),
+        gid: parseInt(process.env["SUDO_GID"]),
+      }
+    }
 
     if (this.debug) {
       this.log.info(JSON5.stringify(state.runContext.vars, null, "  "))
@@ -521,8 +535,6 @@ export class OctopusTool {
         JSON5.stringify({ description: state.settings.description })
       )
     }
-
-    // TODO: Need ability to run specific block of asserters
 
     for (const assertion of state.assertions) {
       const asserter = new this.asserters[assertion.assert]({
@@ -544,6 +556,13 @@ export class OctopusTool {
       let output = {}
       let rectified = false
 
+      if (assertion.become) {
+        // TODO: Support becoming users other than root
+        process.seteuid(0)
+      } else if (sudo !== null) {
+        process.seteuid(sudo.uid)
+      }
+
       if (!(await asserter.assert(assertion._assertNode))) {
         await asserter.rectify()
         rectified = true
@@ -558,6 +577,10 @@ export class OctopusTool {
 
       output.result = asserter.result(rectified)
       this.log.output(JSON5.stringify(output))
+    }
+
+    if (sudo !== null) {
+      process.seteuid(sudo.uid)
     }
   }
 
@@ -729,10 +752,10 @@ Description:
 Runs an Octopus configuration script. If a host or host-file file is
 given then the script will be run on those hosts using SSH. Node.js
 and Octopus will be installed on the remote hosts if not already
-present. For this installation to work the --root option must be
+present. For remote installation to work the 'root' argument must be
 specified and the user must have sudo permissions on the remote host.
 
-Options:
+Arguments:
   --help              Shows this help
   --version           Shows the tool version
   --host, -h          Remote host name. Default is to run the script
@@ -752,9 +775,13 @@ Options:
 
     const scriptPath = path.resolve(args._[0])
 
-    if (!args.host && (args.port || args.user || args.password)) {
-      this.log.warning(
-        "Port, user and password supplied without host are ignored; script will run locally"
+    if (
+      (args.port || args.user || args.password || args.root) &&
+      !args.host &&
+      !args["host-file"]
+    ) {
+      throw new Error(
+        "'host' or 'host-file' must be specified with 'port', 'user', 'password' and 'root' arguments"
       )
     }
 
