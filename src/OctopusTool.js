@@ -506,10 +506,7 @@ export class OctopusTool {
 
   async runScriptLocally(scriptPath, options = {}) {
     const scriptNode = await this.readScriptFile(scriptPath)
-    const state = Object.assign(
-      await this.flattenScript(scriptNode),
-      await this.createRunContext(scriptNode, { inRunScriptLocally: true })
-    )
+    const state = await this.flattenScript(scriptNode)
     let sudo = null
 
     if (state.assertions.find((assertion) => assertion.become) !== null) {
@@ -523,9 +520,14 @@ export class OctopusTool {
         uid: parseInt(process.env["SUDO_UID"]),
         gid: parseInt(process.env["SUDO_GID"]),
       }
+
+      process.seteuid(sudo.uid)
     }
 
-    state.runContext.user = {}
+    Object.assign(
+      state,
+      await this.createRunContext(scriptNode, { inRunScriptLocally: true })
+    )
 
     if (this.debug) {
       this.log.info(JSON5.stringify(state.runContext.vars, null, "  "))
