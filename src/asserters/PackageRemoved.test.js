@@ -15,13 +15,13 @@ test("assert", async () => {
   const asserter = new PackageRemoved(container)
 
   // Not supported OS
-  container.util.getOSInfo = jest.fn(async () => ({ platform: "windows" }))
+  container.util.osInfo = jest.fn(async () => ({ platform: "windows" }))
   await expect(
     asserter.assert(createAssertNode(asserter, { name: "test" }))
   ).rejects.toThrow(ScriptError)
 
   // Missing name
-  container.util.getOSInfo = jest.fn(async () => ({
+  container.util.osInfo = jest.fn(async () => ({
     platform: "linux",
     id: "ubuntu",
   }))
@@ -43,7 +43,7 @@ test("assert", async () => {
   ).resolves.toBe(true)
 
   // Package not present on CentOS
-  container.util.getOSInfo = jest.fn(async () => ({
+  container.util.osInfo = jest.fn(async () => ({
     platform: "linux",
     id: "centos",
   }))

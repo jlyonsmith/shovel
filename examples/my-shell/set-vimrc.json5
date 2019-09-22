@@ -1,6 +1,6 @@
 {
   vars: {
-    vimrc: "{path.join(env.HOME,'.vimrc')}", // This will work locally or remotely
+    vimrc: "{path.join(user.homeDir,'.vimrc')}",
   },
   assertions: [
     { assert: "FileExists", with: { path: "{vars.vimrc}" } },

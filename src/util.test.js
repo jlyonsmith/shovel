@@ -296,12 +296,12 @@ test("parseModeNode", async () => {
   expect(util.parseModeNode(createNode("test.json5", {}))).toBe(0o000)
 })
 
-test("getOSInfo", async () => {
+test("osInfo", async () => {
   const util = new Utility({
     osInfo: jest.fn(() => ({ id: "", platform: "", version_id: "" })),
   })
 
-  await expect(util.getOSInfo()).resolves.not.toBeNull()
+  await expect(util.osInfo()).resolves.not.toBeNull()
 })
 
 test("runRemoteCommand", async () => {

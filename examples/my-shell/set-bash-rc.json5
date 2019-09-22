@@ -1,6 +1,6 @@
 {
   vars: {
-    bashrc: "{path.join(env.HOME,'.bashrc')}",
+    bashrc: "{path.join(user.homeDir,'.bashrc')}",
     local: {
       bashrcContent: "{fs.readFile(path.join(sys.scriptDir,'templates/bash-rc.sh'))}",
     },

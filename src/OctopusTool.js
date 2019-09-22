@@ -364,12 +364,11 @@ export class OctopusTool {
 
   async createRunContext(scriptNode, options = {}) {
     const { vars: varsNode } = scriptNode.value
-    const osInfo = await this.util.getOSInfo()
+    const osInfo = await this.util.osInfo()
     const runContext = vm.createContext({
-      settings: {},
       env: process.env,
       os: osInfo,
-      user: {}, // TODO: Add current user information
+      user: this.util.userInfo(),
       sys: {
         scriptFile: scriptNode.filename,
         scriptDir: path.dirname(scriptNode.filename),
@@ -525,6 +524,8 @@ export class OctopusTool {
         gid: parseInt(process.env["SUDO_GID"]),
       }
     }
+
+    state.runContext.user = {}
 
     if (this.debug) {
       this.log.info(JSON5.stringify(state.runContext.vars, null, "  "))

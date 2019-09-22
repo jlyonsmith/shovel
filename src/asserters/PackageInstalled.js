@@ -34,7 +34,7 @@ export class PackageInstalled {
       )
     }
 
-    const info = await this.util.getOSInfo()
+    const info = await this.util.osInfo()
 
     if (
       info.platform !== "linux" ||

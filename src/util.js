@@ -84,7 +84,28 @@ export class Utility {
     return promise
   }
 
-  // TODO: Return userInfo object with uid, euid, name, etc.
+  userInfo() {
+    const info = this.os.userInfo({ encoding: "utf8" })
+
+    return {
+      name: info.username,
+      uid: info.uid,
+      gid: info.gid,
+      shell: info.shell,
+      homeDir: info.homedir,
+    }
+  }
+
+  async osInfo() {
+    const info = await this.osInfo()
+
+    return {
+      platform: info.platform,
+      id: info.id,
+      versionId: info.version_id,
+    }
+  }
+
   runningAsRoot() {
     return this.os.userInfo().uid === 0
   }
@@ -244,16 +265,6 @@ export class Utility {
     return mode
   }
 
-  async getOSInfo() {
-    const info = await this.osInfo()
-
-    return {
-      platform: info.platform,
-      id: info.id,
-      versionId: info.version_id,
-    }
-  }
-
   async runRemoteCommand(ssh, command, options = {}) {
     // From https://stackoverflow.com/a/29497680/576235
     const ansiEscapeRegex = new RegExp(
@@ -268,7 +279,7 @@ export class Utility {
     try {
       const commandLine =
         (options.cwd ? `cd ${options.cwd} 1> /dev/null 2> /dev/null;` : "") +
-        (options.sudo ? "sudo " : "") +
+        (options.sudo ? "sudo -E " : "") +
         command +
         "; echo $?"
       const socket = await ssh.spawn(commandLine, null, {

@@ -200,7 +200,7 @@ test("flattenScript", async () => {
 })
 
 test("createRunContext", async () => {
-  container.util.getOSInfo = jest.fn(() => ({
+  container.util.osInfo = jest.fn(() => ({
     platform: "blah",
     id: "blah",
     versionId: "1.2.3",

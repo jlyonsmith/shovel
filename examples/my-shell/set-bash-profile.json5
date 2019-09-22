@@ -1,6 +1,6 @@
 {
   vars: {
-    bashProfile: "{path.join(env.HOME,'.bash_profile')}",
+    bashProfile: "{path.join(user.homeDir,'.bash_profile')}",
     local: {
       bashProfileContent: "{fs.readFile(path.join(sys.scriptDir,'templates/bash-profile.sh'))}",
     },
