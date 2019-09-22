@@ -2,10 +2,8 @@ import { DirectoryAbsent } from "./DirectoryAbsent"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
 
-let container = null
-
-beforeEach(() => {
-  container = {
+test("assert", async () => {
+  const container = {
     expandStringNode: (node) => node.value,
     fs: {
       lstat: jest.fn(async (dirName) => {
@@ -23,33 +21,52 @@ beforeEach(() => {
           throw new Error("ENOENT")
         }
       }),
-      remove: jest.fn(async (dirName) => null),
     },
   }
-})
 
-test("DirectoryAbsent with no dir or file existing", async () => {
   const asserter = new DirectoryAbsent(container)
 
+  // Bad arguments
+  await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
+    ScriptError
+  )
+  await expect(
+    asserter.assert(createAssertNode(asserter, { path: 1 }))
+  ).rejects.toThrow(ScriptError)
+
+  // DirectoryAbsent with no dir or file existing
   await expect(
     asserter.assert(createAssertNode(asserter, { path: "/notthere" }))
   ).resolves.toBe(true)
-})
 
-test("DirectoryAbsent with dir existing", async () => {
-  const asserter = new DirectoryAbsent(container)
-
+  // DirectoryAbsent with dir existing
   await expect(
     asserter.assert(createAssertNode(asserter, { path: "/somedir" }))
   ).resolves.toBe(false)
-  await expect(asserter.rectify()).resolves.toBeUndefined()
-  await expect(asserter.result()).toEqual({ path: "/somedir" })
-})
 
-test("DirectoryAbsent with file instead of dir existing", async () => {
-  const asserter = new DirectoryAbsent(container)
-
+  // DirectoryAbsent with file instead of dir existing
   await expect(
     asserter.assert(createAssertNode(asserter, { path: "/somefile" }))
   ).rejects.toThrow(ScriptError)
+})
+
+test("rectify", async () => {
+  const container = {
+    fs: {
+      remove: jest.fn(async (dirName) => null),
+    },
+  }
+  const asserter = new DirectoryAbsent(container)
+
+  asserter.expandedPath = "blah"
+
+  await expect(asserter.rectify()).resolves.toBeUndefined()
+})
+
+test("result", () => {
+  const asserter = new DirectoryAbsent({})
+
+  asserter.expandedPath = "blah"
+
+  expect(asserter.result()).toEqual({ path: asserter.expandedPath })
 })

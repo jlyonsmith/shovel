@@ -39,17 +39,19 @@ export class ServiceActive {
       `systemctl is-active ${this.expandedName}`
     )
 
-    return output.stdout === "active"
-  }
+    const ok = output.stdout === "active"
 
-  async rectify() {
-    if (!this.util.runningAsRoot()) {
+    if (!ok && !this.util.runningAsRoot()) {
       throw new ScriptError(
         "Must be running as root to start services",
         withNode
       )
     }
 
+    return ok
+  }
+
+  async rectify() {
     await this.childProcess.exec(`sudo systemctl restart ${this.expandedName}`)
 
     let output = null
@@ -60,7 +62,7 @@ export class ServiceActive {
       )
 
       if (output.stdout === "failed" || output.stdout === "inactive") {
-        throw new ScriptError(`Service failed to go into the active state`)
+        throw new Error(`Service failed to go into the active state`)
       }
     } while (output.stdout !== "active")
   }

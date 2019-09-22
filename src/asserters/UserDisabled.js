@@ -22,8 +22,8 @@ export class UserDisabled {
   constructor(container) {
     this.fs = container.fs || fs
     this.childProcess = container.childProcess || childProcess
-    this.expandStringNode = container.expandStringNode
     this.util = container.util || util
+    this.expandStringNode = container.expandStringNode
   }
 
   async assert(assertNode) {

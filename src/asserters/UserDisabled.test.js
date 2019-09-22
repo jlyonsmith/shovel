@@ -1,10 +1,9 @@
 import { UserDisabled } from "./UserDisabled"
 import { createAssertNode } from "../testUtil"
+import { ScriptError } from "../ScriptError"
 
-let container = null
-
-beforeEach(() => {
-  container = {
+test("assert", async () => {
+  const container = {
     expandStringNode: (node) => node.value,
     fs: {
       readFile: jest.fn(async (filePath) => {
@@ -34,21 +33,51 @@ disabled:!:18113:0:99999:7::1:`
       runningAsRoot: jest.fn(() => true),
     },
   }
-})
 
-test("With user disabled", async () => {
   const asserter = new UserDisabled(container)
 
+  // Bad args
+  await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
+    ScriptError
+  )
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: 1 }))
+  ).rejects.toThrow(ScriptError)
+
+  // With user disabled
   await expect(
     asserter.assert(createAssertNode(asserter, { name: "disabled" }))
   ).resolves.toBe(true)
-})
 
-test("With user enabled", async () => {
-  const asserter = new UserDisabled(container)
-
+  // With user enabled
   await expect(
     asserter.assert(createAssertNode(asserter, { name: "enabled" }))
   ).resolves.toBe(false)
+
+  // With user enabled and not root
+  container.util.runningAsRoot = () => false
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "enabled" }))
+  ).rejects.toThrow(ScriptError)
+})
+
+test("rectify", async () => {
+  const container = {
+    childProcess: {
+      exec: async () => undefined,
+    },
+  }
+  const asserter = new UserDisabled(container)
+
+  asserter.expandedName = "blah"
+
   await expect(asserter.rectify()).resolves.toBeUndefined()
+})
+
+test("result", () => {
+  const asserter = new UserDisabled({})
+
+  asserter.expandedName = "blah"
+
+  expect(asserter.result()).toEqual({ name: asserter.expandedName })
 })

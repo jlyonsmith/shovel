@@ -39,17 +39,19 @@ export class ServiceInactive {
       `systemctl is-active ${this.expandedName}`
     )
 
-    return output.stdout === "inactive" || output.stdout === "failed"
-  }
+    const ok = output.stdout === "inactive" || output.stdout === "failed"
 
-  async rectify() {
-    if (!this.util.runningAsRoot()) {
+    if (!ok && !this.util.runningAsRoot()) {
       throw new ScriptError(
         "Must be running as root to stop services",
-        withNode
+        assertNode
       )
     }
 
+    return ok
+  }
+
+  async rectify() {
     await this.childProcess.exec(`sudo systemctl stop ${this.expandedName}`)
 
     let output = null

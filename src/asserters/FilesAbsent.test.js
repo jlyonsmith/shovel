@@ -2,10 +2,8 @@ import { FilesAbsent } from "./FilesAbsent"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
 
-let container = null
-
-beforeEach(() => {
-  container = {
+test("assert", async () => {
+  const container = {
     expandStringNode: (node) => node.value,
     fs: {
       lstat: jest.fn(async (fileName) => {
@@ -23,14 +21,23 @@ beforeEach(() => {
           throw new Error("ENOENT")
         }
       }),
-      unlink: jest.fn(async (fileName) => null),
     },
   }
-})
 
-test("FilesAbsent with no dir or files existing", async () => {
   const asserter = new FilesAbsent(container)
 
+  // Bad args
+  await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
+    ScriptError
+  )
+  await expect(
+    asserter.assert(createAssertNode(asserter, { paths: 1 }))
+  ).rejects.toThrow(ScriptError)
+  await expect(
+    asserter.assert(createAssertNode(asserter, { paths: [1] }))
+  ).rejects.toThrow(ScriptError)
+
+  // FilesAbsent with no dir or files existing
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -38,11 +45,8 @@ test("FilesAbsent with no dir or files existing", async () => {
       })
     )
   ).resolves.toBe(true)
-})
 
-test("FilesAbsent with file existing", async () => {
-  const asserter = new FilesAbsent(container)
-
+  // FilesAbsent with file existing
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -50,12 +54,8 @@ test("FilesAbsent with file existing", async () => {
       })
     )
   ).resolves.toBe(false)
-  await expect(asserter.rectify()).resolves.toBeUndefined()
-})
 
-test("FilesAbsent with dir instead of file existing", async () => {
-  const asserter = new FilesAbsent(container)
-
+  // FilesAbsent with dir instead of file existing
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -63,4 +63,29 @@ test("FilesAbsent with dir instead of file existing", async () => {
       })
     )
   ).rejects.toThrow(Error)
+})
+
+test("rectify", async () => {
+  const container = {
+    fs: {
+      unlink: jest.fn(async (fileName) => null),
+    },
+  }
+  const asserter = new FilesAbsent(container)
+
+  asserter.unlinkedPaths = ["blah"]
+
+  await expect(asserter.rectify()).resolves.toBeUndefined()
+})
+
+test("result", () => {
+  const asserter = new FilesAbsent({})
+
+  asserter.unlinkedPaths = ["blah"]
+
+  expect(asserter.result(true)).toEqual({ paths: asserter.unlinkedPaths })
+
+  asserter.expandStringNode = ["blah"]
+
+  expect(asserter.result(false)).toEqual({ paths: asserter.expandedPaths })
 })
