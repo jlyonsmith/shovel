@@ -521,6 +521,7 @@ export class OctopusTool {
         gid: parseInt(process.env["SUDO_GID"]),
       }
 
+      process.setegid(sudo.gid)
       process.seteuid(sudo.uid)
     }
 
@@ -561,8 +562,10 @@ export class OctopusTool {
 
       if (assertion.become) {
         // TODO: Support becoming users other than root
+        process.setegid(0)
         process.seteuid(0)
       } else if (sudo !== null) {
+        process.setegid(sudo.gid)
         process.seteuid(sudo.uid)
       }
 
@@ -583,6 +586,7 @@ export class OctopusTool {
     }
 
     if (sudo !== null) {
+      process.setegid(sudo.gid)
       process.seteuid(sudo.uid)
     }
   }
