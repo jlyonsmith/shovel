@@ -1,7 +1,7 @@
 import { DirectoryExists } from "./DirectoryExists"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
-import * as util from "../util"
+import util from "../util"
 
 test("assert", async () => {
   const container = {
@@ -26,6 +26,7 @@ test("assert", async () => {
       ]),
       parseOwnerNode: util.parseOwnerNode,
       parseModeNode: util.parseModeNode,
+      canAccess: jest.fn(async () => true),
     },
   }
 
@@ -138,6 +139,12 @@ test("assert", async () => {
   await expect(
     asserter.assert(createAssertNode(asserter, { path: "/notthere" }))
   ).resolves.toBe(false)
+
+  // Directory not there and no file with same name
+  container.util.canAccess = jest.fn(async () => false)
+  await expect(
+    asserter.assert(createAssertNode(asserter, { path: "/notthere" }))
+  ).rejects.toThrow(ScriptError)
 
   // File with same name present
   container.fs.lstat = jest.fn(async () => ({

@@ -1,6 +1,6 @@
 import fs from "fs-extra"
 import path from "path"
-import * as util from "../util"
+import util from "../util"
 import { ScriptError } from "../ScriptError"
 
 /*
@@ -19,6 +19,7 @@ Example:
 export class FileCopied {
   constructor(container) {
     this.fs = container.fs || fs
+    this.util = container.util || util
     this.expandStringNode = container.expandStringNode
   }
 
@@ -43,33 +44,26 @@ export class FileCopied {
     this.expandedToPath = this.expandStringNode(toPathNode)
     this.expandedFromPath = this.expandStringNode(fromPathNode)
 
-    if (
-      !(await util.fileExists(this.fs, this.expandedFromPath)) ||
-      !(await util.fileExists(this.fs, this.expandedToPath))
-    ) {
+    if (!(await this.util.fileExists(this.expandedFromPath))) {
+      throw new ScriptError(
+        `File ${this.expandedFromPath} does not exist`,
+        fromPathNode
+      )
+    }
+
+    if (!(await this.util.fileExists(this.expandedToPath))) {
       return false
     }
 
-    const fromDigest = await util.generateDigestFromFile(
-      this.fs,
+    const fromDigest = await this.util.generateDigestFromFile(
       this.expandedFromPath
     )
-    const toDigest = await util.generateDigestFromFile(
-      this.fs,
-      this.expandedToPath
-    )
+    const toDigest = await this.util.generateDigestFromFile(this.expandedToPath)
 
     return fromDigest === toDigest
   }
 
   async rectify() {
-    const toPathDir = path.dirname(this.expandedToPath)
-
-    // TODO: Don't do this - require DirExists instead
-    if (!(await util.dirExists(this.fs, toPathDir))) {
-      await this.fs.ensureDir(toPathDir)
-    }
-
     await this.fs.copy(this.expandedFromPath, this.expandedToPath)
   }
 

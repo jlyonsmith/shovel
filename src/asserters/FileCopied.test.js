@@ -1,51 +1,48 @@
 import { FileCopied } from "./FileCopied"
 import stream from "stream"
 import { createAssertNode } from "../testUtil"
+import { ScriptError } from "../ScriptError"
 
 let container = null
 
-beforeEach(() => {
-  container = {
+test("assert", async () => {
+  const container = {
     expandStringNode: (node) => node.value,
-    fs: {
-      createReadStream: jest.fn((fileName) => {
-        expect(typeof fileName).toBe("string")
-
-        return new stream.Readable({
-          read(size) {
-            if (fileName === "/badfile") {
-              this.push("not the test string")
-            } else {
-              this.push("The quick brown fox jumps over the lazy dog\n")
-            }
-            this.push(null)
-          },
-        })
-      }),
-      copy: jest.fn(async (fromFileName, toFileName) => {
-        expect(typeof fromFileName).toBe("string")
-        expect(typeof toFileName).toBe("string")
-      }),
-      lstat: jest.fn(async (path) => {
-        if (path === "/somefile" || path === "/otherfile") {
-          return {
-            isDirectory: jest.fn(() => false),
-            isFile: jest.fn(() => true),
-          }
+    util: {
+      fileExists: jest.fn(async (path) => {
+        if (path === "/notthere") {
+          return false
         } else {
-          throw new Error("ENOENT")
+          return true
         }
       }),
-      ensureDir: jest.fn(async (dirPath) => {
-        expect(typeof dirPath).toBe("string")
-      }),
+      generateDigestFromFile: async (path) => {
+        if (path === "/badfile") {
+          return "0987654321"
+        } else {
+          return "1234567890"
+        }
+      },
     },
   }
-})
 
-test("FileCopied with files the same", async () => {
   const asserter = new FileCopied(container)
 
+  // Bad args
+  await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
+    ScriptError
+  )
+  await expect(
+    asserter.assert(createAssertNode(asserter, { from: 1 }))
+  ).rejects.toThrow(ScriptError)
+  await expect(
+    asserter.assert(createAssertNode(asserter, { from: "" }))
+  ).rejects.toThrow(ScriptError)
+  await expect(
+    asserter.assert(createAssertNode(asserter, { from: "", to: 1 }))
+  ).rejects.toThrow(ScriptError)
+
+  // With files the same
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -54,12 +51,8 @@ test("FileCopied with files the same", async () => {
       })
     )
   ).resolves.toBe(true)
-  expect(container.fs.createReadStream).toHaveBeenCalledTimes(2)
-})
 
-test("FileCopied with from file non-existent", async () => {
-  const asserter = new FileCopied(container)
-
+  // With from file non-existent
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -67,12 +60,9 @@ test("FileCopied with from file non-existent", async () => {
         to: "/otherfile",
       })
     )
-  ).resolves.toBe(false)
-})
+  ).rejects.toThrow(ScriptError)
 
-test("FileCopied with to file non-existent", async () => {
-  const asserter = new FileCopied(container)
-
+  // FileCopied with to file non-existent
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -81,12 +71,8 @@ test("FileCopied with to file non-existent", async () => {
       })
     )
   ).resolves.toBe(false)
-  await expect(asserter.rectify()).resolves.toBeUndefined()
-})
 
-test("FileCopied with different files", async () => {
-  const asserter = new FileCopied(container)
-
+  // FileCopied with different files
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -95,5 +81,29 @@ test("FileCopied with different files", async () => {
       })
     )
   ).resolves.toBe(false)
+})
+
+test("rectify", async () => {
+  const asserter = new FileCopied({
+    fs: {
+      copy: async () => undefined,
+    },
+  })
+
+  asserter.expandedFromPath = "/blah"
+  asserter.expandedToPath = "/blurp"
+
   await expect(asserter.rectify()).resolves.toBeUndefined()
+})
+
+test("result", async () => {
+  const asserter = new FileCopied({})
+
+  asserter.expandedFromPath = "/blah"
+  asserter.expandedToPath = "/blurp"
+
+  expect(asserter.result()).toEqual({
+    fromPath: asserter.expandedFromPath,
+    toPath: asserter.expandedToPath,
+  })
 })

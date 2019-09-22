@@ -1,41 +1,61 @@
 import { UserAbsent } from "./UserAbsent"
 import { createAssertNode } from "../testUtil"
+import { ScriptError } from "../ScriptError"
+import { Script } from "vm"
 
-let container = null
-
-beforeEach(() => {
-  container = {
+test("assert", async () => {
+  const container = {
     expandStringNode: (node) => node.value,
-    childProcess: {
-      exec: jest.fn(async (path) => {
-        expect(typeof path).toBe("string")
-        return 0
-      }),
-    },
     util: {
-      getUsers: jest.fn(async () => [{ name: "games" }]),
-    },
-    os: {
-      userInfo: jest.fn(() => ({
-        uid: 0,
-      })),
+      runningAsRoot: () => true,
+      getUsers: async () => [{ name: "games" }],
     },
   }
-})
 
-test("With user absent", async () => {
   const asserter = new UserAbsent(container)
 
+  // Bad args
+  await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
+    ScriptError
+  )
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: 1 }))
+  ).rejects.toThrow(ScriptError)
+
+  // With user absent
   await expect(
     asserter.assert(createAssertNode(asserter, { name: "notthere" }))
   ).resolves.toBe(true)
-})
 
-test("With user present", async () => {
-  const asserter = new UserAbsent(container)
-
+  // With user present
   await expect(
     asserter.assert(createAssertNode(asserter, { name: "games" }))
   ).resolves.toBe(false)
+
+  // With user present and not running as root
+  container.util.runningAsRoot = () => false
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "games" }))
+  ).rejects.toThrow(ScriptError)
+})
+
+test("rectify", async () => {
+  const container = {
+    childProcess: {
+      exec: async () => undefined,
+    },
+  }
+  const asserter = new UserAbsent(container)
+
+  asserter.expandedName = "blah"
+
   await expect(asserter.rectify()).resolves.toBeUndefined()
+})
+
+test("result", () => {
+  const asserter = new UserAbsent({})
+
+  asserter.expandedName = "name"
+
+  expect(asserter.result()).toEqual({ name: asserter.expandedName })
 })

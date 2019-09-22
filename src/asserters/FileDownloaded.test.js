@@ -6,32 +6,21 @@ import { ScriptError } from "../ScriptError"
 test("assert", async () => {
   const container = {
     expandStringNode: (node) => node.value,
-    fs: {
-      createReadStream: jest.fn((fileName) => {
-        expect(typeof fileName).toBe("string")
-
-        return new stream.Readable({
-          read(size) {
-            if (fileName === "./abc/badfile.txt") {
-              this.push("not the test string")
-            } else {
-              this.push(testString)
-            }
-            this.push(null)
-          },
-        })
-      }),
-      lstat: jest.fn(async (path) => {
-        if (path === "./abc/somefile.txt" || path === "./abc/badfile.txt") {
-          return {
-            isDirectory: jest.fn(() => false),
-            isFile: jest.fn(() => true),
-          }
+    util: {
+      generateDigestFromFile: async (path) => {
+        if (path === "badfile") {
+          return "0987654321"
         } else {
-          throw new Error("ENOENT")
+          return "1234567890"
         }
-      }),
-      access: jest.fn(async (path) => undefined),
+      },
+      fileExists: async (path) => {
+        if (path === "missingfile") {
+          return false
+        } else {
+          return true
+        }
+      },
     },
   }
   const testUrl = "http://localhost/somefile.txt"
@@ -69,9 +58,8 @@ test("assert", async () => {
     asserter.assert(
       createAssertNode(asserter, {
         url: testUrl,
-        digest:
-          "c03905fcdab297513a620ec81ed46ca44ddb62d41cbbd83eb4a5a3592be26a69",
-        toPath: "./abc/somefile.txt",
+        digest: "1234567890",
+        toPath: "somefile",
       })
     )
   ).resolves.toBe(true)
@@ -81,9 +69,8 @@ test("assert", async () => {
     asserter.assert(
       createAssertNode(asserter, {
         url: testUrl,
-        digest:
-          "c03905fcdab297513a620ec81ed46ca44ddb62d41cbbd83eb4a5a3592be26a69",
-        toPath: "./def/somefile.txt",
+        digest: "1234567890",
+        toPath: "missingfile",
       })
     )
   ).resolves.toBe(false)
@@ -93,27 +80,11 @@ test("assert", async () => {
     asserter.assert(
       createAssertNode(asserter, {
         url: testUrl,
-        digest:
-          "c03905fcdab297513a620ec81ed46ca44ddb62d41cbbd83eb4a5a3592be26a69",
-        toPath: "./abc/badfile.txt",
+        digest: "1234567890",
+        toPath: "badfile",
       })
     )
   ).resolves.toBe(false)
-
-  // With bad toPath directory
-  container.fs.access = jest.fn(async () => {
-    throw new Error()
-  })
-  await expect(
-    asserter.assert(
-      createAssertNode(asserter, {
-        url: testUrl,
-        digest:
-          "c03905fcdab297513a620ec81ed46ca44ddb62d41cbbd83eb4a5a3592be26a69",
-        toPath: "./abc/badfile.txt",
-      })
-    )
-  ).rejects.toThrow(ScriptError)
 })
 
 test("rectify", async () => {

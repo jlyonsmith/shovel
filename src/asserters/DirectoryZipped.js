@@ -4,7 +4,7 @@ import yauzl from "yauzl"
 import readdirp from "readdirp"
 import crypto from "crypto"
 import path from "path"
-import * as util from "../util"
+import util from "../util"
 import { ScriptError } from "../ScriptError"
 
 /*
@@ -47,7 +47,7 @@ export class DirectoryZipped {
       )
     }
 
-    if (!fromPathNode || zipPathNode.type !== "string") {
+    if (!fromPathNode || fromPathNode.type !== "string") {
       throw new ScriptError(
         "'from' must be supplied and be a string",
         fromPathNode || withNode
@@ -60,7 +60,7 @@ export class DirectoryZipped {
       if (globsNode.type !== "array") {
         throw new ScriptError(
           "'globs' must be supplied and be an array",
-          globsNode || withNode
+          globsNode
         )
       }
 
@@ -69,14 +69,7 @@ export class DirectoryZipped {
           throw new ScriptError("glob must be a string", globNode)
         }
 
-        try {
-          this.globs.push(globNode.value)
-        } catch (e) {
-          throw new ScriptError(
-            `Glob '${globNode.value}' could not be parsed`,
-            globNode
-          )
-        }
+        this.globs.push(globNode.value)
       }
     } else {
       this.globs.push(".")
@@ -85,10 +78,10 @@ export class DirectoryZipped {
     this.expandedZipPath = this.expandStringNode(zipPathNode)
     this.expandedFromPath = this.expandStringNode(fromPathNode)
 
-    if (!(await this.util.dirExists(this.fs, this.expandedFromPath))) {
+    if (!(await this.util.dirExists(this.expandedFromPath))) {
       throw new ScriptError(
         `From directory ${this.expandedFromPath} does not exist`,
-        globsNode
+        fromPathNode
       )
     }
 
@@ -110,7 +103,7 @@ export class DirectoryZipped {
 
     this.digest = hash.digest("hex")
 
-    if (await this.util.fileExists(this.fs, this.expandedZipPath)) {
+    if (await this.util.fileExists(this.expandedZipPath)) {
       this.zipFileExists = true
 
       let zipFile = null
@@ -131,7 +124,9 @@ export class DirectoryZipped {
         }
       }
 
-      return this.digest === zipHash.digest("hex")
+      zipHash = zipHash.digest("hex")
+
+      return this.digest === zipHash
     } else {
       this.zipFileExists = false
     }
@@ -144,9 +139,7 @@ export class DirectoryZipped {
       await this.fs.remove(this.expandedZipPath)
     }
 
-    let zipFile = null
-
-    zipFile = new this.yazl.ZipFile()
+    const zipFile = new this.yazl.ZipFile()
 
     for (const file in this.files) {
       zipFile.addFile(path.join(this.expandedFromPath, file))

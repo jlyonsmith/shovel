@@ -21,6 +21,7 @@ test("assert", async () => {
     util: {
       generateDigestFromFile: jest.fn(async () => "1234567890"),
       generateDigest: jest.fn(() => "1234567890"),
+      canAccess: jest.fn(async () => true),
     },
   }
 
@@ -68,9 +69,7 @@ test("assert", async () => {
   ).resolves.toBe(false)
 
   // File missing or inaccessible
-  container.fs.access = jest.fn(async () => {
-    throw new Error()
-  })
+  container.util.canAccess = jest.fn(async () => false)
   await expect(
     asserter.assert(
       createAssertNode(asserter, {

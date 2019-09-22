@@ -32,6 +32,7 @@ test("assert", async () => {
         gid: 0,
       })),
       parseModeNode: jest.fn(() => 0o644),
+      canAccess: jest.fn(() => true),
     },
   }
 
@@ -159,7 +160,6 @@ test("assert", async () => {
   container.fs.lstat = jest.fn(async (fileName) => {
     throw new Error()
   })
-  container.fs.access = jest.fn(async () => undefined)
   await expect(
     asserter.assert(createAssertNode(asserter, { path: "/bar/notthere" }))
   ).resolves.toBe(false)
@@ -168,9 +168,7 @@ test("assert", async () => {
   container.fs.lstat = jest.fn(async () => {
     throw new Error()
   })
-  container.fs.access = jest.fn(async () => {
-    throw new Error()
-  })
+  container.util.canAccess = jest.fn(async () => false)
   await expect(
     asserter.assert(createAssertNode(asserter, { path: "/foo/notthere" }))
   ).rejects.toThrow(ScriptError)

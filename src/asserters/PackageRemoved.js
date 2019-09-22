@@ -1,5 +1,5 @@
 import childProcess from "child-process-promise"
-import * as util from "../util"
+import util from "../util"
 import { ScriptError } from "../ScriptError"
 
 /*

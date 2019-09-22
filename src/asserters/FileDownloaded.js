@@ -1,7 +1,7 @@
 import fs from "fs-extra"
 import path from "path"
 import fetch from "node-fetch"
-import * as util from "../util"
+import util from "../util"
 import { ScriptError } from "../ScriptError"
 
 /*
@@ -58,24 +58,15 @@ export class FileDownloaded {
 
     this.expandedUrl = this.expandStringNode(urlNode)
     this.expandedToPath = this.expandStringNode(toPathNode)
-    this.toFileExists = await util.fileExists(this.fs, this.expandedToPath)
+    this.toFileExists = await this.util.fileExists(this.expandedToPath)
 
     if (!this.toFileExists) {
       return false
     }
 
-    // Ensure we can access the download directory
-    try {
-      await this.fs.access(
-        path.dirname(this.expandedToPath),
-        fs.constants.W_OK | fs.constants.R_OK
-      )
-    } catch (e) {
-      throw new ScriptError(e.message, toPathNode)
-    }
+    // TODO: Ensure we can access the download directory
 
-    const toFileDigest = await util.generateDigestFromFile(
-      this.fs,
+    const toFileDigest = await this.util.generateDigestFromFile(
       this.expandedToPath
     )
 

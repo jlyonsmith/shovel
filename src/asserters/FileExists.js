@@ -1,7 +1,7 @@
 import fs from "fs-extra"
 import os from "os"
 import path from "path"
-import * as util from "../util"
+import util from "../util"
 import { ScriptError } from "../ScriptError"
 
 /*
@@ -38,8 +38,8 @@ export class FileExists {
     }
 
     const userInfo = this.os.userInfo()
-    const users = await this.util.getUsers(this.fs)
-    const groups = await this.util.getGroups(this.fs)
+    const users = await this.util.getUsers()
+    const groups = await this.util.getGroups()
     let stat = null
     let owner = { uid: userInfo.uid, gid: userInfo.gid }
 
@@ -53,12 +53,8 @@ export class FileExists {
     try {
       stat = await this.fs.lstat(this.expandedPath)
     } catch (e) {
-      // Check if required directory exists and is accessible
-      const dirPath = path.dirname(this.expandedPath)
-
-      try {
-        await this.fs.access(dirPath, fs.constants.W_OK | fs.constants.R_OK)
-      } catch (e) {
+      // Check if the target directory exists and is accessible
+      if (!(await this.util.canAccess(path.dirname(this.expandedPath)))) {
         throw new ScriptError(e.message, pathNode)
       }
 

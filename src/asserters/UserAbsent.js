@@ -1,7 +1,6 @@
 import fs from "fs-extra"
 import childProcess from "child-process-promise"
-import os from "os"
-import * as util from "../util"
+import util from "../util"
 import { ScriptError } from "../ScriptError"
 
 /*
@@ -20,7 +19,6 @@ Example:
 export class UserAbsent {
   constructor(container) {
     this.fs = container.fs || fs
-    this.os = container.os || os
     this.util = container.util || util
     this.childProcess = container.childProcess || childProcess
     this.expandStringNode = container.expandStringNode
@@ -40,11 +38,11 @@ export class UserAbsent {
     this.expandedName = this.expandStringNode(nameNode)
 
     const ok =
-      (await this.util.getUsers(this.fs)).find(
+      (await this.util.getUsers()).find(
         (user) => user.name === this.expandedName
       ) === undefined
 
-    if (!ok && !util.runningAsRoot(this.os)) {
+    if (!ok && !this.util.runningAsRoot()) {
       throw new ScriptError("Only root user can delete users", assertNode)
     }
 

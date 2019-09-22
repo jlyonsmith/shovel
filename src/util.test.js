@@ -1,67 +1,93 @@
-import * as util from "./util"
 import stream from "stream"
 import { createNode } from "./testUtil"
 import { ScriptError } from "./ScriptError"
 import { EventEmitter } from "events"
+import { Utility } from "./util"
 
 const testString = "the quick brown fox jumps over the lazy dog"
 
 test("generateDigestFromFile", async () => {
-  const fs = {
-    createReadStream: jest.fn((fileName) => {
-      return new stream.Readable({
-        read(size) {
-          this.push(testString)
-          this.push(null)
-        },
-      })
-    }),
-  }
+  const util = new Utility({
+    fs: {
+      createReadStream: jest.fn((fileName) => {
+        return new stream.Readable({
+          read(size) {
+            this.push(testString)
+            this.push(null)
+          },
+        })
+      }),
+    },
+  })
 
-  await expect(util.generateDigestFromFile(fs, testString)).resolves.toBe(
+  await expect(util.generateDigestFromFile(testString)).resolves.toBe(
     "05c6e08f1d9fdafa03147fcb8f82f124c76d2f70e3d989dc8aadb5e7d7450bec"
   )
 })
 
 test("generateDigest", () => {
+  const util = new Utility()
+
   expect(util.generateDigest(testString)).toBe(
     "05c6e08f1d9fdafa03147fcb8f82f124c76d2f70e3d989dc8aadb5e7d7450bec"
   )
 })
 
 test("fileExists", async () => {
-  const fs = {
-    lstat: jest.fn((path) => {
-      if (path === "there") {
-        return {
-          isFile: () => true,
+  const util = new Utility({
+    fs: {
+      lstat: jest.fn((path) => {
+        if (path === "there") {
+          return {
+            isFile: () => true,
+          }
+        } else {
+          throw new Error()
         }
-      } else {
-        throw new Error()
-      }
-    }),
-  }
-  await expect(util.fileExists(fs, "there")).resolves.toBe(true)
-  await expect(util.fileExists(fs, "notthere")).resolves.toBe(false)
+      }),
+    },
+  })
+
+  await expect(util.fileExists("there")).resolves.toBe(true)
+  await expect(util.fileExists("notthere")).resolves.toBe(false)
 })
 
 test("dirExists", async () => {
-  const fs = {
-    lstat: jest.fn((path) => {
-      if (path === "there") {
-        return {
-          isDirectory: () => true,
+  const util = new Utility({
+    fs: {
+      lstat: jest.fn((path) => {
+        if (path === "there") {
+          return {
+            isDirectory: () => true,
+          }
+        } else {
+          throw new Error()
         }
-      } else {
-        throw new Error()
-      }
-    }),
-  }
-  await expect(util.dirExists(fs, "there")).resolves.toBe(true)
-  await expect(util.dirExists(fs, "notthere")).resolves.toBe(false)
+      }),
+    },
+  })
+
+  await expect(util.dirExists("there")).resolves.toBe(true)
+  await expect(util.dirExists("notthere")).resolves.toBe(false)
+})
+
+test("canAccess", async () => {
+  const util = new Utility({
+    fs: {
+      access: jest.fn(async (path) => {
+        if (path === "badfile") {
+          throw new Error()
+        }
+      }),
+    },
+  })
+
+  await expect(util.canAccess("goodfile")).resolves.toBe(true)
+  await expect(util.canAccess("badfile")).resolves.toBe(false)
 })
 
 test("pipeToPromise", async () => {
+  const util = new Utility()
   let readable = new stream.Readable({
     read(size) {
       this.push(testString)
@@ -101,17 +127,19 @@ test("pipeToPromise", async () => {
 })
 
 test("runningAsRoot", async () => {
-  const os = {
-    userInfo: jest.fn(() => ({
-      uid: 0,
-    })),
-  }
+  const util = new Utility({
+    os: {
+      userInfo: jest.fn(() => ({
+        uid: 0,
+      })),
+    },
+  })
 
-  expect(util.runningAsRoot(os)).toBe(true)
+  expect(util.runningAsRoot()).toBe(true)
 })
 
 test("getUsers", async () => {
-  const container = {
+  const util = new Utility({
     fs: {
       readFile: jest.fn((path, options) => {
         return `root:x:0:0:root:/root:/bin/bash
@@ -132,8 +160,9 @@ sshd:x:110:65534::/run/sshd:/usr/sbin/nologin
 ntp:x:111:113::/nonexistent:/usr/sbin/nologin`
       }),
     },
-  }
-  await expect(util.getUsers(container.fs)).resolves.toContainEqual({
+  })
+
+  await expect(util.getUsers()).resolves.toContainEqual({
     name: "mail",
     password: "x",
     uid: 8,
@@ -146,7 +175,7 @@ ntp:x:111:113::/nonexistent:/usr/sbin/nologin`
 })
 
 test("getGroups", async () => {
-  const container = {
+  const util = new Utility({
     fs: {
       readFile: jest.fn((path, options) => {
         return `root:x:0:
@@ -167,8 +196,9 @@ tape:x:26:
 sudo:x:27:someuser`
       }),
     },
-  }
-  await expect(util.getGroups(container.fs)).resolves.toContainEqual({
+  })
+
+  await expect(util.getGroups()).resolves.toContainEqual({
     name: "adm",
     password: "x",
     gid: 4,
@@ -177,6 +207,8 @@ sudo:x:27:someuser`
 })
 
 test("parseOwnerNode", async () => {
+  const util = new Utility()
+
   expect(util.parseOwnerNode([], [], null)).toEqual({})
 
   expect(util.parseOwnerNode([], [], createNode("test.json5", {}))).toEqual({})
@@ -237,6 +269,8 @@ test("parseOwnerNode", async () => {
 })
 
 test("parseModeNode", async () => {
+  const util = new Utility()
+
   expect(util.parseModeNode(null)).toBe(0o644)
 
   expect(() => util.parseModeNode(1)).toThrow(ScriptError)
@@ -263,10 +297,16 @@ test("parseModeNode", async () => {
 })
 
 test("getOSInfo", async () => {
+  const util = new Utility({
+    osInfo: jest.fn(() => ({ id: "", platform: "", version_id: "" })),
+  })
+
   await expect(util.getOSInfo()).resolves.not.toBeNull()
 })
 
 test("runRemoteCommand", async () => {
+  const util = new Utility()
+
   class Socket extends EventEmitter {
     write() {}
     end() {}

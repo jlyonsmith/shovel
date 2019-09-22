@@ -1,111 +1,171 @@
 import { UserExists } from "./UserExists"
 import { createAssertNode } from "../testUtil"
+import { ScriptError } from "../ScriptError"
 
 let container = null
 
-beforeEach(() => {
-  container = {
+test("assert", async () => {
+  const container = {
     expandStringNode: (node) => node.value,
     util: {
-      getUsers: jest.fn(async () => container._users),
+      runningAsRoot: () => true,
+      getUsers: async () => [
+        {
+          name: "user1",
+          uid: 1,
+          gid: 1,
+          shell: "/bin/sh",
+          homeDir: "/users/user1",
+          comment: "",
+        },
+      ],
     },
-    childProcess: {
-      exec: jest.fn(async (path) => {
-        expect(typeof path).toBe("string")
-
-        const parts = path.split(" ")
-
-        if (path.startsWith("useradd")) {
-          container._users.push({
-            name: parts[1],
-            gid: 12,
-            uid: 12,
-            shell: "/bin/bash",
-            homeDir: "/home/notthere",
-            comment: "",
-          })
-        } else {
-          const user = container._users.find((user) => user.name === parts[11])
-
-          user.uid = parseInt(parts[2])
-          user.gid = parseInt(parts[4])
-          user.shell = parts[6]
-          user.homeDir = parts[8]
-          user.comment = parts[10].substring(1, parts[10].length - 1)
-        }
-
-        return 0
-      }),
-    },
-    os: {
-      userInfo: jest.fn(() => ({
-        uid: 0,
-      })),
-    },
-    _users: [
-      {
-        name: "someuser",
-        uid: 1,
-        gid: 1,
-        shell: "/bin/sh",
-        homeDir: "/Users/someuser",
-        comment: "",
-      },
-    ],
   }
-})
 
-test("With user existing", async () => {
   const asserter = new UserExists(container)
 
+  // Bad args
+  await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
+    ScriptError
+  )
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: 1 }))
+  ).rejects.toThrow(ScriptError)
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "x", uid: "1" }))
+  ).rejects.toThrow(ScriptError)
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "x", gid: "1" }))
+  ).rejects.toThrow(ScriptError)
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "x", shell: 1 }))
+  ).rejects.toThrow(ScriptError)
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "x", homeDir: 1 }))
+  ).rejects.toThrow(ScriptError)
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "x", comment: 1 }))
+  ).rejects.toThrow(ScriptError)
+
+  // With user existing
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        name: "someuser",
+        name: "user1",
       })
     )
   ).resolves.toBe(true)
-})
 
-test("With user existing with different gid, uid, shell, homeDir and comment", async () => {
-  const asserter = new UserExists(container)
-
+  // With user existing with different stuff
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        name: "someuser",
-        gid: 10,
-        uid: 10,
-        shell: "/bin/bash",
-        homeDir: "/home/someuser",
-        comment: "SomeUser",
+        name: "user1",
+        gid: 2,
       })
     )
   ).resolves.toBe(false)
-  await expect(asserter.rectify()).resolves.toBeUndefined()
-  expect(asserter.result()).toEqual({
-    name: "someuser",
-    gid: 10,
-    uid: 10,
-    shell: "/bin/bash",
-    homeDir: "/home/someuser",
-    comment: "SomeUser",
-  })
-})
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        name: "user1",
+        uid: 2,
+      })
+    )
+  ).resolves.toBe(false)
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        name: "user1",
+        shell: "/bin/bash",
+      })
+    )
+  ).resolves.toBe(false)
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        name: "user1",
+        homeDir: "/home/user1",
+      })
+    )
+  ).resolves.toBe(false)
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        name: "user1",
+        comment: "User1",
+      })
+    )
+  ).resolves.toBe(false)
 
-test("With user absent", async () => {
-  const asserter = new UserExists(container)
-
+  // With user absent
   await expect(
     asserter.assert(createAssertNode(asserter, { name: "notthere" }))
   ).resolves.toBe(false)
+
+  // With user absent and not root
+  container.util.runningAsRoot = () => false
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
+  ).rejects.toThrow(ScriptError)
+
+  // With user different and not root
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        name: "user1",
+        gid: 2,
+      })
+    )
+  ).rejects.toThrow(ScriptError)
+})
+
+test("rectify", async () => {
+  const users = [
+    {
+      name: "user1",
+      gid: 12,
+      uid: 12,
+      shell: "/bin/bash",
+      homeDir: "/home/user1",
+      comment: "",
+    },
+    {
+      name: "user2",
+    },
+  ]
+  const container = {
+    childProcess: {
+      exec: async () => undefined,
+    },
+    util: {
+      getUsers: async () => users,
+    },
+  }
+  const asserter = new UserExists(container)
+
+  asserter.modify = false
+  asserter.expandedName = "user1"
+  asserter.user = users[0]
   await expect(asserter.rectify()).resolves.toBeUndefined()
-  expect(asserter.result()).toEqual({
-    name: "notthere",
+
+  asserter.modify = true
+  asserter.expandedName = "badname"
+  asserter.user = users[1]
+  await expect(asserter.rectify()).rejects.toThrow(Error)
+})
+
+test("result", () => {
+  const asserter = new UserExists({})
+
+  asserter.user = {
+    name: "user1",
     gid: 12,
     uid: 12,
     shell: "/bin/bash",
-    homeDir: "/home/notthere",
+    homeDir: "/home/user1",
     comment: "",
-  })
+  }
+
+  expect(asserter.result()).toEqual(asserter.user)
 })

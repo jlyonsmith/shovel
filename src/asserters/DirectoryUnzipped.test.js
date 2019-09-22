@@ -1,11 +1,10 @@
 import { DirectoryUnzipped } from "./DirectoryUnzipped"
 import stream from "stream"
 import { createAssertNode } from "../testUtil"
+import { ScriptError } from "../ScriptError"
 
-let container = null
-
-beforeEach(() => {
-  container = {
+test("assert", async () => {
+  const container = {
     expandStringNode: (node) => node.value,
     fs: {
       lstat: jest.fn(async (path) => {
@@ -31,22 +30,9 @@ beforeEach(() => {
       ensureDir: jest.fn(async (dirPath) => {
         expect(typeof dirPath).toBe("string")
       }),
-      createWriteStream: jest.fn(async (fileName) => {
-        expect(typeof fileName).toBe("string")
-
-        return new stream.Writable({
-          write(chunk, encoding, callback) {
-            callback()
-          },
-        })
-      }),
     },
     util: {
-      fileExists: async (fs, path) => {
-        expect(typeof path).toBe("string")
-        expect(fs).not.toBeNull()
-        expect(typeof fs).toBe("object")
-
+      fileExists: async (path) => {
         switch (path) {
           case "./filesize.zip":
           case "./filedir.zip":
@@ -58,21 +44,13 @@ beforeEach(() => {
             return false
         }
       },
-      dirExists: async (fs, path) => {
-        expect(typeof path).toBe("string")
-        expect(fs).not.toBeNull()
-        expect(typeof fs).toBe("object")
-
+      dirExists: async (path) => {
         switch (path) {
           case "./outdir":
             return true
           default:
             return false
         }
-      },
-      pipeToPromise: async (readable, writeable) => {
-        expect(typeof readable).toBe("object")
-        expect(typeof writeable).toBe("object")
       },
     },
     yauzl: {
@@ -143,11 +121,26 @@ beforeEach(() => {
       }),
     },
   }
-})
 
-test("With zip file not present", async () => {
   const asserter = new DirectoryUnzipped(container)
 
+  // With bad zip path
+  await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
+    ScriptError
+  )
+  await expect(
+    asserter.assert(createAssertNode(asserter, { zip: 1 }))
+  ).rejects.toThrow(ScriptError)
+
+  // With bad to path
+  await expect(
+    asserter.assert(createAssertNode(asserter, { zip: "" }))
+  ).rejects.toThrow(ScriptError)
+  await expect(
+    asserter.assert(createAssertNode(asserter, { zip: "", to: 1 }))
+  ).rejects.toThrow(ScriptError)
+
+  // With zip file not present
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -155,12 +148,9 @@ test("With zip file not present", async () => {
         to: "./outdir",
       })
     )
-  ).rejects.toThrow()
-})
+  ).rejects.toThrow(ScriptError)
 
-test("With all files unzipped and the same", async () => {
-  const asserter = new DirectoryUnzipped(container)
-
+  // With all files unzipped and the same
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -169,11 +159,8 @@ test("With all files unzipped and the same", async () => {
       })
     )
   ).resolves.toBe(true)
-})
 
-test("With output directory missing", async () => {
-  const asserter = new DirectoryUnzipped(container)
-
+  // With output directory missing
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -182,12 +169,8 @@ test("With output directory missing", async () => {
       })
     )
   ).resolves.toBe(false)
-  await expect(asserter.rectify()).resolves.toBeUndefined()
-})
 
-test("With a file missing", async () => {
-  const asserter = new DirectoryUnzipped(container)
-
+  // With a file missing
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -196,12 +179,8 @@ test("With a file missing", async () => {
       })
     )
   ).resolves.toBe(false)
-  await expect(asserter.rectify()).resolves.toBeUndefined()
-})
 
-test("With a file as different size", async () => {
-  const asserter = new DirectoryUnzipped(container)
-
+  // With a file as different size
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -210,12 +189,8 @@ test("With a file as different size", async () => {
       })
     )
   ).resolves.toBe(false)
-  await expect(asserter.rectify()).resolves.toBeUndefined()
-})
 
-test("With a file as a directory", async () => {
-  const asserter = new DirectoryUnzipped(container)
-
+  // With a file as a directory
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -224,5 +199,97 @@ test("With a file as a directory", async () => {
       })
     )
   ).resolves.toBe(false)
+
+  // With bad zip file
+  container.yauzl.open = jest.fn(async () => {
+    throw Error()
+  })
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, { zip: "./somefile.zip", to: "./outdir" })
+    )
+  ).resolves.toBe(false)
+})
+
+test("rectify", async () => {
+  const container = {
+    fs: {
+      ensureDir: jest.fn(async () => undefined),
+      createWriteStream: jest.fn(async () => {
+        return new stream.Writable({
+          write(chunk, encoding, callback) {
+            callback()
+          },
+        })
+      }),
+    },
+    util: {
+      dirExists: async (path) => {
+        switch (path) {
+          case "/a":
+            return false
+          default:
+            return true
+        }
+      },
+      pipeToPromise: async (readable, writeable) => {},
+    },
+    yauzl: {
+      open: jest.fn(async (path) => {
+        const openReadStream = async () =>
+          new stream.Readable({
+            read(size) {
+              this.push("The quick brown fox jumps over the lazy dog\n")
+              this.push(null)
+            },
+          })
+
+        let entries = [
+          { uncompressedSize: 0, fileName: "a/" },
+          {
+            uncompressedSize: 100,
+            fileName: "a/file.txt",
+            openReadStream,
+          },
+          {
+            uncompressedSize: 100,
+            fileName: "b/file.txt",
+            openReadStream,
+          },
+        ]
+
+        return {
+          close: jest.fn(async () => null),
+          walkEntries: jest.fn(async (callback) => {
+            // Assuming that callback returns a Promise
+            await Promise.all(entries.map(callback))
+          }),
+        }
+      }),
+    },
+  }
+  const asserter = new DirectoryUnzipped(container)
+
+  asserter.expandedZipPath = "/xyz.zip"
+  asserter.expandedToPath = "/"
+
   await expect(asserter.rectify()).resolves.toBeUndefined()
+
+  // If zip file cannot be opened
+  container.yauzl.open = jest.fn(async () => {
+    throw new Error()
+  })
+  await expect(asserter.rectify()).rejects.toThrow(Error)
+})
+
+test("result", () => {
+  const asserter = new DirectoryUnzipped({})
+
+  asserter.expandedZipPath = "blah.zip"
+  asserter.expandedToPath = "file/"
+
+  expect(asserter.result()).toEqual({
+    zip: asserter.expandedZipPath,
+    to: asserter.expandedToPath,
+  })
 })

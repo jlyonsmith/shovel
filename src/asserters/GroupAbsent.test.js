@@ -1,13 +1,14 @@
 import { GroupAbsent } from "./GroupAbsent"
 import { createAssertNode } from "../testUtil"
+import { ScriptError } from "../ScriptError"
+import { Script } from "vm"
 
-let container = null
-
-beforeEach(() => {
-  container = {
+test("assert", async () => {
+  const container = {
     expandStringNode: (node) => node.value,
     util: {
-      getGroups: jest.fn(async (fs) => [{ name: "news", gid: 10, users: [] }]),
+      runningAsRoot: () => true,
+      getGroups: async (fs) => [{ name: "news", gid: 10, users: [] }],
     },
     childProcess: {
       exec: jest.fn(async (path) => {
@@ -15,28 +16,52 @@ beforeEach(() => {
         return 0
       }),
     },
-    os: {
-      userInfo: jest.fn(() => ({
-        uid: 0,
-      })),
-    },
   }
-})
 
-test("With group absent", async () => {
   const asserter = new GroupAbsent(container)
 
+  // Bad args
+  await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
+    ScriptError
+  )
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: 1 }))
+  ).rejects.toThrow(ScriptError)
+
+  // With group absent
   await expect(
     asserter.assert(createAssertNode(asserter, { name: "notthere" }))
   ).resolves.toBe(true)
-})
 
-test("With group present", async () => {
-  const asserter = new GroupAbsent(container)
-
+  // With group present
   await expect(
     asserter.assert(createAssertNode(asserter, { name: "news" }))
   ).resolves.toBe(false)
+
+  // With group absent and not root
+  container.util.runningAsRoot = () => false
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "news" }))
+  ).rejects.toThrow(ScriptError)
+})
+
+test("rectify", async () => {
+  const container = {
+    childProcess: {
+      exec: async () => undefined,
+    },
+  }
+  const asserter = new GroupAbsent(container)
+
+  asserter.expandedName = "blah"
+
   await expect(asserter.rectify()).resolves.toBeUndefined()
-  expect(asserter.result()).toEqual({ name: "news" })
+})
+
+test("result", () => {
+  const asserter = new GroupAbsent({})
+
+  asserter.expandedName = "news"
+
+  expect(asserter.result()).toEqual({ name: asserter.expandedName })
 })

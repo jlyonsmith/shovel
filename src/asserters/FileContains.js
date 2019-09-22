@@ -1,5 +1,5 @@
 import fs from "fs-extra"
-import * as util from "../util"
+import util from "../util"
 import { ScriptError } from "../ScriptError"
 
 /*
@@ -44,19 +44,11 @@ export class FileContains {
     this.expandedPath = this.expandStringNode(pathNode)
     this.expandedContents = this.expandStringNode(contentsNode)
 
-    try {
-      await this.fs.access(
-        this.expandedPath,
-        fs.constants.W_OK | fs.constants.R_OK
-      )
-    } catch (e) {
-      throw new ScriptError(e.message, pathNode)
+    if (!(await this.util.canAccess(this.expandedPath))) {
+      throw new ScriptError(`${this.expandedPath} cannet be accessed`, pathNode)
     }
 
-    const pathDigest = await this.util.generateDigestFromFile(
-      this.fs,
-      this.expandedPath
-    )
+    const pathDigest = await this.util.generateDigestFromFile(this.expandedPath)
     const contentsDigest = this.util.generateDigest(this.expandedContents)
 
     return pathDigest === contentsDigest

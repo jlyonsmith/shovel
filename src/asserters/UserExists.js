@@ -1,7 +1,7 @@
 import fs from "fs-extra"
 import childProcess from "child-process-promise"
-import os from "os"
-import * as util from "../util"
+import util from "../util"
+import { ScriptError } from "../ScriptError"
 
 /*
 Asserts and ensures that a user exists with UID, GID, shell and/or system priveges.
@@ -23,7 +23,6 @@ Example:
 export class UserExists {
   constructor(container) {
     this.fs = container.fs || fs
-    this.os = container.os || os
     this.util = container.util || util
     this.childProcess = container.childProcess || childProcess
     this.expandStringNode = container.expandStringNode
@@ -94,7 +93,7 @@ export class UserExists {
     const user = (await this.util.getUsers(this.fs)).find(
       (user) => user.name === this.expandedName
     )
-    const runningAsRoot = util.runningAsRoot(this.os)
+    const runningAsRoot = this.util.runningAsRoot()
 
     if (user) {
       if (
@@ -140,7 +139,7 @@ export class UserExists {
 
     await this.childProcess.exec(command)
 
-    const user = (await this.util.getUsers(this.fs)).find(
+    const user = (await this.util.getUsers()).find(
       (user) => user.name === this.expandedName
     )
 

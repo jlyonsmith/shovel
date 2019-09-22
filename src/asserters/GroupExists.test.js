@@ -2,70 +2,101 @@ import { GroupExists } from "./GroupExists"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
 
-let container = null
-
-beforeEach(() => {
-  container = {
+test("assert", async () => {
+  const container = {
     expandStringNode: (node) => node.value,
     util: {
-      getGroups: jest.fn(async (fs) => container._groups),
-    },
-    childProcess: {
-      exec: jest.fn(async (path) => {
-        expect(typeof path).toBe("string")
-
-        const parts = path.split(" ")
-
-        if (path.startsWith("groupadd")) {
-          const group = { name: parts[1], gid: 12 }
-
-          container._groups.push(group)
-        } else {
-          const group = container._groups.find(
-            (group) => group.name === parts[3]
-          )
-
-          group.gid = parseInt(parts[2])
-        }
-        return 0
-      }),
-    },
-    os: {
-      userInfo: jest.fn(() => ({
-        uid: 0,
-      })),
+      runningAsRoot: jest.fn(() => true),
     },
     _groups: [
       { name: "mail", password: "", gid: 10, users: ["mail"] },
       { name: "nfs", password: "", gid: 1, users: ["nfs"] },
     ],
   }
-})
-
-test("With group existing with same name and gid", async () => {
   const asserter = new GroupExists(container)
 
+  // Bad name
+  await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
+    ScriptError
+  )
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "mail", gid: 10 }))
-  ).resolves.toBe(true)
-})
+    asserter.assert(createAssertNode(asserter, { name: 1, gid: 10 }))
+  ).rejects.toThrow(ScriptError)
 
-test("With group exists with different gid", async () => {
-  const asserter = new GroupExists(container)
-
+  // Bad gid
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "nfs", gid: 11 }))
-  ).resolves.toBe(false)
-  await expect(asserter.rectify()).resolves.toBeUndefined()
-  expect(asserter.result()).toEqual({ name: "nfs", gid: 11 })
-})
+    asserter.assert(createAssertNode(asserter, { name: "mail", gid: "10" }))
+  ).rejects.toThrow(ScriptError)
 
-test("With group absent", async () => {
-  const asserter = new GroupExists(container)
-
+  // With group absent
+  container.util.getGroups = jest.fn(async (fs) => [])
   await expect(
     asserter.assert(createAssertNode(asserter, { name: "notthere" }))
   ).resolves.toBe(false)
+
+  // With group existing
+  container.util.getGroups = jest.fn(async (fs) => [{ name: "mail", gid: 10 }])
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "mail" }))
+  ).resolves.toBe(true)
+
+  // With group existing with same name and gid
+  container.util.getGroups = jest.fn(async (fs) => [{ name: "mail", gid: 10 }])
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "mail", gid: 10 }))
+  ).resolves.toBe(true)
+
+  // With group exists with different gid
+  container.util.getGroups = jest.fn(async (fs) => [{ name: "nfs", gid: 10 }])
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "nfs", gid: 11 }))
+  ).resolves.toBe(false)
+
+  // With group present with different gid and not root
+  container.util.runningAsRoot = jest.fn(() => false)
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "nfs", gid: 11 }))
+  ).rejects.toThrow(ScriptError)
+
+  // With group absent and not root
+  container.util.getGroups = jest.fn(async (fs) => [])
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
+  ).rejects.toThrow(ScriptError)
+})
+
+test("rectify", async () => {
+  const container = {
+    childProcess: {
+      exec: jest.fn(async () => undefined),
+    },
+    util: {
+      getGroups: jest.fn(async () => [{ name: "name", gid: 12 }]),
+    },
+  }
+  const asserter = new GroupExists(container)
+
+  asserter.expandedName = "name"
+  asserter.modify = false
+  asserter.gid = undefined
+
+  // Add
   await expect(asserter.rectify()).resolves.toBeUndefined()
-  expect(asserter.result()).toEqual({ name: "notthere", gid: 12 })
+
+  // Modify
+  asserter.modify = true
+  await expect(asserter.rectify()).resolves.toBeUndefined()
+
+  // Group not present after command
+  container.util.getGroups = jest.fn(async () => [])
+  await expect(asserter.rectify()).rejects.toThrow(Error)
+})
+
+test("result", () => {
+  const asserter = new GroupExists({})
+
+  asserter.expandedName = "name"
+  asserter.gid = 12
+
+  expect(asserter.result()).toEqual({ name: asserter.expandedName, gid: 12 })
 })

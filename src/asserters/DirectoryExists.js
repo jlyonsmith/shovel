@@ -1,7 +1,8 @@
 import fs from "fs-extra"
 import os from "os"
 import { ScriptError } from "../ScriptError"
-import * as util from "../util"
+import util from "../util"
+import path from "path"
 
 /*
 Checks and ensures that a directory exists.
@@ -60,7 +61,10 @@ export class DirectoryExists {
     try {
       stat = await this.fs.lstat(this.expandedPath)
     } catch (e) {
-      // TODO: Ensure root directory is accessible or throw
+      // Ensure the root of the directory is accessible
+      if (!(await this.util.canAccess(path.dirname(this.expandedPath)))) {
+        throw new ScriptError(e.message, pathNode)
+      }
 
       return false
     }

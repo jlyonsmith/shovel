@@ -9,10 +9,10 @@ import path from "path"
 import { Readable } from "stream"
 import JSON5 from "@johnls/json5"
 import autobind from "autobind-decorator"
-import * as asserters from "./asserters"
-import * as util from "./util"
-import { ScriptError } from "./ScriptError"
 import merge from "merge"
+import * as asserters from "./asserters"
+import util from "./util"
+import { ScriptError } from "./ScriptError"
 
 @autobind
 export class OctopusTool {
@@ -522,6 +522,8 @@ export class OctopusTool {
       )
     }
 
+    // TODO: Need ability to run specific block of asserters
+
     for (const assertion of state.assertions) {
       const asserter = new this.asserters[assertion.assert]({
         expandStringNode: state.expandStringNode,
@@ -665,7 +667,7 @@ export class OctopusTool {
 
       await this.uploadFile(ssh, remoteTempFile, newScript)
 
-      // TODO: Need ability to run local and remote asserters in order!
+      // TODO: Need ability to run SFTP commands if remote script requests it
 
       this.log.info(
         `Running script on remote host as ${

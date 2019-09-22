@@ -1,6 +1,6 @@
 import fs from "fs-extra"
 import childProcess from "child-process-promise"
-import * as util from "../util"
+import util from "../util"
 import os from "os"
 import { ScriptError } from "../ScriptError"
 
@@ -48,11 +48,11 @@ export class GroupExists {
 
     this.expandedName = this.expandStringNode(nameNode)
 
-    const group = (await this.util.getGroups(this.fs)).find(
+    const group = (await this.util.getGroups()).find(
       (group) => group.name === this.expandedName
     )
 
-    const runningAsRoot = util.runningAsRoot(this.os)
+    const runningAsRoot = this.util.runningAsRoot()
 
     if (group) {
       if (this.gid === undefined) {
@@ -87,7 +87,7 @@ export class GroupExists {
 
     await this.childProcess.exec(command)
 
-    const group = (await this.util.getGroups(this.fs)).find(
+    const group = (await this.util.getGroups()).find(
       (group) => group.name === this.expandedName
     )
 

@@ -1,6 +1,6 @@
 import fs from "fs-extra"
 import yauzl from "yauzl-promise"
-import * as util from "../util"
+import util from "../util"
 import path from "path"
 import { ScriptError } from "../ScriptError"
 
@@ -47,14 +47,14 @@ export class DirectoryUnzipped {
     this.expandedZipPath = this.expandStringNode(zipPathNode)
     this.expandedToPath = this.expandStringNode(toPathNode)
 
-    if (!(await this.util.fileExists(this.fs, this.expandedZipPath))) {
+    if (!(await this.util.fileExists(this.expandedZipPath))) {
       throw new ScriptError(
         `Zip file ${this.expandedZipPath} does not exist`,
         zipPathNode
       )
     }
 
-    if (!(await this.util.dirExists(this.fs, this.expandedToPath))) {
+    if (!(await this.util.dirExists(this.expandedToPath))) {
       return false
     }
 
@@ -99,7 +99,7 @@ export class DirectoryUnzipped {
         const entryIsDir = entry.fileName.endsWith("/")
         const targetDir = entryIsDir ? targetPath : path.dirname(targetPath)
 
-        if (!(await this.util.dirExists(this.fs, targetDir))) {
+        if (!(await this.util.dirExists(targetDir))) {
           await this.fs.ensureDir(targetDir)
         }
 
