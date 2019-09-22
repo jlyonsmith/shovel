@@ -94,7 +94,9 @@ export class FileExists {
   }
 
   async rectify() {
-    await this.fs.ensureFile(this.expandedPath)
+    const fd = await this.fs.open(this.expandedPath, "a")
+
+    await this.fs.close(fd)
     await this.fs.chmod(this.expandedPath, this.mode)
     await this.fs.chown(this.expandedPath, this.owner.uid, this.owner.gid)
   }
