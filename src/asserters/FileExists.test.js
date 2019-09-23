@@ -177,11 +177,10 @@ test("assert", async () => {
 test("rectify", async () => {
   const container = {
     fs: {
-      ensureFile: jest.fn(async (fileName) => {
-        expect(typeof fileName).toBe("string")
-      }),
-      chown: jest.fn(async (path, uid, gid) => null),
-      chmod: jest.fn(async (path, mode) => null),
+      open: async () => undefined,
+      close: async () => undefined,
+      chown: async (path, uid, gid) => null,
+      chmod: async (path, mode) => null,
     },
   }
   const asserter = new FileExists(container)

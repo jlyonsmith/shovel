@@ -200,11 +200,12 @@ test("flattenScript", async () => {
 })
 
 test("createRunContext", async () => {
-  container.util.osInfo = jest.fn(() => ({
+  container.util.osInfo = async () => ({
     platform: "blah",
     id: "blah",
     versionId: "1.2.3",
-  }))
+  })
+  container.util.userInfo = () => ({})
   const tool = new OctopusTool(container)
   const scriptNode = testUtil.createScriptNode("a.json5")
 
@@ -230,6 +231,15 @@ test("runScriptLocally", async () => {
       assert() {}
       rectify() {}
       result() {}
+    },
+  }
+  container.util.runningAsRoot = () => true
+  container.process = {
+    seteuid: () => undefined,
+    setegid: () => undefined,
+    env: {
+      SUDO_UID: "1",
+      SUDO_GID: "1",
     },
   }
 

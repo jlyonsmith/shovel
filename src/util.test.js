@@ -298,7 +298,7 @@ test("parseModeNode", async () => {
 
 test("osInfo", async () => {
   const util = new Utility({
-    osInfo: jest.fn(() => ({ id: "", platform: "", version_id: "" })),
+    osInfo: async () => ({ id: "", platform: "", version_id: "" }),
   })
 
   await expect(util.osInfo()).resolves.not.toBeNull()

@@ -22,6 +22,7 @@ export class OctopusTool {
     this.log = container.log
     this.util = container.util || util
     this.asserters = container.asserters || asserters
+    this.process = container.process || process
     this.createSSH =
       container.createSSH || ((sshConfig) => new SSH2Promise(sshConfig))
     this.debug = container.debug
@@ -517,12 +518,12 @@ export class OctopusTool {
       }
 
       sudo = {
-        uid: parseInt(process.env["SUDO_UID"]),
-        gid: parseInt(process.env["SUDO_GID"]),
+        uid: parseInt(this.process.env["SUDO_UID"]),
+        gid: parseInt(this.process.env["SUDO_GID"]),
       }
 
-      process.setegid(sudo.gid)
-      process.seteuid(sudo.uid)
+      this.process.setegid(sudo.gid)
+      this.process.seteuid(sudo.uid)
     }
 
     Object.assign(
@@ -562,11 +563,11 @@ export class OctopusTool {
 
       if (assertion.become) {
         // TODO: Support becoming users other than root
-        process.setegid(0)
-        process.seteuid(0)
+        this.process.setegid(0)
+        this.process.seteuid(0)
       } else if (sudo !== null) {
-        process.setegid(sudo.gid)
-        process.seteuid(sudo.uid)
+        this.process.setegid(sudo.gid)
+        this.process.seteuid(sudo.uid)
       }
 
       if (!(await asserter.assert(assertion._assertNode))) {
@@ -586,8 +587,8 @@ export class OctopusTool {
     }
 
     if (sudo !== null) {
-      process.setegid(sudo.gid)
-      process.seteuid(sudo.uid)
+      this.process.setegid(sudo.gid)
+      this.process.seteuid(sudo.uid)
     }
   }
 
