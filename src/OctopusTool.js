@@ -16,7 +16,7 @@ import { ScriptError } from "./ScriptError"
 
 @autobind
 export class OctopusTool {
-  constructor(container) {
+  constructor(container = {}) {
     this.toolName = container.toolName
     this.fs = container.fs || fs
     this.log = container.log
@@ -219,27 +219,18 @@ export class OctopusTool {
     const scriptNode = JSON5.parse(await this.fs.readFile(scriptPath), {
       wantNodes: true,
     })
-    const createNode = (value) => {
-      let type = typeof value
-      let newValue
-
-      if (type === "object") {
-        if (Array.isArray(value)) {
-          type = "array"
-          newValue = value.map(createNode)
-        } else {
-          newValue = {}
-
-          Object.entries(value).map(([k, v]) => {
-            newValue[k] = createNode(v)
-          })
-        }
-      } else {
-        newValue = value
-      }
-
-      return { line: 0, column: 0, type, value }
-    }
+    const createArrayNode = () => ({
+      line: 0,
+      column: 0,
+      type: "array",
+      value: [],
+    })
+    const createObjectNode = () => ({
+      line: 0,
+      column: 0,
+      type: "object",
+      value: {},
+    })
     const addFilename = (node) => {
       node.filename = scriptPath
 
@@ -276,19 +267,19 @@ export class OctopusTool {
     } = scriptNode.value
 
     if (!includesNode) {
-      scriptNode.value.includes = includesNode = createNode([])
+      scriptNode.value.includes = includesNode = createArrayNode()
     }
 
     if (!settingsNode) {
-      scriptNode.value.settings = settingsNode = createNode({})
+      scriptNode.value.settings = settingsNode = createObjectNode()
     }
 
     if (!varsNode) {
-      scriptNode.value.vars = varsNode = createNode({})
+      scriptNode.value.vars = varsNode = createObjectNode()
     }
 
     if (!assertionsNode) {
-      scriptNode.value.assertions = assertionsNode = createNode([])
+      scriptNode.value.assertions = assertionsNode = createArrayNode([])
     }
 
     addFilename(scriptNode)
@@ -341,7 +332,7 @@ export class OctopusTool {
           throw new ScriptError("'assert' must be a string", assertNode)
         }
       } else {
-        throw new ScriptError("'assert' property is not present", assertNode)
+        throw new ScriptError("'assert' property is not present", assertionNode)
       }
 
       if (descriptionNode && descriptionNode.type !== "string") {

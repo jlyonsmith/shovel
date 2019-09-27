@@ -2,6 +2,7 @@ import { OctopusTool } from "./OctopusTool"
 import * as testUtil from "./testUtil"
 import * as version from "./version"
 import stream from "stream"
+import { ScriptError } from "./ScriptError"
 
 let container = null
 
@@ -17,6 +18,10 @@ beforeEach(() => {
     util: {},
     fs: {},
   }
+})
+
+test("constructor", () => {
+  expect(new OctopusTool()).not.toBe(null)
 })
 
 test("assertHasNode", async () => {
@@ -146,20 +151,108 @@ test("rectifyHasOctopus", async () => {
 })
 
 test("readScriptFile", async () => {
-  container.fs.readFile = (path) => {
-    if (path === "test1.json5") {
-      return `{
-        settings: {},
-        vars: {},
-        scripts: [],
-        assertions: [],
-      }`
-    }
-  }
-
   const tool = new OctopusTool(container)
 
-  await expect(tool.readScriptFile("test1.json5")).not.toBeNull()
+  // Bad empty script
+  container.fs.readFile = (path) => "[]"
+  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+
+  // Empty script
+  container.fs.readFile = (path) => "{}"
+  await expect(tool.readScriptFile("test.json5")).resolves.not.toBeNull()
+
+  // Clean script
+  container.fs.readFile = (path) =>
+    `{
+      settings: {},
+      includes: [],
+      vars: { a: 1, b: null, c: [1,2,3], d: { x: "x" }},
+      assertions: [{assert: "Thing", with: {}}],
+    }`
+  await expect(tool.readScriptFile("test.json5")).resolves.not.toBeNull()
+
+  // Bad settings
+  container.fs.readFile = (path) =>
+    `{
+      settings: [],
+    }`
+  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+
+  // Bad description
+  container.fs.readFile = (path) =>
+    `{
+      settings: {description: 1},
+    }`
+  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+
+  // Bad includes
+  container.fs.readFile = (path) =>
+    `{
+      includes: {},
+    }`
+  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+
+  // Bad include
+  container.fs.readFile = (path) =>
+    `{
+      includes: [1],
+    }`
+  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+
+  // Bad vars
+  container.fs.readFile = (path) =>
+    `{
+      vars: [],
+    }`
+  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+
+  // Bad assertions
+  container.fs.readFile = (path) =>
+    `{
+      assertions: {},
+    }`
+  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+
+  // Bad assertion
+  container.fs.readFile = (path) =>
+    `{
+      assertions: [1],
+    }`
+  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+
+  // Missing assertion name
+  container.fs.readFile = (path) =>
+    `{
+      assertions: [{}],
+    }`
+  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+
+  // Bad assertion name
+  container.fs.readFile = (path) =>
+    `{
+      assertions: [{ assert: 1 }],
+    }`
+  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+
+  // Bad assertion description
+  container.fs.readFile = (path) =>
+    `{
+      assertions: [{ assert: "Thing", description: 1 }],
+    }`
+  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+
+  // Bad assertion with
+  container.fs.readFile = (path) =>
+    `{
+      assertions: [{ assert: "Thing", with: 1 }],
+    }`
+  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+  // Bad assertion when
+  container.fs.readFile = (path) =>
+    `{
+      assertions: [{ assert: "Thing", when: 1 }],
+    }`
+  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
 })
 
 test("mergeIncludeNodes", async () => {
