@@ -301,7 +301,33 @@ test("osInfo", async () => {
     osInfo: async () => ({ id: "", platform: "", version_id: "" }),
   })
 
-  await expect(util.osInfo()).resolves.not.toBeNull()
+  await expect(util.osInfo()).resolves.toEqual({
+    id: "",
+    platform: "",
+    versionId: "",
+  })
+})
+
+test("userInfo", () => {
+  const util = new Utility({
+    os: {
+      userInfo: () => ({
+        username: "",
+        uid: 0,
+        gid: 0,
+        shell: "",
+        homedir: "",
+      }),
+    },
+  })
+
+  expect(util.userInfo()).toEqual({
+    name: "",
+    uid: 0,
+    gid: 0,
+    shell: "",
+    homeDir: "",
+  })
 })
 
 test("runRemoteCommand", async () => {

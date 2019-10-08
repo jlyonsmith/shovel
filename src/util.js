@@ -8,7 +8,7 @@ export class Utility {
   constructor(container = {}) {
     this.fs = container.fs || fs
     this.os = container.os || os
-    this.osInfo = container.osInfo || osInfo
+    this.os.osInfo = container.osInfo || osInfo
   }
 
   generateDigestFromFile(filePath) {
@@ -97,7 +97,7 @@ export class Utility {
   }
 
   async osInfo() {
-    const info = await this.osInfo()
+    const info = await this.os.osInfo()
 
     return {
       platform: info.platform,
