@@ -79,7 +79,7 @@ export class OctopusTool {
     const sftp = ssh.sftp()
     const writeStream = await sftp.createWriteStream(remotePath)
 
-    await util.pipeToPromise(readStream, writeStream)
+    await this.util.pipeToPromise(readStream, writeStream)
   }
 
   async assertHasNode(ssh) {
@@ -146,6 +146,7 @@ export class OctopusTool {
       {
         sudo: true,
         password,
+        noThrow: true,
       }
     )
 
@@ -628,6 +629,7 @@ export class OctopusTool {
         //debug: this.debug ? (detail) => this.log.info(detail) : null,
       }
 
+      // TODO: Support reading from .ssh/config
       // TODO: Support connecting through a jump box
 
       this.log.info(
@@ -723,14 +725,24 @@ export class OctopusTool {
   async run(argv) {
     const options = {
       boolean: ["help", "version", "debug", "root"],
-      string: ["host", "host-file", "user", "port", "password"],
+      string: [
+        "host",
+        "host-file",
+        "user",
+        "port",
+        "password",
+        "identity",
+        "jump-host",
+      ],
       alias: {
-        h: "host",
-        u: "user",
-        p: "port",
         f: "host-file",
+        h: "host",
+        i: "identity",
+        j: "jump-host",
+        p: "port",
         P: "password",
         r: "root",
+        u: "user",
       },
     }
     const args = parseArgs(argv, options)
@@ -760,8 +772,8 @@ Arguments:
   --host, -h          Remote host name. Default is to run the script
                       directly, without a remote proxy
   --port, -p          Remote port number. Default is 22
-  --user, -u          Remote user name. Defaults to current user.
-  --password, -P      Remote user password. Defaults is to just use PPK.
+  --user, -u          Remote user name. Defaults to current user
+  --password, -P      Remote user password. Defaults is to just use PPK
   --host-file, -f     JSON5 file containing multiple host names
   --root, -r          Start Octopus as root on remote host
 `)

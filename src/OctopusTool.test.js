@@ -21,7 +21,10 @@ beforeEach(() => {
 })
 
 test("constructor", () => {
-  expect(new OctopusTool()).not.toBe(null)
+  const tool = new OctopusTool()
+
+  expect(tool).not.toBe(null)
+  expect(tool.createSSH()).not.toBe(null)
 })
 
 test("assertHasNode", async () => {
@@ -64,6 +67,24 @@ test("assertCanSudoOnHost", async () => {
   await expect(tool.assertCanSudoOnHost(ssh)).rejects.toThrow(Error)
 })
 
+test("uploadFile", async () => {
+  container.util = undefined
+
+  const tool = new OctopusTool(container)
+  const ssh = {
+    sftp: jest.fn(() => ({
+      createWriteStream: async (path) =>
+        new stream.Writable({
+          write(chunk, encoding, callback) {
+            callback()
+          },
+        }),
+    })),
+  }
+
+  await expect(tool.uploadFile(ssh)).resolves.toBeUndefined()
+})
+
 test("rectifyHasNode", async () => {
   container.util.runRemoteCommand = async (ssh, command, options) => {
     if (command === 'bash -c "echo /$(date)"') {
@@ -90,21 +111,100 @@ test("rectifyHasNode", async () => {
   }
 
   const tool = new OctopusTool(container)
+
+  tool.uploadFile = async () => undefined
+  tool.assertCanSudoOnHost = async () => undefined
+
   const ssh = {
-    connect: jest.fn(async () => null),
-    sftp: jest.fn(() => ({
-      createWriteStream: async (path) =>
-        new stream.Writable({
-          write(chunk, encoding, callback) {
-            callback()
-          },
-        }),
-    })),
-    close: jest.fn(),
     config: [{ password: "", username: "test" }],
   }
 
+  // Success
+  container.util.runRemoteCommand = async (ssh, command, options) => {
+    if (command === 'bash -c "echo /$(date)"') {
+      return {
+        exitCode: 0,
+        output: ["/" + new Date().toString()],
+      }
+    } else if (command === "node --version") {
+      return {
+        exitCode: 0,
+        output: [OctopusTool.minNodeVersion],
+      }
+    } else if (command === "bash -c 'echo /$EUID'") {
+      return {
+        exitCode: 0,
+        output: ["/0"],
+      }
+    } else {
+      return {
+        exitCode: 0,
+        output: [""],
+      }
+    }
+  }
   await expect(tool.rectifyHasNode(ssh)).resolves.toBeUndefined()
+
+  // Test debug stuff now
+  tool.debug = true
+  await expect(tool.rectifyHasNode(ssh)).resolves.toBeUndefined()
+  tool.debug = false
+
+  // Unable to get date
+  container.util.runRemoteCommand = async (ssh, command, options) => ({
+    exitCode: 0,
+    output: [""],
+  })
+  await expect(tool.rectifyHasNode(ssh)).rejects.toThrow(Error)
+
+  // Bad date
+  container.util.runRemoteCommand = async (ssh, command, options) => ({
+    exitCode: 0,
+    output: ["/Wed Oct 1 12:00:00 UTC 2010"],
+  })
+  await expect(tool.rectifyHasNode(ssh)).rejects.toThrow(Error)
+
+  // Bad install
+  container.util.runRemoteCommand = async (ssh, command, options) => {
+    if (command === 'bash -c "echo /$(date)"') {
+      return {
+        exitCode: 0,
+        output: ["/" + new Date().toString()],
+      }
+    } else if (command === "mktemp") {
+      return {
+        exitCode: 0,
+        output: [""],
+      }
+    } else {
+      return {
+        exitCode: 255,
+        output: ["/255"],
+      }
+    }
+  }
+  await expect(tool.rectifyHasNode(ssh)).rejects.toThrow(Error)
+
+  // Bad version
+  container.util.runRemoteCommand = async (ssh, command, options) => {
+    if (command === 'bash -c "echo /$(date)"') {
+      return {
+        exitCode: 0,
+        output: ["/" + new Date().toString()],
+      }
+    } else if (command === "node --version") {
+      return {
+        exitCode: 255,
+        output: ["/255"],
+      }
+    } else {
+      return {
+        exitCode: 0,
+        output: [""],
+      }
+    }
+  }
+  await expect(tool.rectifyHasNode(ssh)).rejects.toThrow(Error)
 })
 
 test("assertHasOctopus", async () => {
@@ -416,6 +516,4 @@ test("run", async () => {
   expect(container.log.info.mock.calls[0][0]).toEqual(
     expect.stringMatching(/\d\.\d\.\d/)
   )
-
-  // TODO: More run tests
 })
