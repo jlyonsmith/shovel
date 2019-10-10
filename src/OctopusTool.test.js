@@ -247,7 +247,29 @@ test("rectifyHasOctopus", async () => {
     config: [{ password: "", username: "test" }],
   }
 
+  // Success
   await expect(tool.rectifyHasOctopus(ssh)).resolves.toBeUndefined()
+
+  // Not can sudo
+  await expect(
+    tool.rectifyHasOctopus(ssh, { canSudoOnHost: true })
+  ).resolves.toBeUndefined()
+
+  // Failed after install
+  container.util.runRemoteCommand = async (ssh, command, options) => ({
+    exitCode: 255,
+    output: [],
+  })
+  await expect(tool.rectifyHasOctopus(ssh)).rejects.toThrow(Error)
+
+  // Failed install
+  container.util.runRemoteCommand = async (ssh, command, options) => {
+    return {
+      exitCode: 0,
+      output: [""],
+    }
+  }
+  await expect(tool.rectifyHasOctopus(ssh)).rejects.toThrow(Error)
 })
 
 test("readScriptFile", async () => {
@@ -265,7 +287,7 @@ test("readScriptFile", async () => {
   container.fs.readFile = (path) =>
     `{
       settings: {},
-      includes: [],
+      includes: ["something.json5"],
       vars: { a: 1, b: null, c: [1,2,3], d: { x: "x" }},
       assertions: [{assert: "Thing", with: {}}],
     }`
@@ -398,11 +420,24 @@ test("createRunContext", async () => {
     id: "blah",
     versionId: "1.2.3",
   })
+  container.fs = {
+    readFileSync: () => "foobar",
+  }
   container.util.userInfo = () => ({})
   const tool = new OctopusTool(container)
   const scriptNode = testUtil.createScriptNode("a.json5")
 
-  scriptNode.vars = testUtil.createNode(scriptNode.filename, {
+  // No vars
+  scriptNode.value.vars = undefined
+
+  let result = await tool.createRunContext(scriptNode)
+
+  expect(result).toMatchObject({
+    runContext: {},
+  })
+
+  // With vars
+  scriptNode.value.vars = testUtil.createNode(scriptNode.filename, {
     s: "b",
     n: 1,
     x: null,
@@ -411,10 +446,36 @@ test("createRunContext", async () => {
     o: { s: "a", n: 2 },
     local: { s: "c" },
   })
-
-  await expect(tool.createRunContext(scriptNode)).resolves.toMatchObject({
+  result = await tool.createRunContext(scriptNode)
+  expect(result).toMatchObject({
     runContext: {},
   })
+  expect(
+    result.expandStringNode(testUtil.createNode(scriptNode.filename, "test"))
+  ).toBe("test")
+  expect(() =>
+    result.expandStringNode(testUtil.createNode(scriptNode.filename, 1))
+  ).toThrow(Error)
+  expect(() =>
+    result.expandStringNode(testUtil.createNode(scriptNode.filename, "{x()}"))
+  ).toThrow(ScriptError)
+
+  // Context functions
+  expect(
+    result.expandStringNode(
+      testUtil.createNode(scriptNode.filename, "{fs.readFile('blah')}")
+    )
+  ).toBe("foobar")
+  expect(
+    result.expandStringNode(
+      testUtil.createNode(scriptNode.filename, "{path.join('foo', 'bar')}")
+    )
+  ).toBe("foo/bar")
+  expect(
+    result.expandStringNode(
+      testUtil.createNode(scriptNode.filename, "{path.dirname('foo/bar')}")
+    )
+  ).toBe("foo")
 })
 
 test("runScriptLocally", async () => {
@@ -504,6 +565,10 @@ test("runScriptRemotely", async () => {
 test("run", async () => {
   const tool = new OctopusTool(container)
 
+  tool.runScriptLocally = async () => undefined
+  tool.runScriptRemotely = async () => undefined
+
+  // Help
   await expect(tool.run(["--help"])).resolves.toBeUndefined()
 
   expect(container.log.info.mock.calls[0][0]).toEqual(
@@ -512,8 +577,45 @@ test("run", async () => {
 
   container.log.info.mockClear()
 
+  // Version
   await expect(tool.run(["--version"])).resolves.toBeUndefined()
   expect(container.log.info.mock.calls[0][0]).toEqual(
     expect.stringMatching(/\d\.\d\.\d/)
   )
+
+  // Running script directly
+  await expect(tool.run(["somescript.json5"])).resolves.toBeUndefined()
+
+  // Too many scripts
+  await expect(
+    tool.run(["somescript.json5", "otherscript.json5"])
+  ).rejects.toThrow(Error)
+  expect(container.log.info.mock.calls[0][0]).toEqual(
+    expect.stringMatching(/\d\.\d\.\d/)
+  )
+
+  // Missing host/hosts-file
+  await expect(
+    tool.run(["--identity", "id_rsa", "otherscript.json5"])
+  ).rejects.toThrow(Error)
+
+  // Running script
+  await expect(
+    tool.run(["somescript.json5", "--host", "somehost"])
+  ).resolves.toBeUndefined()
+
+  // Running remote script that fails
+  tool.debug = true
+  tool.runScriptRemotely = async () => {
+    throw new Error()
+  }
+  await expect(
+    tool.run(["somescript.json5", "--host", "somehost"])
+  ).rejects.toThrow(Error)
+
+  // Running remote script that fails (no debug)
+  tool.debug = false
+  await expect(
+    tool.run(["somescript.json5", "--host", "somehost"])
+  ).rejects.toThrow(Error)
 })

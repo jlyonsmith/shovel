@@ -367,7 +367,8 @@ export class OctopusTool {
         scriptDir: path.dirname(scriptNode.filename),
       },
       fs: {
-        readFile: (fileName) => fs.readFileSync(fileName, { encoding: "utf8" }),
+        readFile: (fileName) =>
+          this.fs.readFileSync(fileName, { encoding: "utf8" }),
       },
       path: {
         join: (...paths) => path.join(...paths),
@@ -391,32 +392,32 @@ export class OctopusTool {
       }
     }
 
-    const processNode = (node, expand) => {
-      if (node.type === "object") {
-        const newValue = {}
+    if (varsNode) {
+      const processNode = (node, expand) => {
+        if (node.value !== null && node.type === "object") {
+          const newValue = {}
 
-        Object.entries(node.value).map(([k, v]) => {
-          newValue[k] = processNode(v, k === "local" ? true : expand)
-        })
+          Object.entries(node.value).map(([k, v]) => {
+            newValue[k] = processNode(v, k === "local" ? true : expand)
+          })
 
-        return newValue
-      } else if (node.type === "array") {
-        return node.value.map((i) => processNode(i, expand))
-      } else if (node.type === "string") {
-        if (expand) {
-          const newValue = expandStringNode(node)
-
-          node.value = newValue
           return newValue
+        } else if (node.type === "array") {
+          return node.value.map((i) => processNode(i, expand))
+        } else if (node.type === "string") {
+          if (expand) {
+            const newValue = expandStringNode(node)
+
+            node.value = newValue
+            return newValue
+          } else {
+            return node.value
+          }
         } else {
           return node.value
         }
-      } else {
-        return node.value
       }
-    }
 
-    if (varsNode) {
       runContext.vars = processNode(varsNode, options.inRunScriptLocally)
     }
 
@@ -730,6 +731,7 @@ export class OctopusTool {
         "host-file",
         "user",
         "port",
+        "jump-port",
         "password",
         "identity",
         "jump-host",
@@ -738,8 +740,9 @@ export class OctopusTool {
         f: "host-file",
         h: "host",
         i: "identity",
-        j: "jump-host",
+        jh: "jump-host",
         p: "port",
+        jp: "jump-port",
         P: "password",
         r: "root",
         u: "user",
@@ -771,7 +774,9 @@ Arguments:
   --version           Shows the tool version
   --host, -h          Remote host name. Default is to run the script
                       directly, without a remote proxy
+  --jump-host, -jh    Jump box host name
   --port, -p          Remote port number. Default is 22
+  --jump-port, -jp    Jump box port number. Default is 22
   --user, -u          Remote user name. Defaults to current user
   --password, -P      Remote user password. Defaults is to just use PPK
   --host-file, -f     JSON5 file containing multiple host names
@@ -787,12 +792,12 @@ Arguments:
     const scriptPath = path.resolve(args._[0])
 
     if (
-      (args.port || args.user || args.password || args.root) &&
+      (args.port || args.user || args.password || args.root || args.identity) &&
       !args.host &&
       !args["host-file"]
     ) {
       throw new Error(
-        "'host' or 'host-file' must be specified with 'port', 'user', 'password' and 'root' arguments"
+        "'host' or 'host-file' must be specified with 'port', 'user', 'password', 'identity', 'jump-host' and 'root' arguments"
       )
     }
 
@@ -820,6 +825,7 @@ Arguments:
           host: args.host,
           user: args.user,
           password: args.password,
+          identity: args.identity,
           port: parsePort(args.port),
           runAsRoot: args.root,
         })
@@ -835,6 +841,7 @@ Arguments:
             host: host.host,
             user: host.user,
             password: host.password,
+            identity: host.identity,
             port: parsePort(host.port),
             runAsRoot: host.runAsRoot,
           })
