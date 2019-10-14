@@ -24,7 +24,7 @@ test("constructor", () => {
   const tool = new OctopusTool()
 
   expect(tool).not.toBe(null)
-  expect(tool.createSSH()).not.toBe(null)
+  expect(tool.createSsh()).not.toBe(null)
 })
 
 test("assertHasNode", async () => {
@@ -527,7 +527,7 @@ test("runScriptRemotely", async () => {
     exitCode: 0,
     output: "",
   })
-  container.createSSH = (sshConfig) => ({
+  container.createSsh = (sshConfig) => ({
     connect: jest.fn(async () => null),
     sftp: jest.fn(() => ({
       createWriteStream: async (path) =>

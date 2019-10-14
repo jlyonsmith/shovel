@@ -106,6 +106,16 @@ export class Utility {
     }
   }
 
+  parsePort(s) {
+    const port = parseInt(s)
+
+    if (port && (port < 0 || port > 65535)) {
+      throw new Error("Port must be a number between 0 and 65535")
+    }
+
+    return port
+  }
+
   runningAsRoot() {
     return this.os.userInfo().uid === 0
   }

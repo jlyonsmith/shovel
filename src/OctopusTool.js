@@ -2,6 +2,7 @@ import parseArgs from "minimist"
 import * as version from "./version"
 import readlinePassword from "@johnls/readline-password"
 import SSH2Promise from "@johnls/ssh2-promise"
+import sshConfig from "ssh-config"
 import os from "os"
 import fs from "fs-extra"
 import vm from "vm"
@@ -23,8 +24,9 @@ export class OctopusTool {
     this.util = container.util || util
     this.asserters = container.asserters || asserters
     this.process = container.process || process
-    this.createSSH =
-      container.createSSH || ((sshConfig) => new SSH2Promise(sshConfig))
+    this.createSsh =
+      container.createSsh || ((options) => new SSH2Promise(options))
+    this.sshConfig = container.sshConfig || sshConfig
     this.debug = container.debug
   }
 
@@ -94,8 +96,7 @@ export class OctopusTool {
     )
   }
 
-  async rectifyHasNode(ssh) {
-    const password = ssh.config[0].password
+  async rectifyHasNode(ssh, options = {}) {
     let result = null
 
     this.log.info("Checking remote system clock")
@@ -145,7 +146,7 @@ export class OctopusTool {
       `bash ${remoteTempFilePath}`,
       {
         sudo: true,
-        password,
+        password: options.password,
         noThrow: true,
       }
     )
@@ -185,15 +186,13 @@ export class OctopusTool {
       await this.assertCanSudoOnHost(ssh)
     }
 
-    const password = ssh.config[0].password
-
     this.log.info("Installing Octopus")
     let result = await this.util.runRemoteCommand(
       ssh,
       "npm install -g @johnls/octopus",
       {
         sudo: true,
-        password,
+        password: options.password,
         noThrown: true,
       }
     )
@@ -503,7 +502,7 @@ export class OctopusTool {
     const state = await this.flattenScript(scriptNode)
     let sudo = null
 
-    if (state.assertions.find((assertion) => assertion.become) !== null) {
+    if (state.assertions.find((assertion) => assertion.become !== null)) {
       if (!this.util.runningAsRoot()) {
         throw new Error(
           "Script requires becoming another user and it is not running as root"
@@ -586,19 +585,6 @@ export class OctopusTool {
   }
 
   async runScriptRemotely(scriptPath, options = {}) {
-    let isConnected = false
-    let ssh = null
-    let remoteTempFile = null
-    const showPrompts = async (name, instructions, lang, prompts) => {
-      const rl = readlinePassword.createInstance(process.stdin, process.stdout)
-      let responses = []
-
-      for (const prompt of prompts) {
-        responses.push(await rl.passwordAsync(prompt))
-      }
-      rl.close()
-      return responses
-    }
     const scriptNode = await this.readScriptFile(scriptPath)
     const state = Object.assign(
       await this.flattenScript(scriptNode),
@@ -618,67 +604,115 @@ export class OctopusTool {
       this.log.info("Script after local processing:\n" + newScript)
     }
 
-    try {
-      const userInfo = os.userInfo()
-      const sshConfig = {
-        username: options.user || userInfo.username,
-        host: options.host || "localhost",
-        port: options.port || 22,
-        password: options.password,
-        agent: process.env["SSH_AUTH_SOCK"],
-        showPrompts,
-        //debug: this.debug ? (detail) => this.log.info(detail) : null,
+    const sshOptions = []
+    const userInfo = os.userInfo()
+    const sshConfigFile = `${process.env.HOME}/.ssh/config`
+    const config = this.sshConfig.parse(
+      await fs.readFile(sshConfigFile, { encoding: "utf8" })
+    )
+    const section = config.compute(options.host)
+
+    if (section) {
+      if (section.ProxyJump) {
+        const proxySection = config.compute(section.ProxyJump)
+
+        sshOptions.push({
+          // Again, use config first, then passed in name
+          host: proxySection.HostName || options.proxyHost,
+          // Again, for these use command line first
+          port: options.proxyPort || parsePort(proxySection.Port) || 22,
+          username: options.user || proxySection.User || userInfo.username,
+          identity: options.identity || section.Identity,
+        })
       }
 
-      // TODO: Support reading from .ssh/config
-      // TODO: Support connecting through a jump box
+      sshOptions.push({
+        // Here use config first, then passed in name
+        host: section.HostName || options.host,
+        // For these, use command line first
+        port: options.port || parseInt(section.Port) || 22,
+        username: options.user || section.User || userInfo.username,
+        identity: options.identity || section.Identity,
+      })
+    }
 
-      this.log.info(
-        `Connecting to ${sshConfig.host}:${sshConfig.port} as ${sshConfig.username}`
-      )
+    const showPrompts = async (name, instructions, lang, prompts) => {
+      const rl = readlinePassword.createInstance(process.stdin, process.stdout)
+      let responses = []
 
-      if (!sshConfig.password) {
+      for (const prompt of prompts) {
+        responses.push(await rl.passwordAsync(prompt))
+      }
+      rl.close()
+      return responses
+    }
+
+    // Must manually ask for passwords if none supplied
+    for (const sshOption of sshOptions) {
+      if (!sshOption.password && !sshOption.identity) {
         const answers = await showPrompts("", "", "en-us", [
           {
-            prompt: `${sshConfig.username}:${sshConfig.host}'s password:`,
+            prompt: `${sshOption.username}@${sshOption.host}'s password:`,
             echo: false,
           },
         ])
 
-        sshConfig.password = answers[0]
+        sshOption.password = answers[0]
       }
+    }
 
-      ssh = this.createSSH(sshConfig)
+    Object.assign(sshOptions[0], {
+      agent: process.env["SSH_AUTH_SOCK"],
+      showPrompts,
+      //debug: this.debug ? (detail) => this.log.info(detail) : null,
+    })
+
+    let remote = sshOptions[0]
+    let isConnected = false
+    let ssh = null
+    let remoteTempFile = null
+
+    try {
+      this.log.info(
+        `Connecting to ${sshOptions[0].host}:${sshOptions[0].port} as ${sshOptions[0].username}`
+      )
+
+      ssh = this.createSsh(sshOptions)
 
       await ssh.connect()
 
-      isConnected = true
+      if (sshOptions[1]) {
+        this.log.info(
+          `Proxied to ${sshOptions[1].host}:${sshOptions[1].port} as ${sshOptions[1].username}`
+        )
 
-      this.log.info(`Connected to ${sshConfig.host}:${sshConfig.port}`)
+        remote = sshOptions[1]
+      }
+
+      isConnected = true
 
       let installedNode = false
 
       if (!(await this.assertHasNode(ssh))) {
         this.log.warning(
-          `Node not found on ${sshConfig.host}:${sshConfig.port}; attempting to rectify.`
+          `Node not found on ${remote.host}:${remote.port}; attempting to rectify.`
         )
-        await this.rectifyHasNode(ssh)
+        await this.rectifyHasNode(ssh, { password: remote.password })
         installedNode = true
       } else if (this.debug) {
-        this.log.info(
-          `Node.js is installed on ${sshConfig.host}:${sshConfig.port}`
-        )
+        this.log.info(`Node.js is installed on ${remote.host}:${remote.port}`)
       }
 
       if (!(await this.assertHasOctopus(ssh))) {
         this.log.warning(
-          `Octopus with version ${version.shortVersion} not found on ${sshConfig.host}:${sshConfig.port}; attempting to rectify`
+          `Octopus with version ${version.shortVersion} not found on ${remote.host}:${remote.port}; attempting to rectify`
         )
-        await this.rectifyHasOctopus(ssh, { canSudoOnHost: installedNode })
+        await this.rectifyHasOctopus(ssh, {
+          canSudoOnHost: installedNode,
+          password: remote.password,
+        })
       } else if (this.debug) {
-        this.log.info(
-          `Octopus is installed on ${sshConfig.host}:${sshConfig.port}`
-        )
+        this.log.info(`Octopus is installed on ${remote.host}:${remote.port}`)
       }
 
       const remoteTempFile = (await this.util.runRemoteCommand(ssh, "mktemp"))
@@ -696,12 +730,12 @@ export class OctopusTool {
 
       this.log.info(
         `Running script on remote host as ${
-          options.runAsRoot ? "root" : sshConfig.username
+          options.runAsRoot ? "root" : remote.username
         }`
       )
       await this.util.runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
         sudo: options.runAsRoot,
-        password: sshConfig.password,
+        password: remote.password,
         log: this.log.output,
         logError: this.log.outputError,
         noThrow: true,
@@ -728,13 +762,12 @@ export class OctopusTool {
       boolean: ["help", "version", "debug", "root"],
       string: [
         "host",
+        "jump-host",
         "host-file",
         "user",
         "port",
         "jump-port",
-        "password",
         "identity",
-        "jump-host",
       ],
       alias: {
         f: "host-file",
@@ -743,7 +776,6 @@ export class OctopusTool {
         jh: "jump-host",
         p: "port",
         jp: "jump-port",
-        P: "password",
         r: "root",
         u: "user",
       },
@@ -778,7 +810,6 @@ Arguments:
   --port, -p          Remote port number. Default is 22
   --jump-port, -jp    Jump box port number. Default is 22
   --user, -u          Remote user name. Defaults to current user
-  --password, -P      Remote user password. Defaults is to just use PPK
   --host-file, -f     JSON5 file containing multiple host names
   --root, -r          Start Octopus as root on remote host
 `)
@@ -792,23 +823,13 @@ Arguments:
     const scriptPath = path.resolve(args._[0])
 
     if (
-      (args.port || args.user || args.password || args.root || args.identity) &&
+      (args.port || args.user || args.root || args.identity) &&
       !args.host &&
       !args["host-file"]
     ) {
       throw new Error(
-        "'host' or 'host-file' must be specified with 'port', 'user', 'password', 'identity', 'jump-host' and 'root' arguments"
+        "'host' or 'host-file' must be specified with 'port', 'user', 'identity', 'jump-host' and 'root' arguments"
       )
-    }
-
-    const parsePort = (s) => {
-      const port = parseInt(args.port)
-
-      if (args.port && (port < 0 || port > 65535)) {
-        throw new Error("Port must be a number between 0 and 65535")
-      }
-
-      return port
     }
 
     let hosts = null
@@ -823,10 +844,11 @@ Arguments:
       if (args.host) {
         hosts.push({
           host: args.host,
+          proxyHost: args.proxyHost,
           user: args.user,
-          password: args.password,
           identity: args.identity,
-          port: parsePort(args.port),
+          port: this.util.parsePort(args.port),
+          proxyPort: this.util.parsePort(args.proxyPort),
           runAsRoot: args.root,
         })
       }
@@ -839,10 +861,11 @@ Arguments:
         try {
           await this.runScriptRemotely(scriptPath, {
             host: host.host,
+            proxyHost: host.proxyHost,
             user: host.user,
-            password: host.password,
             identity: host.identity,
-            port: parsePort(host.port),
+            port: this.util.parsePort(host.port),
+            proxyPort: this.util.parsePort(host.proxyHost),
             runAsRoot: host.runAsRoot,
           })
         } catch (error) {
