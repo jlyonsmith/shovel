@@ -617,10 +617,11 @@ export class OctopusTool {
         const proxySection = config.compute(section.ProxyJump)
 
         sshOptions.push({
-          // Again, use config first, then passed in name
+          // Again, use co nfig first, then passed in name
           host: proxySection.HostName || options.proxyHost,
           // Again, for these use command line first
-          port: options.proxyPort || parsePort(proxySection.Port) || 22,
+          port:
+            options.proxyPort || this.util.parsePort(proxySection.Port) || 22,
           username: options.user || proxySection.User || userInfo.username,
           identity: options.identity || section.Identity,
         })
@@ -667,7 +668,6 @@ export class OctopusTool {
       //debug: this.debug ? (detail) => this.log.info(detail) : null,
     })
 
-    let remote = sshOptions[0]
     let isConnected = false
     let ssh = null
     let remoteTempFile = null
@@ -685,34 +685,32 @@ export class OctopusTool {
         this.log.info(
           `Proxied to ${sshOptions[1].host}:${sshOptions[1].port} as ${sshOptions[1].username}`
         )
-
-        remote = sshOptions[1]
       }
+
+      // Get password and username for sudo on remote
+      const { password, username } = sshOptions[sshOptions.length === 2 ? 1 : 0]
+      let installedNode = false
 
       isConnected = true
 
-      let installedNode = false
-
       if (!(await this.assertHasNode(ssh))) {
-        this.log.warning(
-          `Node not found on ${remote.host}:${remote.port}; attempting to rectify.`
-        )
-        await this.rectifyHasNode(ssh, { password: remote.password })
+        this.log.warning(`Node not found; attempting to rectify.`)
+        await this.rectifyHasNode(ssh, { password })
         installedNode = true
       } else if (this.debug) {
-        this.log.info(`Node.js is installed on ${remote.host}:${remote.port}`)
+        this.log.info(`Node.js is installed`)
       }
 
       if (!(await this.assertHasOctopus(ssh))) {
         this.log.warning(
-          `Octopus with version ${version.shortVersion} not found on ${remote.host}:${remote.port}; attempting to rectify`
+          `Octopus with version ${version.shortVersion} not found; attempting to rectify`
         )
         await this.rectifyHasOctopus(ssh, {
           canSudoOnHost: installedNode,
-          password: remote.password,
+          password,
         })
       } else if (this.debug) {
-        this.log.info(`Octopus is installed on ${remote.host}:${remote.port}`)
+        this.log.info(`Octopus is installed`)
       }
 
       const remoteTempFile = (await this.util.runRemoteCommand(ssh, "mktemp"))
@@ -730,12 +728,12 @@ export class OctopusTool {
 
       this.log.info(
         `Running script on remote host as ${
-          options.runAsRoot ? "root" : remote.username
+          options.runAsRoot ? "root" : username
         }`
       )
       await this.util.runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
         sudo: options.runAsRoot,
-        password: remote.password,
+        password,
         log: this.log.output,
         logError: this.log.outputError,
         noThrow: true,
