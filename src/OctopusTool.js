@@ -168,7 +168,7 @@ export class OctopusTool {
       {
         sudo: true,
         sudoPassword,
-        noThrown: true,
+        noThrow: true,
       }
     )
 
@@ -582,7 +582,10 @@ export class OctopusTool {
           port:
             options.proxyPort || this.util.parsePort(proxySection.Port) || 22,
           username: options.user || proxySection.User || userInfo.username,
-          identity: options.identity || section.Identity,
+          identity:
+            options.identity ||
+            (section.IdentityFile &&
+              this.util.expandTilde(section.IdentityFile[0])),
         })
       }
 
@@ -592,13 +595,16 @@ export class OctopusTool {
         // For these, use command line first
         port: options.port || parseInt(section.Port) || 22,
         username: options.user || section.User || userInfo.username,
-        identity: options.identity || section.Identity,
+        identity:
+          options.identity ||
+          (section.IdentityFile &&
+            this.util.expandTilde(section.IdentityFile[0])),
       })
     }
 
-    // Must manually ask for passwords if none supplied
+    // Must ask for passwords if no identity supplied
     for (const sshOption of sshOptions) {
-      if (!sshOption.password && !sshOption.identity) {
+      if (!sshOption.identity) {
         const answers = await this.util.showPrompts("", "", "en-us", [
           {
             prompt: `${sshOption.username}@${sshOption.host}'s password:`,
@@ -680,7 +686,7 @@ export class OctopusTool {
           if (!sudoPassword) {
             const answers = await this.util.showPrompts("", "", "en-us", [
               {
-                prompt: `${remoteSshOptions.username}@${remoteSshOptions.host}'s password (for sudo):`,
+                prompt: `[sudo] ${remoteSshOptions.username}@${remoteSshOptions.host}'s password:`,
                 echo: false,
               },
             ])
@@ -695,16 +701,14 @@ export class OctopusTool {
 
         if (!hasNode) {
           this.log.warning(`Node not found; attempting to rectify.`)
-          await this.rectifyHasNode(ssh, { sudoPassword })
+          await this.rectifyHasNode(ssh, sudoPassword)
         }
 
         if (!hasOctopus) {
           this.log.warning(
             `Octopus with version ${version.shortVersion} not found; attempting to rectify`
           )
-          await this.rectifyHasOctopus(ssh, {
-            sudoPassword,
-          })
+          await this.rectifyHasOctopus(ssh, sudoPassword)
         }
       }
 

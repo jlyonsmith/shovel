@@ -3,6 +3,7 @@ import { ScriptError } from "./ScriptError"
 import osInfo from "linux-os-info"
 import fs from "fs-extra"
 import os from "os"
+import path from "path"
 import readlinePassword from "@johnls/readline-password"
 import Timeout from "await-timeout"
 
@@ -120,6 +121,14 @@ export class Utility {
     }
 
     return port
+  }
+
+  expandTilde(filePath) {
+    if (filePath && typeof filePath === "string" && filePath[0] === "~") {
+      return path.join(this.process.env.HOME, filePath.slice(1))
+    } else {
+      return filePath
+    }
   }
 
   runningAsRoot() {
@@ -368,6 +377,10 @@ export class Utility {
               )
 
               lines = lines.map((line) => line.trim())
+
+              if (options.debug) {
+                console.log(lines)
+              }
 
               for (const line of lines) {
                 if (options.sudoPassword && firstLine) {
