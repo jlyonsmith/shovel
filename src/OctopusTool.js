@@ -1,6 +1,5 @@
 import parseArgs from "minimist"
 import * as version from "./version"
-import readlinePassword from "@johnls/readline-password"
 import SSH2Promise from "@johnls/ssh2-promise"
 import sshConfig from "ssh-config"
 import os from "os"
@@ -53,24 +52,6 @@ export class OctopusTool {
 `
   static minNodeVersion = "v10"
 
-  async assertCanSudoOnHost(ssh) {
-    const result = await this.util.runRemoteCommand(
-      ssh,
-      "bash -c 'echo /$EUID'", // Make output look like a path
-      {
-        sudo: true,
-        password: ssh.config[0].password,
-        noThrow: true,
-      }
-    )
-
-    if (result.exitCode !== 0 || result.output[0] !== "/0") {
-      throw new Error(
-        `User ${ssh.config[0].username} does not have sudo ability on remote system`
-      )
-    }
-  }
-
   async uploadFile(ssh, remotePath, contents) {
     const readStream = new Readable({
       read(size) {
@@ -96,7 +77,7 @@ export class OctopusTool {
     )
   }
 
-  async rectifyHasNode(ssh, options = {}) {
+  async rectifyHasNode(ssh, sudoPassword) {
     let result = null
 
     this.log.info("Checking remote system clock")
@@ -123,8 +104,6 @@ export class OctopusTool {
       throw new Error("Remote system clock is more than 24 hours out of sync.")
     }
 
-    await this.assertCanSudoOnHost(ssh)
-
     const remoteTempFilePath = (await this.util.runRemoteCommand(ssh, "mktemp"))
       .output[0]
 
@@ -146,7 +125,7 @@ export class OctopusTool {
       `bash ${remoteTempFilePath}`,
       {
         sudo: true,
-        password: options.password,
+        sudoPassword,
         noThrow: true,
       }
     )
@@ -181,18 +160,14 @@ export class OctopusTool {
     )
   }
 
-  async rectifyHasOctopus(ssh, options = {}) {
-    if (!options.canSudoOnHost) {
-      await this.assertCanSudoOnHost(ssh)
-    }
-
+  async rectifyHasOctopus(ssh, sudoPassword) {
     this.log.info("Installing Octopus")
     let result = await this.util.runRemoteCommand(
       ssh,
       "npm install -g @johnls/octopus",
       {
         sudo: true,
-        password: options.password,
+        sudoPassword,
         noThrown: true,
       }
     )
@@ -500,9 +475,12 @@ export class OctopusTool {
   async runScriptLocally(scriptPath, options = {}) {
     const scriptNode = await this.readScriptFile(scriptPath)
     const state = await this.flattenScript(scriptNode)
+    const scriptHasBecomes = state.assertions.find(
+      (assertion) => assertion.become !== null
+    )
     let sudo = null
 
-    if (state.assertions.find((assertion) => assertion.become !== null)) {
+    if (scriptHasBecomes) {
       if (!this.util.runningAsRoot()) {
         throw new Error(
           "Script requires becoming another user and it is not running as root"
@@ -584,31 +562,12 @@ export class OctopusTool {
     }
   }
 
-  async runScriptRemotely(scriptPath, options = {}) {
-    const scriptNode = await this.readScriptFile(scriptPath)
-    const state = Object.assign(
-      await this.flattenScript(scriptNode),
-      await this.createRunContext(scriptNode, { inRunScriptLocally: false })
-    )
-    const newScript = JSON.stringify(
-      {
-        settings: state.settings,
-        vars: state.runContext.vars,
-        assertions: state.assertions,
-      },
-      (key, value) => (key.startsWith("_") ? undefined : value),
-      this.debug ? "  " : null
-    )
-
-    if (this.debug) {
-      this.log.info("Script after local processing:\n" + newScript)
-    }
-
+  async getSshOptions(options) {
     const sshOptions = []
     const userInfo = os.userInfo()
     const sshConfigFile = `${process.env.HOME}/.ssh/config`
     const config = this.sshConfig.parse(
-      await fs.readFile(sshConfigFile, { encoding: "utf8" })
+      await this.fs.readFile(sshConfigFile, { encoding: "utf8" })
     )
     const section = config.compute(options.host)
 
@@ -617,7 +576,7 @@ export class OctopusTool {
         const proxySection = config.compute(section.ProxyJump)
 
         sshOptions.push({
-          // Again, use co nfig first, then passed in name
+          // Again, use config first, then passed in name
           host: proxySection.HostName || options.proxyHost,
           // Again, for these use command line first
           port:
@@ -637,21 +596,10 @@ export class OctopusTool {
       })
     }
 
-    const showPrompts = async (name, instructions, lang, prompts) => {
-      const rl = readlinePassword.createInstance(process.stdin, process.stdout)
-      let responses = []
-
-      for (const prompt of prompts) {
-        responses.push(await rl.passwordAsync(prompt))
-      }
-      rl.close()
-      return responses
-    }
-
     // Must manually ask for passwords if none supplied
     for (const sshOption of sshOptions) {
       if (!sshOption.password && !sshOption.identity) {
-        const answers = await showPrompts("", "", "en-us", [
+        const answers = await this.util.showPrompts("", "", "en-us", [
           {
             prompt: `${sshOption.username}@${sshOption.host}'s password:`,
             echo: false,
@@ -664,90 +612,137 @@ export class OctopusTool {
 
     Object.assign(sshOptions[0], {
       agent: process.env["SSH_AUTH_SOCK"],
-      showPrompts,
+      showPrompts: this.util.showPrompts,
       //debug: this.debug ? (detail) => this.log.info(detail) : null,
     })
 
-    let isConnected = false
-    let ssh = null
+    return sshOptions
+  }
+
+  async runScriptRemotely(scriptPath, options = {}) {
+    const scriptNode = await this.readScriptFile(scriptPath)
+    const state = Object.assign(
+      await this.flattenScript(scriptNode),
+      await this.createRunContext(scriptNode, { inRunScriptLocally: false })
+    )
+    const newScript = JSON.stringify(
+      {
+        settings: state.settings,
+        vars: state.runContext.vars,
+        assertions: state.assertions,
+      },
+      (key, value) => (key.startsWith("_") ? undefined : value),
+      this.debug ? "  " : null
+    )
+    const scriptHasBecomes = state.assertions.find(
+      (assertion) => assertion.become !== null
+    )
+
+    if (this.debug) {
+      this.log.info("Script after local processing:\n" + newScript)
+    }
+
     let remoteTempFile = null
+    let ssh = null
+    let sshOptions = null
 
     try {
+      sshOptions = await this.getSshOptions(options)
+
+      const usingProxy = sshOptions.length > 1
+      const remoteSshOptions = sshOptions[usingProxy ? 1 : 0]
+
       this.log.info(
         `Connecting to ${sshOptions[0].host}:${sshOptions[0].port} as ${sshOptions[0].username}`
       )
+
+      if (usingProxy) {
+        this.log.info(
+          `Proxying to ${remoteSshOptions.host}:${remoteSshOptions.port} as ${remoteSshOptions.username}`
+        )
+      }
 
       ssh = this.createSsh(sshOptions)
 
       await ssh.connect()
 
-      if (sshOptions[1]) {
-        this.log.info(
-          `Proxied to ${sshOptions[1].host}:${sshOptions[1].port} as ${sshOptions[1].username}`
-        )
+      const sudoNeedsPassword = await this.util.doesSudoNeedPassword(ssh)
+      const hasNode = await this.assertHasNode(ssh)
+      const hasOctopus = hasNode && (await this.assertHasOctopus(ssh))
+      const scriptNeedsSudo =
+        options.runAsRoot || scriptHasBecomes || !hasNode || !hasOctopus
+      let sudoPassword = null
+
+      if (scriptNeedsSudo) {
+        if (sudoNeedsPassword) {
+          sudoPassword = remoteSshOptions.password
+
+          if (!sudoPassword) {
+            const answers = await this.util.showPrompts("", "", "en-us", [
+              {
+                prompt: `${remoteSshOptions.username}@${remoteSshOptions.host}'s password (for sudo):`,
+                echo: false,
+              },
+            ])
+
+            sudoPassword = answers[0]
+          }
+
+          if (!(await this.util.canSudoWithPassword(ssh, sudoPassword))) {
+            throw new Error("Cannot sudo with supplied password")
+          }
+        }
+
+        if (!hasNode) {
+          this.log.warning(`Node not found; attempting to rectify.`)
+          await this.rectifyHasNode(ssh, { sudoPassword })
+        }
+
+        if (!hasOctopus) {
+          this.log.warning(
+            `Octopus with version ${version.shortVersion} not found; attempting to rectify`
+          )
+          await this.rectifyHasOctopus(ssh, {
+            sudoPassword,
+          })
+        }
       }
 
-      // Get password and username for sudo on remote
-      const { password, username } = sshOptions[sshOptions.length === 2 ? 1 : 0]
-      let installedNode = false
-
-      isConnected = true
-
-      if (!(await this.assertHasNode(ssh))) {
-        this.log.warning(`Node not found; attempting to rectify.`)
-        await this.rectifyHasNode(ssh, { password })
-        installedNode = true
-      } else if (this.debug) {
-        this.log.info(`Node.js is installed`)
-      }
-
-      if (!(await this.assertHasOctopus(ssh))) {
-        this.log.warning(
-          `Octopus with version ${version.shortVersion} not found; attempting to rectify`
-        )
-        await this.rectifyHasOctopus(ssh, {
-          canSudoOnHost: installedNode,
-          password,
-        })
-      } else if (this.debug) {
-        this.log.info(`Octopus is installed`)
-      }
-
-      const remoteTempFile = (await this.util.runRemoteCommand(ssh, "mktemp"))
+      remoteTempFile = (await this.util.runRemoteCommand(ssh, "mktemp"))
         .output[0]
 
       this.log.info(
-        `Created remote host script file${
+        `Uploading remote script file${
           this.debug ? " (" + remoteTempFile + ")" : ""
         }`
       )
 
       await this.uploadFile(ssh, remoteTempFile, newScript)
 
-      // TODO: Need ability to run SFTP commands if remote script requests it
-
       this.log.info(
-        `Running script on remote host as ${
-          options.runAsRoot ? "root" : username
-        }`
+        `Running Octopus script on remote${options.runAsRoot ? " as root" : ""}`
       )
+
       await this.util.runRemoteCommand(ssh, `octopus ${remoteTempFile}`, {
         sudo: options.runAsRoot,
-        password,
+        sudoPassword,
         log: this.log.output,
         logError: this.log.outputError,
         noThrow: true,
       })
     } finally {
-      if (isConnected) {
-        if (remoteTempFile && !this.debug) {
-          this.log.info("Deleting remote temp file")
-          await this.util.runRemoteCommand(ssh, `rm ${remoteTempFile}`)
-        }
+      if (remoteTempFile && !this.debug) {
+        this.log.info("Deleting remote temp file")
+        await this.util.runRemoteCommand(ssh, `rm ${remoteTempFile}`)
+      }
 
+      if (ssh) {
         ssh.close()
+      }
+
+      if (sshOptions) {
         this.log.info(
-          `Disconnected from ${ssh.config[0].host}:${ssh.config[0].port}`
+          `Disconnected from ${sshOptions[0].host}:${sshOptions[0].port}`
         )
       }
 
@@ -796,7 +791,7 @@ Description:
 Runs an Octopus configuration script. If a host or host-file file is
 given then the script will be run on those hosts using SSH. Node.js
 and Octopus will be installed on the remote hosts if not already
-present. For remote installation to work the 'root' argument must be
+present. For remote installation to work the '--root' argument must be
 specified and the user must have sudo permissions on the remote host.
 
 Arguments:

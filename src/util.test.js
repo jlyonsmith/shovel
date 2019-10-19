@@ -308,6 +308,13 @@ test("osInfo", async () => {
   })
 })
 
+test("parsePort", () => {
+  const util = new Utility()
+
+  expect(util.parsePort("123")).toBe(123)
+  expect(() => util.parsePort("70000")).toThrow(Error)
+})
+
 test("userInfo", () => {
   const util = new Utility({
     os: {
@@ -328,6 +335,75 @@ test("userInfo", () => {
     shell: "",
     homeDir: "",
   })
+})
+
+test("doesSudoNeedPassword", async () => {
+  let result = {
+    exitCode: 500,
+    output: ["/500"],
+  }
+  const util = new Utility()
+
+  util.runRemoteCommand = async (ssh, command, options) => result
+
+  const ssh = {
+    config: [{ password: "", username: "test" }],
+  }
+
+  // Success
+  await expect(util.doesSudoNeedPassword(ssh)).resolves.toBe(true)
+
+  // Failure
+  result = { exitCode: 0, output: ["/0"] }
+
+  await expect(util.doesSudoNeedPassword(ssh)).resolves.toBe(false)
+})
+
+test("canSudoWithPassword", async () => {
+  let result = {
+    exitCode: 0,
+    output: ["/0"],
+  }
+
+  const util = new Utility()
+
+  util.runRemoteCommand = async (ssh, command, options) => result
+
+  const ssh = {
+    config: [{ password: "", username: "test" }],
+  }
+
+  // Success
+  await expect(util.canSudoWithPassword(ssh)).resolves.toBe(true)
+
+  // Failure
+  result = { exitCode: 0, output: ["/500"] }
+
+  await expect(util.canSudoWithPassword(ssh)).resolves.toBe(false)
+})
+
+test("showPrompts", async () => {
+  const util = new Utility({
+    process: { stdin: {}, stdout: {}, exit: () => null },
+    console: { log: () => null },
+    readlinePassword: {
+      createInstance: () => {
+        const Instance = class extends EventEmitter {
+          passwordAsync() {
+            return ["abc"]
+          }
+          close() {}
+        }
+
+        return new Instance()
+      },
+    },
+  })
+
+  // Success
+  await expect(
+    util.showPrompts(null, null, null, ["xyz"])
+  ).resolves.toContainEqual(["abc"])
 })
 
 test("runRemoteCommand", async () => {
@@ -359,7 +435,7 @@ test("runRemoteCommand", async () => {
       cwd: "/a/b",
       sudo: true,
       debug: true,
-      password: "password",
+      sudoPassword: "password",
     })
   ).resolves.toEqual({
     exitCode: 0,

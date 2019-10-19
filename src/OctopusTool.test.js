@@ -48,25 +48,6 @@ test("assertHasNode", async () => {
   await expect(tool.assertHasNode(ssh)).resolves.toBe(true)
 })
 
-test("assertCanSudoOnHost", async () => {
-  let result = {
-    exitCode: 0,
-    output: ["/0"],
-  }
-  container.util.runRemoteCommand = async (ssh, command, options) => result
-
-  const tool = new OctopusTool(container)
-  const ssh = {
-    config: [{ password: "", username: "test" }],
-  }
-
-  await expect(tool.assertCanSudoOnHost(ssh)).resolves.toBeUndefined()
-
-  result = { exitCode: 0, output: ["/500"] }
-
-  await expect(tool.assertCanSudoOnHost(ssh)).rejects.toThrow(Error)
-})
-
 test("uploadFile", async () => {
   container.util = undefined
 
@@ -522,11 +503,18 @@ test("runScriptLocally", async () => {
   await expect(tool.runScriptLocally("test.json5")).resolves.toBeUndefined()
 })
 
+test("getSshOptions", async () => {})
+
 test("runScriptRemotely", async () => {
-  container.util.runRemoteCommand = async (ssh, command, options) => ({
-    exitCode: 0,
-    output: "",
-  })
+  container.util = {
+    runRemoteCommand: async (ssh, command, options) => ({
+      exitCode: 0,
+      output: "",
+    }),
+    showPrompts: async () => null,
+    doesSudoNeedPassword: async () => false,
+    pipeToPromise: async () => null,
+  }
   container.createSsh = (sshConfig) => ({
     connect: jest.fn(async () => null),
     sftp: jest.fn(() => ({
@@ -543,26 +531,39 @@ test("runScriptRemotely", async () => {
 
   const tool = new OctopusTool(container)
 
-  tool.assertHasNode = jest.fn(() => true)
-  tool.assertHasOctopus = jest.fn(() => true)
-  tool.compileScriptFile = jest.fn(async () => ({
+  tool.assertHasNode = () => true
+  tool.assertHasOctopus = () => true
+  tool.compileScriptFile = async () => ({
     vars: {},
     settings: {},
     assertions: [{ assert: "TestAssert", with: {} }],
     runContext: { vars: {} },
     expandStringNode: jest.fn(),
-  }))
+  })
+  tool.readScriptFile = async () => ({})
+  tool.getSshOptions = async () => [{}]
+  tool.flattenScript = async (node) => node
+  tool.createRunContext = async () => ({
+    runContext: { vars: {} },
+    settings: {},
+    vars: {},
+    assertions: [],
+  })
 
-  await expect(
-    tool.runScriptRemotely("test.json5", {
-      user: "test",
-      password: "test",
-      host: "somehost",
-    })
-  ).resolves.toBeUndefined()
+  const result = await tool.runScriptRemotely("test.json5", {
+    user: "test",
+    password: "test",
+    host: "somehost",
+  })
+
+  await expect(result).toBeUndefined()
 })
 
 test("run", async () => {
+  container.util = {
+    parsePort: () => 0,
+  }
+
   const tool = new OctopusTool(container)
 
   tool.runScriptLocally = async () => undefined
