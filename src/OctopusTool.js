@@ -599,6 +599,7 @@ export class OctopusTool {
           options.identity ||
           (section.IdentityFile &&
             this.util.expandTilde(section.IdentityFile[0])),
+        passphrase: "Never, never, never give up",
       })
     }
 
@@ -612,7 +613,7 @@ export class OctopusTool {
     }
 
     for (const sshOption of sshOptions) {
-      if (options.askForPasswords) {
+      if (options.passwordPrompt) {
         const answers = await this.util.showPrompts("", "", "en-us", [
           {
             prompt: `${sshOption.username}@${sshOption.host}'s password:`,
@@ -621,7 +622,7 @@ export class OctopusTool {
         ])
 
         sshOption.password = answers[0]
-        delete sshOption.askForPasswords
+        delete sshOption.passwordPrompt
       }
 
       if (!sshOption.password && !sshOption.identity) {
@@ -629,7 +630,12 @@ export class OctopusTool {
       }
 
       sshOption.showPrompts = this.util.showPrompts
-      // sshOption.debug = this.debug ? (detail) => this.log.info(detail) : null
+      sshOption.debug =
+        this.debug === 2 ? (detail) => this.log.info(detail) : null
+    }
+
+    if (this.debug) {
+      console.log(sshOptions)
     }
 
     return sshOptions
@@ -766,8 +772,9 @@ export class OctopusTool {
 
   async run(argv) {
     const options = {
-      boolean: ["help", "version", "debug", "root", "prompt"],
+      boolean: ["help", "version", "root", "prompt"],
       string: [
+        "debug-level",
         "host",
         "jump-host",
         "host-file",
@@ -786,11 +793,15 @@ export class OctopusTool {
         jp: "jump-port",
         r: "root",
         u: "user",
+        d: "debug-level",
+      },
+      default: {
+        "debug-level": 0,
       },
     }
     const args = parseArgs(argv, options)
 
-    this.debug = args.debug
+    this.debug = parseInt(args["debug-level"])
 
     if (args.version) {
       this.log.info(`${version.fullVersion}`)
@@ -832,7 +843,7 @@ Arguments:
     const scriptPath = path.resolve(args._[0])
 
     if (
-      (args.port || args.user || args.root || args.identity) &&
+      (args.port || args.user || args.root || args.identity || args.prompt) &&
       !args.host &&
       !args["host-file"]
     ) {
@@ -859,7 +870,6 @@ Arguments:
           port: this.util.parsePort(args.port),
           proxyPort: this.util.parsePort(args.proxyPort),
           runAsRoot: args.root,
-          askForPasswords: args.prompt,
         })
       }
     }
@@ -877,6 +887,7 @@ Arguments:
             port: this.util.parsePort(host.port),
             proxyPort: this.util.parsePort(host.proxyHost),
             runAsRoot: host.runAsRoot,
+            passwordPrompt: args.prompt,
           })
         } catch (error) {
           if (error) {

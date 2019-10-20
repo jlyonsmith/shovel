@@ -53,6 +53,7 @@ export class DirectoryExists {
       { uid: userInfo.uid, gid: userInfo.gid },
       this.util.parseOwnerNode(users, groups, ownerNode)
     )
+    // TODO: Default for dirs should be rwx
     this.mode = this.util.parseModeNode(modeNode)
     this.expandedPath = this.expandStringNode(pathNode)
 
