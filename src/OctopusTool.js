@@ -475,8 +475,8 @@ export class OctopusTool {
   async runScriptLocally(scriptPath, options = {}) {
     const scriptNode = await this.readScriptFile(scriptPath)
     const state = await this.flattenScript(scriptNode)
-    const scriptHasBecomes = state.assertions.find(
-      (assertion) => assertion.become !== null
+    const scriptHasBecomes = !!state.assertions.find((assertion) =>
+      assertion.hasOwnProperty("become")
     )
     let sudo = null
 
@@ -584,8 +584,8 @@ export class OctopusTool {
           username: options.user || proxySection.User || userInfo.username,
           identity:
             options.identity ||
-            (section.IdentityFile &&
-              this.util.expandTilde(section.IdentityFile[0])),
+            (proxySection.IdentityFile &&
+              this.util.expandTilde(proxySection.IdentityFile[0])),
         })
       }
 
@@ -602,9 +602,17 @@ export class OctopusTool {
       })
     }
 
-    // Must ask for passwords if no identity supplied
+    // Use proxy identity for remote if not specified explicitly
+    if (
+      sshOptions.length === 2 &&
+      !sshOptions[1].identity &&
+      sshOptions[0].identity
+    ) {
+      sshOptions[1].identity = sshOptions[0].identity
+    }
+
     for (const sshOption of sshOptions) {
-      if (!sshOption.identity) {
+      if (options.askForPasswords) {
         const answers = await this.util.showPrompts("", "", "en-us", [
           {
             prompt: `${sshOption.username}@${sshOption.host}'s password:`,
@@ -613,14 +621,16 @@ export class OctopusTool {
         ])
 
         sshOption.password = answers[0]
+        delete sshOption.askForPasswords
       }
-    }
 
-    Object.assign(sshOptions[0], {
-      agent: process.env["SSH_AUTH_SOCK"],
-      showPrompts: this.util.showPrompts,
-      //debug: this.debug ? (detail) => this.log.info(detail) : null,
-    })
+      if (!sshOption.password && !sshOption.identity) {
+        sshOption.agent = process.env.SSH_AUTH_SOCK
+      }
+
+      sshOption.showPrompts = this.util.showPrompts
+      // sshOption.debug = this.debug ? (detail) => this.log.info(detail) : null
+    }
 
     return sshOptions
   }
@@ -640,8 +650,8 @@ export class OctopusTool {
       (key, value) => (key.startsWith("_") ? undefined : value),
       this.debug ? "  " : null
     )
-    const scriptHasBecomes = state.assertions.find(
-      (assertion) => assertion.become !== null
+    const scriptHasBecomes = !!state.assertions.find((assertion) =>
+      assertion.hasOwnProperty("become")
     )
 
     if (this.debug) {
@@ -756,7 +766,7 @@ export class OctopusTool {
 
   async run(argv) {
     const options = {
-      boolean: ["help", "version", "debug", "root"],
+      boolean: ["help", "version", "debug", "root", "prompt"],
       string: [
         "host",
         "jump-host",
@@ -772,6 +782,7 @@ export class OctopusTool {
         i: "identity",
         jh: "jump-host",
         p: "port",
+        t: "prompt",
         jp: "jump-port",
         r: "root",
         u: "user",
@@ -799,16 +810,17 @@ present. For remote installation to work the '--root' argument must be
 specified and the user must have sudo permissions on the remote host.
 
 Arguments:
-  --help              Shows this help
-  --version           Shows the tool version
-  --host, -h          Remote host name. Default is to run the script
-                      directly, without a remote proxy
-  --jump-host, -jh    Jump box host name
-  --port, -p          Remote port number. Default is 22
-  --jump-port, -jp    Jump box port number. Default is 22
-  --user, -u          Remote user name. Defaults to current user
-  --host-file, -f     JSON5 file containing multiple host names
-  --root, -r          Start Octopus as root on remote host
+  --help                    Shows this help
+  --version                 Shows the tool version
+  --host, -h <host>         Remote host name. Default is to run the script
+                            directly, without a remote proxy
+  --jump-host, -jh <host>   Jump box host name
+  --port, -p <port>         Remote port number. Default is 22
+  --prompt, -t              Prompt for passwords.
+  --jump-port, -jp <port>   Jump box port number. Default is 22
+  --user, -u <user>         Remote user name. Defaults to current user
+  --host-file, -f <file>    JSON5 file containing multiple host names
+  --root, -r                Start Octopus as root on remote host
 `)
       return
     }
@@ -847,6 +859,7 @@ Arguments:
           port: this.util.parsePort(args.port),
           proxyPort: this.util.parsePort(args.proxyPort),
           runAsRoot: args.root,
+          askForPasswords: args.prompt,
         })
       }
     }

@@ -550,13 +550,13 @@ test("runScriptRemotely", async () => {
     assertions: [],
   })
 
-  const result = await tool.runScriptRemotely("test.json5", {
-    user: "test",
-    password: "test",
-    host: "somehost",
-  })
-
-  await expect(result).toBeUndefined()
+  await expect(
+    tool.runScriptRemotely("test.json5", {
+      user: "test",
+      password: "test",
+      host: "somehost",
+    })
+  ).resolves.toBeUndefined()
 })
 
 test("run", async () => {
