@@ -344,7 +344,7 @@ test("doesSudoNeedPassword", async () => {
   }
   const util = new Utility()
 
-  util.runRemoteCommand = async (ssh, command, options) => result
+  util.run = async (ssh, command, options) => result
 
   const ssh = {
     config: [{ password: "", username: "test" }],
@@ -367,7 +367,7 @@ test("canSudoWithPassword", async () => {
 
   const util = new Utility()
 
-  util.runRemoteCommand = async (ssh, command, options) => result
+  util.run = async (ssh, command, options) => result
 
   const ssh = {
     config: [{ password: "", username: "test" }],
@@ -406,7 +406,7 @@ test("showPrompts", async () => {
   ).resolves.toContainEqual(["abc"])
 })
 
-test("runRemoteCommand", async () => {
+test("run", async () => {
   const util = new Utility()
 
   class Socket extends EventEmitter {
@@ -422,7 +422,7 @@ test("runRemoteCommand", async () => {
   process.nextTick(() => {
     socket.emit("close")
   })
-  await expect(util.runRemoteCommand(ssh, "ls")).resolves.toEqual({
+  await expect(util.run(ssh, "ls")).resolves.toEqual({
     exitCode: 0,
     output: [],
   })
@@ -431,7 +431,7 @@ test("runRemoteCommand", async () => {
     socket.emit("close")
   })
   await expect(
-    util.runRemoteCommand(ssh, "ls", {
+    util.run(ssh, "ls", {
       cwd: "/a/b",
       sudo: true,
       debug: true,
@@ -445,7 +445,7 @@ test("runRemoteCommand", async () => {
   process.nextTick(() => {
     socket.emit("error")
   })
-  await expect(util.runRemoteCommand(ssh, "xxx")).rejects.toThrow(Error)
+  await expect(util.run(ssh, "xxx")).rejects.toThrow(Error)
 
   process.nextTick(() => {
     socket.emit("data", "/a/b/c\n1.2.3\n{a:1}\nerror:\nwarning:\n\n1")
@@ -454,7 +454,7 @@ test("runRemoteCommand", async () => {
     })
   })
   await expect(
-    util.runRemoteCommand(ssh, "nop", {
+    util.run(ssh, "nop", {
       password: "blah",
       log: jest.fn(),
       logError: jest.fn(),

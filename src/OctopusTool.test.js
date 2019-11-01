@@ -28,7 +28,7 @@ test("constructor", () => {
 })
 
 test("assertHasNode", async () => {
-  container.util.runRemoteCommand = async (ssh, command, options) => {
+  container.ssh.run = async (command, options) => {
     if (command === "node --version") {
       return {
         exitCode: 0,
@@ -67,7 +67,7 @@ test("uploadFile", async () => {
 })
 
 test("rectifyHasNode", async () => {
-  container.util.runRemoteCommand = async (ssh, command, options) => {
+  container.ssh.run = async (command, options) => {
     if (command === 'bash -c "echo /$(date)"') {
       return {
         exitCode: 0,
@@ -101,7 +101,7 @@ test("rectifyHasNode", async () => {
   }
 
   // Success
-  container.util.runRemoteCommand = async (ssh, command, options) => {
+  container.ssh.run = async (command, options) => {
     if (command === 'bash -c "echo /$(date)"') {
       return {
         exitCode: 0,
@@ -132,21 +132,21 @@ test("rectifyHasNode", async () => {
   tool.debug = false
 
   // Unable to get date
-  container.util.runRemoteCommand = async (ssh, command, options) => ({
+  container.ssh.run = async (command, options) => ({
     exitCode: 0,
     output: [""],
   })
   await expect(tool.rectifyHasNode(ssh)).rejects.toThrow(Error)
 
   // Bad date
-  container.util.runRemoteCommand = async (ssh, command, options) => ({
+  container.ssh.run = async (command, options) => ({
     exitCode: 0,
     output: ["/Wed Oct 1 12:00:00 UTC 2010"],
   })
   await expect(tool.rectifyHasNode(ssh)).rejects.toThrow(Error)
 
   // Bad install
-  container.util.runRemoteCommand = async (ssh, command, options) => {
+  container.ssh.run = async (command, options) => {
     if (command === 'bash -c "echo /$(date)"') {
       return {
         exitCode: 0,
@@ -167,7 +167,7 @@ test("rectifyHasNode", async () => {
   await expect(tool.rectifyHasNode(ssh)).rejects.toThrow(Error)
 
   // Bad version
-  container.util.runRemoteCommand = async (ssh, command, options) => {
+  container.ssh.run = async (command, options) => {
     if (command === 'bash -c "echo /$(date)"') {
       return {
         exitCode: 0,
@@ -189,7 +189,7 @@ test("rectifyHasNode", async () => {
 })
 
 test("assertHasOctopus", async () => {
-  container.util.runRemoteCommand = async (ssh, command, options) => ({
+  container.ssh.run = async (command, options) => ({
     exitCode: 0,
     output: [version.shortVersion],
   })
@@ -201,7 +201,7 @@ test("assertHasOctopus", async () => {
 })
 
 test("rectifyHasOctopus", async () => {
-  container.util.runRemoteCommand = async (ssh, command, options) => {
+  container.ssh.run = async (command, options) => {
     if (command === "npm install -g @johnls/octopus") {
       return {
         exitCode: 0,
@@ -237,14 +237,14 @@ test("rectifyHasOctopus", async () => {
   ).resolves.toBeUndefined()
 
   // Failed after install
-  container.util.runRemoteCommand = async (ssh, command, options) => ({
+  container.ssh.run = async (command, options) => ({
     exitCode: 255,
     output: [],
   })
   await expect(tool.rectifyHasOctopus(ssh)).rejects.toThrow(Error)
 
   // Failed install
-  container.util.runRemoteCommand = async (ssh, command, options) => {
+  container.ssh.run = async (command, options) => {
     return {
       exitCode: 0,
       output: [""],
@@ -507,7 +507,7 @@ test("getSshOptions", async () => {})
 
 test("runScriptRemotely", async () => {
   container.util = {
-    runRemoteCommand: async (ssh, command, options) => ({
+    run: async (command, options) => ({
       exitCode: 0,
       output: "",
     }),

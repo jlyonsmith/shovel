@@ -4,16 +4,17 @@ import osInfo from "linux-os-info"
 import fs from "fs-extra"
 import os from "os"
 import path from "path"
-import readlinePassword from "@johnls/readline-password"
-import Timeout from "await-timeout"
+
+// From https://stackoverflow.com/a/29497680/576235
+export const ansiEscapeRegex = new RegExp(
+  /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g
+)
 
 export class Utility {
   constructor(container = {}) {
     this.fs = container.fs || fs
     this.os = container.os || os
     this.os.osInfo = container.osInfo || osInfo
-    this.readlinePassword = container.readlinePassword || readlinePassword
-    this.Timeout = container.Timeout || Timeout
     this.console = container.console || console
     this.process = container.process || process
   }
@@ -288,146 +289,6 @@ export class Utility {
     }
 
     return mode
-  }
-
-  async doesSudoNeedPassword(ssh) {
-    // Run sudo with no password to see if it needs one
-    const result = await this.runRemoteCommand(ssh, "-n bash -c ''", {
-      sudo: true,
-      noThrow: true,
-    })
-
-    return result.exitCode !== 0
-  }
-
-  async canSudoWithPassword(ssh, sudoPassword) {
-    const result = await this.runRemoteCommand(
-      ssh,
-      "bash -c 'echo /$EUID'", // Make output look like a path
-      {
-        sudo: true,
-        sudoPassword,
-        noThrow: true,
-        timeout: 3000,
-      }
-    )
-
-    return result.exitCode === 0 && result.output[0] === "/0"
-  }
-
-  async showPrompts(name, instructions, lang, prompts) {
-    const rlp = this.readlinePassword.createInstance(
-      this.process.stdin,
-      this.process.stdout
-    )
-    const responses = []
-
-    rlp.on("SIGINT", () => {
-      this.console.log("^C")
-      this.process.exit()
-    })
-    for (const prompt of prompts) {
-      responses.push(await rlp.passwordAsync(prompt))
-    }
-    rlp.close()
-    return responses
-  }
-
-  // TODO: Need ability to run SFTP commands if remote script requests it; use callback?
-  async runRemoteCommand(ssh, command, options = {}) {
-    // From https://stackoverflow.com/a/29497680/576235
-    const ansiEscapeRegex = new RegExp(
-      /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g
-    )
-    const stripAnsiEscapes = (s) => s.replace(ansiEscapeRegex, "")
-    const output = []
-    let firstLine = true
-    let exitCode = 0
-    let timer = null
-
-    try {
-      const commandLine =
-        (options.cwd ? `cd ${options.cwd} 1> /dev/null 2> /dev/null;` : "") +
-        (options.sudo ? "sudo -E " : "") +
-        command +
-        "; echo $?"
-      const socket = await ssh.spawn(commandLine, null, {
-        // Always allocate a pseudo-TTY. Unfortunately this merges STDOUT & STDERR
-        // but different apps use those inconsistently anyway, so we merge them and
-        // identify the output with pattern matches.
-        pty: true,
-      })
-
-      if (options.sudoPassword) {
-        socket.write(options.sudoPassword + "\n")
-        socket.end()
-      }
-
-      const promises = []
-
-      promises.push(
-        new Promise((resolve, reject) => {
-          socket
-            .on("close", resolve)
-            .on("error", reject)
-            // We have to read data or the socket will block
-            .on("data", (data) => {
-              let lines = stripAnsiEscapes(data.toString()).match(
-                /^.*((\r\n|\n|\r)|$)/gm
-              )
-
-              lines = lines.map((line) => line.trim())
-
-              if (options.debug) {
-                console.log(lines)
-              }
-
-              for (const line of lines) {
-                if (options.sudoPassword && firstLine) {
-                  // Password will be output to first line if supplied
-                  firstLine = false
-                } else if (!line) {
-                  continue
-                } else if (
-                  options.logError &&
-                  (line.startsWith("error:") || line.startsWith("warning:"))
-                ) {
-                  options.logError(line)
-                } else if (/^\d+$/.test(line)) {
-                  exitCode = parseInt(line)
-                } else if (/^v?\d+\.\d+\.\d+/.test(line)) {
-                  // Version numbers
-                  output.push(line)
-                } else if (line.startsWith("/")) {
-                  // Paths
-                  output.push(line)
-                } else if (options.log && line.startsWith("{")) {
-                  options.log(line)
-                }
-              }
-            })
-        })
-      )
-
-      if (options.timeout) {
-        timer = new this.Timeout()
-        promises.push(timer.set(options.timeout))
-      }
-
-      await Promise.race(promises)
-    } catch (error) {
-      throw new Error(`Failed to run command '${command}'`)
-    } finally {
-      if (timer) {
-        timer.clear()
-      }
-    }
-
-    if (!options.noThrow && exitCode !== 0) {
-      throw new Error(`Command '${command}' returned exit code ${exitCode}`)
-    }
-
-    return { exitCode, output }
   }
 }
 
