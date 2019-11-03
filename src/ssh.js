@@ -6,67 +6,6 @@ import { ansiEscapeRegex } from "./util"
 
 const ps1 = "PS1>"
 const ps2 = "PS2>"
-const parseLines = (cb) => {
-  const stripAnsiEscapes = (s) => s.replace(ansiEscapeRegex, "")
-
-  return async (data) => {
-    const outputLines = []
-    const errorLines = []
-    const jsonLines = []
-    let exitCode = undefined
-    let ready = false
-    let permissionDenied = false
-    let loginPasswordPrompt = undefined
-    let sudoPasswordPrompt = undefined
-    let lines = stripAnsiEscapes(data.toString()).match(/^.*((\r\n|\n|\r)|$)/gm)
-
-    lines = lines.map((line) => line.trim())
-
-    // NOTE: Keep for debugging
-    //console.log(lines)
-
-    for (const line of lines) {
-      if (!line) {
-        continue
-      } else if (line.startsWith("error:") || line.startsWith("warning:")) {
-        errorLines.push(line)
-      } else if (/^\d+$/.test(line)) {
-        exitCode = parseInt(line)
-      } else if (/^v?\d+\.\d+\.\d+/.test(line)) {
-        // Version numbers
-        outputLines.push(line)
-      } else if (line.startsWith("/")) {
-        // Paths
-        outputLines.push(line)
-      } else if (line.startsWith("{")) {
-        jsonLines.push(line)
-      } else if (line.startsWith("[sudo] password for")) {
-        sudoPasswordPrompt = line
-      } else if (/^.+@.+'s password:/.test(line)) {
-        loginPasswordPrompt = line
-      } else if (/^.+@.+: Permission denied/.test(line)) {
-        permissionDenied = true
-      }
-    }
-
-    const lastLine = lines[lines.length - 1]
-
-    if (lastLine.endsWith(ps1) || lastLine.endsWith(ps2)) {
-      ready = true
-    }
-
-    await cb({
-      outputLines,
-      errorLines,
-      jsonLines,
-      exitCode,
-      ready,
-      permissionDenied,
-      loginPasswordPrompt,
-      sudoPasswordPrompt,
-    })
-  }
-}
 
 @autobind
 export class SSH {
@@ -124,29 +63,31 @@ export class SSH {
       let promptChanged = false
 
       const disposable = this.pty.onData(
-        parseLines(async ({ ready, permissionDenied, loginPasswordPrompt }) => {
-          if (ready) {
-            disposable.dispose()
-            resolve()
-          } else if (permissionDenied) {
-            disposable.dispose()
-            reject(
-              new Error(
-                `Unable to connect to ${this.options.host}; bad password or key`
+        this.parseLines(
+          async ({ ready, permissionDenied, loginPasswordPrompt }) => {
+            if (ready) {
+              disposable.dispose()
+              resolve()
+            } else if (permissionDenied) {
+              disposable.dispose()
+              reject(
+                new Error(
+                  `Unable to connect to ${this.options.host}; bad password or key`
+                )
               )
-            )
-          } else if (loginPasswordPrompt) {
-            if (!this.loginPasswordPrompts[loginPasswordPrompt]) {
-              this.loginPasswordPrompts[loginPasswordPrompt] =
-                (await this.showPrompt(loginPasswordPrompt)) + "\n"
-            }
+            } else if (loginPasswordPrompt) {
+              if (!this.loginPasswordPrompts[loginPasswordPrompt]) {
+                this.loginPasswordPrompts[loginPasswordPrompt] =
+                  (await this.showPrompt(loginPasswordPrompt)) + "\n"
+              }
 
-            this.pty.write(this.loginPasswordPrompts[loginPasswordPrompt])
-          } else if (!promptChanged) {
-            this.pty.write(`PROMPT_COMMAND=\nPS1='${ps1}'\nPS2='${ps2}'\n`)
-            promptChanged = true
+              this.pty.write(this.loginPasswordPrompts[loginPasswordPrompt])
+            } else if (!promptChanged) {
+              this.pty.write(`PROMPT_COMMAND=\nPS1='${ps1}'\nPS2='${ps2}'\n`)
+              promptChanged = true
+            }
           }
-        })
+        )
       )
       this.pty.onExit((e) => {
         if (this.promptDisplayed) {
@@ -158,6 +99,70 @@ export class SSH {
         this.options = undefined
       })
     })
+  }
+
+  parseLines(cb) {
+    const stripAnsiEscapes = (s) => s.replace(ansiEscapeRegex, "")
+
+    return async (data) => {
+      const outputLines = []
+      const errorLines = []
+      const jsonLines = []
+      let exitCode = undefined
+      let ready = false
+      let permissionDenied = false
+      let loginPasswordPrompt = undefined
+      let sudoPasswordPrompt = undefined
+      let lines = stripAnsiEscapes(data.toString()).match(
+        /^.*((\r\n|\n|\r)|$)/gm
+      )
+
+      lines = lines.map((line) => line.trim())
+
+      // NOTE: Keep for debugging
+      //console.log(lines)
+
+      for (const line of lines) {
+        if (!line) {
+          continue
+        } else if (line.startsWith("error:") || line.startsWith("warning:")) {
+          errorLines.push(line)
+        } else if (/^\d+$/.test(line)) {
+          exitCode = parseInt(line)
+        } else if (/^v?\d+\.\d+\.\d+/.test(line)) {
+          // Version numbers
+          outputLines.push(line)
+        } else if (line.startsWith("/")) {
+          // Paths
+          outputLines.push(line)
+        } else if (line.startsWith("{")) {
+          jsonLines.push(line)
+        } else if (line.startsWith("[sudo] password for")) {
+          sudoPasswordPrompt = line
+        } else if (/^.+@.+'s password:/.test(line)) {
+          loginPasswordPrompt = line
+        } else if (/^.+@.+: Permission denied/.test(line)) {
+          permissionDenied = true
+        }
+      }
+
+      const lastLine = lines[lines.length - 1]
+
+      if (lastLine.endsWith(ps1) || lastLine.endsWith(ps2)) {
+        ready = true
+      }
+
+      await cb({
+        outputLines,
+        errorLines,
+        jsonLines,
+        exitCode,
+        ready,
+        permissionDenied,
+        loginPasswordPrompt,
+        sudoPasswordPrompt,
+      })
+    }
   }
 
   async showPrompt(prompt) {
@@ -192,7 +197,7 @@ export class SSH {
     promises.push(
       new Promise((resolve, reject) => {
         const disposable = this.pty.onData(
-          parseLines(async (data) => {
+          this.parseLines(async (data) => {
             output = output.concat(data.outputLines)
 
             if (data.sudoPasswordPrompt) {

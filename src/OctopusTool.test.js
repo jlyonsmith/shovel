@@ -15,8 +15,6 @@ beforeEach(() => {
       error: jest.fn(),
       output: jest.fn(),
     },
-    util: {},
-    fs: {},
   }
 })
 
@@ -28,107 +26,80 @@ test("constructor", () => {
 })
 
 test("assertHasNode", async () => {
-  container.ssh.run = async (command, options) => {
-    if (command === "node --version") {
-      return {
-        exitCode: 0,
-        output: [OctopusTool.minNodeVersion],
+  const ssh = {
+    run: async (command, options) => {
+      if (command === "node --version") {
+        return {
+          exitCode: 0,
+          output: [OctopusTool.minNodeVersion],
+        }
+      } else {
+        return {
+          exitCode: 255,
+          output: [""],
+        }
       }
-    } else {
-      return {
-        exitCode: 255,
-        output: [""],
-      }
-    }
+    },
   }
-
   const tool = new OctopusTool(container)
-  const ssh = {}
 
   await expect(tool.assertHasNode(ssh)).resolves.toBe(true)
 })
 
 test("rectifyHasNode", async () => {
-  container.ssh.run = async (command, options) => {
-    if (command === 'bash -c "echo /$(date)"') {
-      return {
-        exitCode: 0,
-        output: ["/" + new Date().toString()],
-      }
-    } else if (command === "node --version") {
-      return {
-        exitCode: 0,
-        output: [OctopusTool.minNodeVersion],
-      }
-    } else if (command === "bash -c 'echo /$EUID'") {
-      return {
-        exitCode: 0,
-        output: ["/0"],
-      }
-    } else {
-      return {
-        exitCode: 0,
-        output: [""],
-      }
-    }
-  }
-
   const tool = new OctopusTool(container)
 
-  tool.uploadFile = async () => undefined
-  tool.assertCanSudoOnHost = async () => undefined
-
-  const ssh = {
-    config: [{ password: "", username: "test" }],
-  }
-
   // Success
-  container.ssh.run = async (command, options) => {
-    if (command === 'bash -c "echo /$(date)"') {
-      return {
-        exitCode: 0,
-        output: ["/" + new Date().toString()],
+  const ssh = {
+    run: async (command, options) => {
+      if (command === 'bash -c "echo /$(date)"') {
+        return {
+          exitCode: 0,
+          output: ["/" + new Date().toString()],
+        }
+      } else if (command === "node --version") {
+        return {
+          exitCode: 0,
+          output: [OctopusTool.minNodeVersion],
+        }
+      } else if (command === "bash -c 'echo /$EUID'") {
+        return {
+          exitCode: 0,
+          output: ["/0"],
+        }
+      } else {
+        return {
+          exitCode: 0,
+          output: [""],
+        }
       }
-    } else if (command === "node --version") {
-      return {
-        exitCode: 0,
-        output: [OctopusTool.minNodeVersion],
-      }
-    } else if (command === "bash -c 'echo /$EUID'") {
-      return {
-        exitCode: 0,
-        output: ["/0"],
-      }
-    } else {
-      return {
-        exitCode: 0,
-        output: [""],
-      }
-    }
+    },
   }
-  await expect(tool.rectifyHasNode(ssh)).resolves.toBeUndefined()
+  const sftp = { putContent: async () => undefined }
+
+  await expect(tool.rectifyHasNode(ssh, sftp)).resolves.toBeUndefined()
 
   // Test debug stuff now
   tool.debug = true
-  await expect(tool.rectifyHasNode(ssh)).resolves.toBeUndefined()
+  await expect(tool.rectifyHasNode(ssh, sftp)).resolves.toBeUndefined()
   tool.debug = false
 
   // Unable to get date
-  container.ssh.run = async (command, options) => ({
+  ssh.run = async (command, options) => ({
     exitCode: 0,
     output: [""],
   })
-  await expect(tool.rectifyHasNode(ssh)).rejects.toThrow(Error)
+  await expect(tool.rectifyHasNode(ssh, sftp)).rejects.toThrow(Error)
 
   // Bad date
-  container.ssh.run = async (command, options) => ({
+  ssh.run = async (command, options) => ({
     exitCode: 0,
     output: ["/Wed Oct 1 12:00:00 UTC 2010"],
   })
   await expect(tool.rectifyHasNode(ssh)).rejects.toThrow(Error)
 
   // Bad install
-  container.ssh.run = async (command, options) => {
+  ssh.run = async (command, options) => {
     if (command === 'bash -c "echo /$(date)"') {
       return {
         exitCode: 0,
@@ -149,7 +120,7 @@ test("rectifyHasNode", async () => {
   await expect(tool.rectifyHasNode(ssh)).rejects.toThrow(Error)
 
   // Bad version
-  container.ssh.run = async (command, options) => {
+  ssh.run = async (command, options) => {
     if (command === 'bash -c "echo /$(date)"') {
       return {
         exitCode: 0,
@@ -171,62 +142,52 @@ test("rectifyHasNode", async () => {
 })
 
 test("assertHasOctopus", async () => {
-  container.ssh.run = async (command, options) => ({
-    exitCode: 0,
-    output: [version.shortVersion],
-  })
-
+  const ssh = {
+    run: async (command, options) => ({
+      exitCode: 0,
+      output: [version.shortVersion],
+    }),
+  }
   const tool = new OctopusTool(container)
-  const ssh = {}
 
   await expect(tool.assertHasOctopus(ssh)).resolves.toBe(true)
 })
 
 test("rectifyHasOctopus", async () => {
-  container.ssh.run = async (command, options) => {
-    if (command === "npm install -g @johnls/octopus") {
-      return {
-        exitCode: 0,
-        output: [],
-      }
-    } else if (command === "octopus --version") {
-      return {
-        exitCode: 0,
-        output: [version.shortVersion],
-      }
-    } else {
-      return {
-        exitCode: 0,
-        output: [""],
-      }
-    }
-  }
-
-  const tool = new OctopusTool(container)
-
-  tool.assertCanSudoOnHost = jest.fn(async () => true)
-
   const ssh = {
-    config: [{ password: "", username: "test" }],
+    run: async (command, options) => {
+      if (command === "npm install -g @johnls/octopus") {
+        return {
+          exitCode: 0,
+          output: [],
+        }
+      } else if (command === "octopus --version") {
+        return {
+          exitCode: 0,
+          output: [version.shortVersion],
+        }
+      } else {
+        return {
+          exitCode: 0,
+          output: [""],
+        }
+      }
+    },
   }
+  const tool = new OctopusTool(container)
 
   // Success
   await expect(tool.rectifyHasOctopus(ssh)).resolves.toBeUndefined()
 
-  // Not can sudo
-  await expect(
-    tool.rectifyHasOctopus(ssh, { canSudoOnHost: true })
-  ).resolves.toBeUndefined()
-
   // Failed after install
-  container.ssh.run = async (command, options) => ({
+  ssh.run = async (command, options) => ({
     exitCode: 255,
     output: [],
   })
   await expect(tool.rectifyHasOctopus(ssh)).rejects.toThrow(Error)
 
   // Failed install
-  container.ssh.run = async (command, options) => {
+  ssh.run = async (command, options) => {
     return {
       exitCode: 0,
       output: [""],
@@ -236,10 +197,11 @@ test("rectifyHasOctopus", async () => {
 })
 
 test("readScriptFile", async () => {
+  Object.assign(container, { fs: { readFile: (path) => "[]" } })
+
   const tool = new OctopusTool(container)
 
   // Bad empty script
-  container.fs.readFile = (path) => "[]"
   await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Empty script
@@ -341,18 +303,22 @@ test("readScriptFile", async () => {
 })
 
 test("mergeIncludeNodes", async () => {
-  container.fs.readFile = (path) => {
-    if (path.endsWith("b.json5")) {
-      return `{
+  Object.assign(container, {
+    fs: {
+      readFile: (path) => {
+        if (path.endsWith("b.json5")) {
+          return `{
       settings: { blah: "x"},
       vars: { blah : "y"},
       scripts: [],
       assertions: [{ assert: "something" }],
     }`
-    } else {
-      return ""
-    }
-  }
+        } else {
+          return ""
+        }
+      },
+    },
+  })
 
   const tool = new OctopusTool(container)
   const scriptNode = testUtil.createScriptNode("a.json5")
@@ -378,15 +344,20 @@ test("flattenScript", async () => {
 })
 
 test("createRunContext", async () => {
-  container.util.osInfo = async () => ({
-    platform: "blah",
-    id: "blah",
-    versionId: "1.2.3",
+  Object.assign(container, {
+    util: {
+      osInfo: async () => ({
+        platform: "blah",
+        id: "blah",
+        versionId: "1.2.3",
+      }),
+      userInfo: () => ({}),
+    },
+    fs: {
+      readFileSync: () => "foobar",
+    },
   })
-  container.fs = {
-    readFileSync: () => "foobar",
-  }
-  container.util.userInfo = () => ({})
+
   const tool = new OctopusTool(container)
   const scriptNode = testUtil.createScriptNode("a.json5")
 
@@ -442,23 +413,25 @@ test("createRunContext", async () => {
 })
 
 test("runScriptLocally", async () => {
-  container.asserters = {
-    TestAssert: class TestAssert {
-      constructor() {}
-      assert() {}
-      rectify() {}
-      result() {}
+  Object.assign(container, {
+    asserters: {
+      TestAssert: class TestAssert {
+        constructor() {}
+        assert() {}
+        rectify() {}
+        result() {}
+      },
     },
-  }
-  container.util.runningAsRoot = () => true
-  container.process = {
-    seteuid: () => undefined,
-    setegid: () => undefined,
-    env: {
-      SUDO_UID: "1",
-      SUDO_GID: "1",
+    util: { runningAsRoot: () => true },
+    process: {
+      seteuid: () => undefined,
+      setegid: () => undefined,
+      env: {
+        SUDO_UID: "1",
+        SUDO_GID: "1",
+      },
     },
-  }
+  })
 
   const tool = new OctopusTool(container)
 
@@ -485,32 +458,22 @@ test("runScriptLocally", async () => {
   await expect(tool.runScriptLocally("test.json5")).resolves.toBeUndefined()
 })
 
-test("getSshOptions", async () => {})
-
 test("runScriptRemotely", async () => {
-  container.util = {
-    run: async (command, options) => ({
-      exitCode: 0,
-      output: "",
+  Object.assign(container, {
+    createSsh: () => ({
+      connect: async () => undefined,
+      run: async (command, options) => ({
+        exitCode: 0,
+        output: "",
+      }),
+      close: () => undefined,
     }),
-    showPrompts: async () => null,
-    doesSudoNeedPassword: async () => false,
-    pipeToPromise: async () => null,
-  }
-  container.createSsh = (sshConfig) => ({
-    connect: jest.fn(async () => null),
-    sftp: jest.fn(() => ({
-      createWriteStream: async (path) =>
-        new stream.Writable({
-          write(chunk, encoding, callback) {
-            callback()
-          },
-        }),
-    })),
-    close: jest.fn(),
-    config: [{ password: "", username: "test" }],
+    createSftp: () => ({
+      connect: async () => undefined,
+      putContent: async () => undefined,
+      close: () => undefined,
+    }),
   })
-
   const tool = new OctopusTool(container)
 
   tool.assertHasNode = () => true

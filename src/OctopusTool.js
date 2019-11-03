@@ -28,27 +28,6 @@ export class OctopusTool {
     this.debug = container.debug
   }
 
-  static installNodeScript = `#!/bin/bash
-  VERSION=$(grep -Eo "\\(Red Hat|\\(Ubuntu" /proc/version)
-  case $VERSION in
-    "(Red Hat")
-      curl -sL https://rpm.nodesource.com/setup_10.x | bash -
-      yum clean all
-      yum makecache fast
-      yum install -y -q gcc-c++ make
-      yum install -y -q nodejs
-      ;;
-    "(Ubuntu")
-      curl -sL https://deb.nodesource.com/setup_10.x | bash -
-      apt update
-      apt install -y -q nodejs
-      ;;
-    *)
-      echo Unsupported Linux distro
-      exit 255
-      ;;
-  esac
-`
   static minNodeVersion = "v10"
 
   async assertHasNode(ssh) {
@@ -65,6 +44,27 @@ export class OctopusTool {
 
   async rectifyHasNode(ssh, sftp) {
     let result = null
+    const installNodeScript = `#!/bin/bash
+    VERSION=$(grep -Eo "\\(Red Hat|\\(Ubuntu" /proc/version)
+    case $VERSION in
+      "(Red Hat")
+        curl -sL https://rpm.nodesource.com/setup_10.x | bash -
+        yum clean all
+        yum makecache fast
+        yum install -y -q gcc-c++ make
+        yum install -y -q nodejs
+        ;;
+      "(Ubuntu")
+        curl -sL https://deb.nodesource.com/setup_10.x | bash -
+        apt update
+        apt install -y -q nodejs
+        ;;
+      *)
+        echo Unsupported Linux distro
+        exit 255
+        ;;
+    esac
+  `
 
     this.log.info("Checking remote system clock")
     result = await ssh.run('bash -c "echo /$(date)"', {
@@ -98,7 +98,7 @@ export class OctopusTool {
       }`
     )
 
-    await sftp.putContent(remoteTempFilePath, OctopusTool.installNodeScript)
+    await sftp.putContent(remoteTempFilePath, installNodeScript)
 
     this.log.info(`Running Node.js install script`)
     result = await ssh.run(`bash ${remoteTempFilePath}`, {
