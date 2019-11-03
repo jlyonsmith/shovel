@@ -315,6 +315,13 @@ test("parsePort", () => {
   expect(() => util.parsePort("70000")).toThrow(Error)
 })
 
+test("expandTilde", async () => {
+  const util = new Utility({ process: { env: { HOME: "/x/y" } } })
+
+  expect(util.expandTilde("~/a.txt")).toBe("/x/y/a.txt")
+  expect(util.expandTilde("a.txt")).toBe("a.txt")
+})
+
 test("userInfo", () => {
   const util = new Utility({
     os: {
@@ -335,129 +342,4 @@ test("userInfo", () => {
     shell: "",
     homeDir: "",
   })
-})
-
-test("doesSudoNeedPassword", async () => {
-  let result = {
-    exitCode: 500,
-    output: ["/500"],
-  }
-  const util = new Utility()
-
-  util.run = async (ssh, command, options) => result
-
-  const ssh = {
-    config: [{ password: "", username: "test" }],
-  }
-
-  // Success
-  await expect(util.doesSudoNeedPassword(ssh)).resolves.toBe(true)
-
-  // Failure
-  result = { exitCode: 0, output: ["/0"] }
-
-  await expect(util.doesSudoNeedPassword(ssh)).resolves.toBe(false)
-})
-
-test("canSudoWithPassword", async () => {
-  let result = {
-    exitCode: 0,
-    output: ["/0"],
-  }
-
-  const util = new Utility()
-
-  util.run = async (ssh, command, options) => result
-
-  const ssh = {
-    config: [{ password: "", username: "test" }],
-  }
-
-  // Success
-  await expect(util.canSudoWithPassword(ssh)).resolves.toBe(true)
-
-  // Failure
-  result = { exitCode: 0, output: ["/500"] }
-
-  await expect(util.canSudoWithPassword(ssh)).resolves.toBe(false)
-})
-
-test("showPrompts", async () => {
-  const util = new Utility({
-    process: { stdin: {}, stdout: {}, exit: () => null },
-    console: { log: () => null },
-    readlinePassword: {
-      createInstance: () => {
-        const Instance = class extends EventEmitter {
-          passwordAsync() {
-            return ["abc"]
-          }
-          close() {}
-        }
-
-        return new Instance()
-      },
-    },
-  })
-
-  // Success
-  await expect(
-    util.showPrompts(null, null, null, ["xyz"])
-  ).resolves.toContainEqual(["abc"])
-})
-
-test("run", async () => {
-  const util = new Utility()
-
-  class Socket extends EventEmitter {
-    write() {}
-    end() {}
-  }
-
-  let socket = new Socket()
-  let ssh = {
-    spawn: jest.fn(async () => socket),
-  }
-
-  process.nextTick(() => {
-    socket.emit("close")
-  })
-  await expect(util.run(ssh, "ls")).resolves.toEqual({
-    exitCode: 0,
-    output: [],
-  })
-
-  process.nextTick(() => {
-    socket.emit("close")
-  })
-  await expect(
-    util.run(ssh, "ls", {
-      cwd: "/a/b",
-      sudo: true,
-      debug: true,
-      sudoPassword: "password",
-    })
-  ).resolves.toEqual({
-    exitCode: 0,
-    output: [],
-  })
-
-  process.nextTick(() => {
-    socket.emit("error")
-  })
-  await expect(util.run(ssh, "xxx")).rejects.toThrow(Error)
-
-  process.nextTick(() => {
-    socket.emit("data", "/a/b/c\n1.2.3\n{a:1}\nerror:\nwarning:\n\n1")
-    process.nextTick(() => {
-      socket.emit("close")
-    })
-  })
-  await expect(
-    util.run(ssh, "nop", {
-      password: "blah",
-      log: jest.fn(),
-      logError: jest.fn(),
-    })
-  ).rejects.toThrow(Error)
 })

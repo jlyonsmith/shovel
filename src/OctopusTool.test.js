@@ -48,24 +48,6 @@ test("assertHasNode", async () => {
   await expect(tool.assertHasNode(ssh)).resolves.toBe(true)
 })
 
-test("uploadFile", async () => {
-  container.util = undefined
-
-  const tool = new OctopusTool(container)
-  const ssh = {
-    sftp: jest.fn(() => ({
-      createWriteStream: async (path) =>
-        new stream.Writable({
-          write(chunk, encoding, callback) {
-            callback()
-          },
-        }),
-    })),
-  }
-
-  await expect(tool.uploadFile(ssh)).resolves.toBeUndefined()
-})
-
 test("rectifyHasNode", async () => {
   container.ssh.run = async (command, options) => {
     if (command === 'bash -c "echo /$(date)"') {

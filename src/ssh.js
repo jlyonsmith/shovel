@@ -3,7 +3,6 @@ import autobind from "autobind-decorator"
 import readlinePassword from "@johnls/readline-password"
 import Timeout from "await-timeout"
 import { ansiEscapeRegex } from "./util"
-import { SFTP } from "./sftp"
 
 const ps1 = "PS1>"
 const ps2 = "PS2>"
