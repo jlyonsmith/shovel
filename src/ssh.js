@@ -20,6 +20,10 @@ export class SSH {
   }
 
   async connect(options = {}) {
+    if (this.pty) {
+      throw new Error("Already connected")
+    }
+
     let args = []
 
     if (!options.host) {
@@ -58,110 +62,117 @@ export class SSH {
       }
 
       this.promptDisplayed = false
-      this.loginPasswordPrompts = options.loginPasswordPrompts || {}
 
       let promptChanged = false
-
-      const disposable = this.pty.onData(
-        this.parseLines(
-          async ({ ready, permissionDenied, loginPasswordPrompt }) => {
-            if (ready) {
-              disposable.dispose()
-              resolve()
-            } else if (permissionDenied) {
-              disposable.dispose()
-              reject(
-                new Error(
-                  `Unable to connect to ${this.options.host}; bad password or key`
-                )
-              )
-            } else if (loginPasswordPrompt) {
-              if (!this.loginPasswordPrompts[loginPasswordPrompt]) {
-                this.loginPasswordPrompts[loginPasswordPrompt] =
-                  (await this.showPrompt(loginPasswordPrompt)) + "\n"
-              }
-
-              this.pty.write(this.loginPasswordPrompts[loginPasswordPrompt])
-            } else if (!promptChanged) {
-              this.pty.write(`PROMPT_COMMAND=\nPS1='${ps1}'\nPS2='${ps2}'\n`)
-              promptChanged = true
-            }
+      const dataHandler = ({
+        ready,
+        permissionDenied,
+        loginPasswordPrompt,
+      }) => {
+        if (ready) {
+          disposable.dispose()
+          resolve()
+        } else if (permissionDenied) {
+          disposable.dispose()
+          reject(
+            new Error(
+              `Unable to connect to ${this.options.host}; bad password or key`
+            )
+          )
+        } else if (loginPasswordPrompt) {
+          if (!this.loginPasswordPrompts) {
+            this.loginPasswordPrompts = new Map(options.loginPasswordPrompts)
           }
-        )
-      )
+
+          if (this.loginPasswordPrompts.has(loginPasswordPrompt)) {
+            this.pty.write(this.loginPasswordPrompts.get(loginPasswordPrompt))
+          } else {
+            this.showPrompt(loginPasswordPrompt).then((password) => {
+              this.loginPasswordPrompts.set(
+                loginPasswordPrompt,
+                password + "\n"
+              )
+              setImmediate(() => dataHandler({ loginPasswordPrompt }))
+            })
+          }
+        } else if (!promptChanged) {
+          this.pty.write(`PROMPT_COMMAND=\nPS1='${ps1}'\nPS2='${ps2}'\n`)
+          promptChanged = true
+        }
+      }
+      const disposable = this.pty.onData((data) => {
+        dataHandler(SSH.parseLines(data))
+      })
+
       this.pty.onExit((e) => {
         if (this.promptDisplayed) {
           process.stdin.unref() // To free the Node event loop
         }
 
-        this.loginPasswordPrompts = {}
+        this.loginPasswordPrompts = null
+        this.sudoPassword = null
         this.sudoPassword = undefined
         this.options = undefined
       })
     })
   }
 
-  parseLines(cb) {
+  static parseLines(data) {
     const stripAnsiEscapes = (s) => s.replace(ansiEscapeRegex, "")
+    const outputLines = []
+    const errorLines = []
+    const jsonLines = []
+    let exitCode = undefined
+    let ready = false
+    let permissionDenied = false
+    let loginPasswordPrompt = undefined
+    let sudoPasswordPrompt = undefined
+    let lines = stripAnsiEscapes(data.toString()).match(/^.*((\r\n|\n|\r)|$)/gm)
 
-    return async (data) => {
-      const outputLines = []
-      const errorLines = []
-      const jsonLines = []
-      let exitCode = undefined
-      let ready = false
-      let permissionDenied = false
-      let loginPasswordPrompt = undefined
-      let sudoPasswordPrompt = undefined
-      let lines = stripAnsiEscapes(data.toString()).match(
-        /^.*((\r\n|\n|\r)|$)/gm
-      )
+    lines = lines.map((line) => line.trim())
 
-      lines = lines.map((line) => line.trim())
+    // NOTE: Keep for debugging
+    //console.log(lines)
 
-      // NOTE: Keep for debugging
-      //console.log(lines)
-
-      for (const line of lines) {
-        if (!line) {
-          continue
-        } else if (line.startsWith("error:") || line.startsWith("warning:")) {
-          errorLines.push(line)
-        } else if (/^\d+$/.test(line)) {
-          exitCode = parseInt(line)
-        } else if (/^v?\d+\.\d+\.\d+/.test(line)) {
-          // Version numbers
-          outputLines.push(line)
-        } else if (line.startsWith("/")) {
-          // Paths
-          outputLines.push(line)
-        } else if (line.startsWith("{")) {
-          jsonLines.push(line)
-        } else if (line.startsWith("[sudo] password for")) {
-          sudoPasswordPrompt = line
-        } else if (/^.+@.+'s password:/.test(line)) {
-          loginPasswordPrompt = line
-        } else if (/^.+@.+: Permission denied/.test(line)) {
-          permissionDenied = true
-        }
+    for (const line of lines) {
+      if (!line) {
+        continue
+      } else if (line.startsWith("error:") || line.startsWith("warning:")) {
+        errorLines.push(line)
+      } else if (/^\d+$/.test(line)) {
+        exitCode = parseInt(line)
+      } else if (/^v?\d+\.\d+\.\d+/.test(line)) {
+        // Version numbers
+        outputLines.push(line)
+      } else if (line.startsWith("/")) {
+        // Paths
+        outputLines.push(line)
+      } else if (line.startsWith("{")) {
+        jsonLines.push(line)
+      } else if (line.startsWith("[sudo] password for")) {
+        sudoPasswordPrompt = line
+      } else if (/^.+@.+'s password:/.test(line)) {
+        loginPasswordPrompt = line
+      } else if (/^.+@.+: Permission denied/.test(line)) {
+        permissionDenied = true
       }
+    }
 
-      const lastLine = lines[lines.length - 1]
+    const lastLine = lines[lines.length - 1]
 
-      if (lastLine.endsWith(ps1) || lastLine.endsWith(ps2)) {
-        ready = true
-      }
+    if (lastLine.endsWith(ps1) || lastLine.endsWith(ps2)) {
+      ready = true
+    }
 
-      await cb({
-        outputLines,
-        errorLines,
-        jsonLines,
-        exitCode,
-        ready,
-        permissionDenied,
-        loginPasswordPrompt,
-        sudoPasswordPrompt,
-      })
+    return {
+      outputLines,
+      errorLines,
+      jsonLines,
+      exitCode,
+      ready,
+      permissionDenied,
+      loginPasswordPrompt,
+      sudoPasswordPrompt,
     }
   }
 
@@ -192,38 +203,49 @@ export class SSH {
 
     const promises = []
     let output = []
-    let exitCode = undefined
+    let savedExitCode = undefined
 
     promises.push(
       new Promise((resolve, reject) => {
-        const disposable = this.pty.onData(
-          this.parseLines(async (data) => {
-            output = output.concat(data.outputLines)
+        const dataHandler = ({
+          exitCode,
+          jsonLines,
+          errorLines,
+          outputLines,
+          sudoPasswordPrompt,
+        }) => {
+          if (outputLines) {
+            output = output.concat(outputLines)
+          }
 
-            if (data.sudoPasswordPrompt) {
-              if (!this.sudoPassword) {
-                this.sudoPassword =
-                  (await this.showPrompt(data.sudoPasswordPrompt)) + "\n"
-              }
-
+          if (sudoPasswordPrompt) {
+            if (this.sudoPassword) {
               this.pty.write(this.sudoPassword)
+            } else {
+              this.showPrompt(sudoPasswordPrompt).then((password) => {
+                this.sudoPassword = password + "\n"
+                setImmediate(() => dataHandler({ sudoPasswordPrompt }))
+              })
             }
+          }
 
-            if (options.logError) {
-              data.errorLines.forEach((line) => options.logError(line))
-            }
+          if (options.logError && errorLines) {
+            errorLines.forEach((line) => options.logError(line))
+          }
 
-            if (options.logOutput) {
-              data.jsonLines.forEach((line) => options.logOutput(line))
-            }
+          if (options.logOutput && jsonLines) {
+            jsonLines.forEach((line) => options.logOutput(line))
+          }
 
-            if (data.exitCode !== undefined) {
-              exitCode = data.exitCode
-              disposable.dispose()
-              resolve()
-            }
-          })
-        )
+          if (exitCode !== undefined) {
+            savedExitCode = exitCode
+            disposable.dispose()
+            resolve()
+          }
+        }
+        const disposable = this.pty.onData((data) => {
+          dataHandler(SSH.parseLines(data))
+        })
       })
     )
 
@@ -252,11 +274,11 @@ export class SSH {
 
     // TODO: If the timer fired, Ctrl+C out of whatever we were doing?
 
-    if (!options.noThrow && exitCode !== 0) {
+    if (!options.noThrow && savedExitCode !== 0) {
       throw new Error(`Command '${command}' returned exit code ${exitCode}`)
     }
 
-    return { exitCode, output }
+    return { exitCode: savedExitCode, output }
   }
 
   close() {

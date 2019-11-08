@@ -467,6 +467,8 @@ export class OctopusTool {
       this.process.seteuid(sudo.uid)
     }
 
+    // TODO: Warn if Node version is not correct
+
     Object.assign(
       state,
       await this.createRunContext(scriptNode, { inRunScriptLocally: true })
