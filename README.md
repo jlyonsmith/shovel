@@ -95,21 +95,11 @@ Octopus scripts are made up of a collections of assertions about a host state.  
 
 Asserters are the core of Octopus.  They are simple Javascript objects that contain two methods, `assert` and `rectify`. The `assert` method confirms the machine state. If `assert` returns `true` then the script proceeds. If `assert` returns `false`, then the machine is not in the correct state and the `rectify` method is called to fix things. If `rectify` cannot put the machine in the correct state so that `assert` will succeed next time then it throws an exception and the script ends.  The `assert` will throw an exception if it is impossible for the `assert` to ever succeed, e.g. unzipping a file that is not actually present.
 
+See the full list of built-in [asserters](doc/Asserters.md) in the documentation directory.
+
 ### SSH Authentication
 
-When run against one or more hosts, Octopus uses SSH to run scripts on those hostes. When run without a remote host, Octopus just runs the script directly.
-
-## Asserters
-
-### `FileAbsent`
-
-Ensures that a file is absent (deleted) from a system.
-
-| Arg    | Type     | Description                       |
-| ------ | -------- | --------------------------------- |
-| `path` | `String` | Path of the file to ensure absent |
-
-// TODO: Document all asserters
+When run against one or more hosts, Octopus uses SSH to run scripts on those hostes. When run without a remote host, Octopus just runs the script directly on your local system.
 
 ## Advanced
 
