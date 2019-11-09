@@ -100,7 +100,7 @@ export class OctopusTool {
 
     await sftp.putContent(remoteTempFilePath, installNodeScript)
 
-    this.log.info(`Running Node.js install script`)
+    this.log.info(`Running Node.js install script; this could take a while`)
     result = await ssh.run(`bash ${remoteTempFilePath}`, {
       sudo: true,
       noThrow: true,
@@ -138,7 +138,8 @@ export class OctopusTool {
 
   async rectifyHasOctopus(ssh) {
     this.log.info("Installing Octopus")
-    let result = await ssh.run("npm install -g @johnls/octopus", {
+    // NOTE: See https://github.com/nodejs/node-gyp/issues/454#issuecomment-58792114 for why "--unsafe-perm"
+    let result = await ssh.run("npm install -g --unsafe-perm @johnls/octopus", {
       sudo: true,
       noThrow: true,
     })
