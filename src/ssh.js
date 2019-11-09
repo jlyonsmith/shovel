@@ -68,6 +68,7 @@ export class SSH {
         ready,
         permissionDenied,
         loginPasswordPrompt,
+        verificationPrompt,
       }) => {
         if (ready) {
           disposable.dispose()
@@ -95,6 +96,10 @@ export class SSH {
               setImmediate(() => dataHandler({ loginPasswordPrompt }))
             })
           }
+        } else if (verificationPrompt) {
+          this.showPrompt(verificationPrompt).then((code) => {
+            this.pty.write(code + "\n")
+          })
         } else if (!promptChanged) {
           this.pty.write(`PROMPT_COMMAND=\nPS1='${ps1}'\nPS2='${ps2}'\n`)
           promptChanged = true
@@ -127,12 +132,15 @@ export class SSH {
     let permissionDenied = false
     let loginPasswordPrompt = undefined
     let sudoPasswordPrompt = undefined
+    let verificationPrompt = undefined
     let lines = stripAnsiEscapes(data.toString()).match(/^.*((\r\n|\n|\r)|$)/gm)
 
     lines = lines.map((line) => line.trim())
 
     // NOTE: Keep for debugging
     //console.log(lines)
+
+    // TODO: Support 'Enter passphrase for key...' for ssh-add
 
     for (const line of lines) {
       if (!line) {
@@ -155,6 +163,8 @@ export class SSH {
         loginPasswordPrompt = line
       } else if (/^.+@.+: Permission denied/.test(line)) {
         permissionDenied = true
+      } else if (line.startsWith("Verification code:")) {
+        verificationPrompt = line
       }
     }
 
@@ -173,6 +183,7 @@ export class SSH {
       permissionDenied,
       loginPasswordPrompt,
       sudoPasswordPrompt,
+      verificationPrompt,
     }
   }
 
