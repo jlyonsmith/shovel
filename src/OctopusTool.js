@@ -52,12 +52,12 @@ export class OctopusTool {
         yum clean all
         yum makecache fast
         yum install -y -q gcc-c++ make
-        yum install -y -q nodejs
+        yum install -y -q nodejs node-gyp
         ;;
       "(Ubuntu")
         curl -sL https://deb.nodesource.com/setup_10.x | bash -
         apt update
-        apt install -y -q nodejs
+        apt install -y -q nodejs node-gyp
         ;;
       *)
         echo Unsupported Linux distro
