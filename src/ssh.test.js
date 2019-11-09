@@ -112,8 +112,6 @@ test("connect", async () => {
     throw new Error()
   }
   await expect(ssh.connect({ host: "xyz" })).rejects.toThrow(Error)
-
-  // ssh = null
 })
 
 test("showPrompt", async () => {

@@ -7,45 +7,6 @@ import tempy from "tempy"
 import fs from "fs-extra"
 
 const ps1 = "sftp>"
-const parseLines = (cb) => {
-  const stripAnsiEscapes = (s) => s.replace(ansiEscapeRegex, "")
-
-  return async (data) => {
-    const errorLines = []
-    let ready = false
-    let loginPasswordPrompt = undefined
-    let lines = stripAnsiEscapes(data.toString()).match(/^.*((\r\n|\n|\r)|$)/gm)
-
-    lines = lines.map((line) => line.trim())
-
-    // NOTE: Keep for debugging
-    // console.log(lines)
-
-    for (const line of lines) {
-      if (!line) {
-        continue
-      } else if (line.startsWith("error:") || line.startsWith("warning:")) {
-        errorLines.push(line)
-      } else if (/^.+@.+'s password:/.test(line)) {
-        loginPasswordPrompt = line
-      } else if (/^.+@.+: Permission denied/.test(line)) {
-        permissionDenied = true
-      }
-    }
-
-    const lastLine = lines[lines.length - 1]
-
-    if (lastLine.endsWith(ps1)) {
-      ready = true
-    }
-
-    await cb({
-      errorLines,
-      ready,
-      loginPasswordPrompt,
-    })
-  }
-}
 
 @autobind
 export class SFTP {
@@ -61,6 +22,10 @@ export class SFTP {
   }
 
   async connect(options = {}) {
+    if (this.pty) {
+      throw new Error("Already connected")
+    }
+
     let args = []
 
     if (!options.host) {
@@ -97,40 +62,93 @@ export class SFTP {
       }
 
       this.promptDisplayed = false
-      this.loginPasswordPrompts = options.loginPasswordPrompts || {}
 
-      const disposable = this.pty.onData(
-        parseLines(async ({ ready, permissionDenied, loginPasswordPrompt }) => {
-          if (ready) {
-            disposable.dispose()
-            resolve()
-          } else if (permissionDenied) {
-            disposable.dispose()
-            reject(
-              new Error(
-                `Unable to connect to ${this.options.host}; bad password or key`
-              )
+      const dataHandler = ({
+        ready,
+        permissionDenied,
+        loginPasswordPrompt,
+      }) => {
+        if (ready) {
+          disposable.dispose()
+          resolve()
+        } else if (permissionDenied) {
+          disposable.dispose()
+          reject(
+            new Error(
+              `Unable to connect to ${this.options.host}; bad password or key`
             )
-          } else if (loginPasswordPrompt) {
-            if (!this.loginPasswordPrompts[loginPasswordPrompt]) {
-              this.loginPasswordPrompts[loginPasswordPrompt] =
-                (await this.showPrompt(loginPasswordPrompt)) + "\n"
-            }
-
-            this.pty.write(this.loginPasswordPrompts[loginPasswordPrompt])
+          )
+        } else if (loginPasswordPrompt) {
+          if (!this.loginPasswordPrompts) {
+            this.loginPasswordPrompts = new Map(options.loginPasswordPrompts)
           }
-        })
-      )
+
+          if (this.loginPasswordPrompts.has(loginPasswordPrompt)) {
+            this.pty.write(this.loginPasswordPrompts.get(loginPasswordPrompt))
+          } else {
+            this.showPrompt(loginPasswordPrompt).then((password) => {
+              this.loginPasswordPrompts.set(
+                loginPasswordPrompt,
+                password + "\n"
+              )
+              setImmediate(() => dataHandler({ loginPasswordPrompt }))
+            })
+          }
+        }
+      }
+      const disposable = this.pty.onData((data) => {
+        dataHandler(SFTP.parseLines(data))
+      })
+
       this.pty.onExit((e) => {
         if (this.promptDisplayed) {
           process.stdin.unref() // To free the Node event loop
         }
 
-        this.loginPasswordPrompts = {}
+        this.loginPasswordPrompts = null
         this.options = undefined
         this.promptDisplayed = false
       })
     })
+  }
+
+  static parseLines(data) {
+    const stripAnsiEscapes = (s) => s.replace(ansiEscapeRegex, "")
+    const errorLines = []
+    let ready = false
+    let loginPasswordPrompt = undefined
+    let lines = stripAnsiEscapes(data.toString()).match(/^.*((\r\n|\n|\r)|$)/gm)
+    let permissionDenied = false
+
+    lines = lines.map((line) => line.trim())
+
+    // NOTE: Keep for debugging
+    // console.log(lines)
+
+    for (const line of lines) {
+      if (!line) {
+        continue
+      } else if (line.startsWith("error:") || line.startsWith("warning:")) {
+        errorLines.push(line)
+      } else if (/^.+@.+'s password:/.test(line)) {
+        loginPasswordPrompt = line
+      } else if (/^.+@.+: Permission denied/.test(line)) {
+        permissionDenied = true
+      }
+    }
+
+    const lastLine = lines[lines.length - 1]
+
+    if (lastLine.endsWith(ps1)) {
+      ready = true
+    }
+
+    return {
+      errorLines,
+      ready,
+      loginPasswordPrompt,
+      permissionDenied,
+    }
   }
 
   async showPrompt(prompt) {
@@ -165,20 +183,23 @@ export class SFTP {
 
     promises.push(
       new Promise((resolve, reject) => {
-        const disposable = this.pty.onData(
-          parseLines(async ({ errorLines, ready }) => {
-            if (errorLines.length > 0) {
-              if (options.logError) {
-                errorLines.forEach((line) => options.logError(line))
-              }
-              disposable.dispose()
-              reject(new Error(`Unable to upload ${remoteFile}`))
-            } else if (ready) {
-              disposable.dispose()
-              resolve()
+        const dataHandler = ({ errorLines, ready }) => {
+          if (errorLines.length > 0) {
+            if (options.logError) {
+              errorLines.forEach((line) => options.logError(line))
             }
-          })
-        )
+            disposable.dispose()
+            reject(new Error(`Unable to upload ${remoteFile}`))
+          }
+
+          if (ready) {
+            disposable.dispose()
+            resolve()
+          }
+        }
+        const disposable = this.pty.onData((data) => {
+          dataHandler(SFTP.parseLines(data))
+        })
       })
     )
 
