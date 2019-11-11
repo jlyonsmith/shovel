@@ -9,12 +9,12 @@
   tags: {
     major: 1,
     minor: 6,
-    patch: 0,
-    build: 20191108,
+    patch: 1,
+    build: 20191111,
     revision: 0,
     tz: "America/Los_Angeles",
     startYear: "2017",
-    sequence: 35
+    sequence: 36
   },
   fileTypes: [
     {
