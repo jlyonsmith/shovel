@@ -23,6 +23,7 @@ test("constructor", () => {
 
   expect(tool).not.toBe(null)
   expect(tool.createSsh()).not.toBe(null)
+  expect(tool.createSftp()).not.toBe(null)
 })
 
 test("assertHasNode", async () => {
@@ -113,11 +114,32 @@ test("rectifyHasNode", async () => {
     } else {
       return {
         exitCode: 255,
-        output: ["/255"],
+        output: [""],
       }
     }
   }
-  await expect(tool.rectifyHasNode(ssh)).rejects.toThrow(Error)
+  await expect(tool.rectifyHasNode(ssh, sftp)).rejects.toThrow(Error)
+
+  // Bad install
+  ssh.run = async (command, options) => {
+    if (command === 'bash -c "echo /$(date)"') {
+      return {
+        exitCode: 0,
+        output: ["/" + new Date().toString()],
+      }
+    } else if (command === "mktemp") {
+      return {
+        exitCode: 0,
+        output: [""],
+      }
+    } else {
+      return {
+        exitCode: 255,
+        output: [""],
+      }
+    }
+  }
+  await expect(tool.rectifyHasNode(ssh, sftp)).rejects.toThrow(Error)
 
   // Bad version
   ssh.run = async (command, options) => {
@@ -138,7 +160,7 @@ test("rectifyHasNode", async () => {
       }
     }
   }
-  await expect(tool.rectifyHasNode(ssh)).rejects.toThrow(Error)
+  await expect(tool.rectifyHasNode(ssh, sftp)).rejects.toThrow(Error)
 })
 
 test("assertHasOctopus", async () => {
