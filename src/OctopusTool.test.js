@@ -554,11 +554,12 @@ test("runScriptLocally", async () => {
 
 test("runScriptRemotely", async () => {
   Object.assign(container, {
+    debug: true,
     createSsh: () => ({
       connect: async () => undefined,
       run: async (command, options) => ({
         exitCode: 0,
-        output: "",
+        output: "/tmp/1234",
       }),
       close: () => undefined,
     }),
@@ -572,23 +573,15 @@ test("runScriptRemotely", async () => {
 
   tool.assertHasNode = () => true
   tool.assertHasOctopus = () => true
-  tool.compileScriptFile = async () => ({
-    vars: {},
-    settings: {},
-    assertions: [{ assert: "TestAssert", with: {} }],
-    runContext: { vars: {} },
-    expandStringNode: jest.fn(),
-  })
   tool.readScriptFile = async () => ({})
   tool.getSshOptions = async () => [{}]
-  tool.flattenScript = async (node) => node
+  tool.flattenScript = async () => ({ assertions: [] })
   tool.createRunContext = async () => ({
     runContext: { vars: {} },
-    settings: {},
-    vars: {},
-    assertions: [],
+    expandStringNode: (s) => s,
   })
 
+  // Happy path
   await expect(
     tool.runScriptRemotely("test.json5", {
       user: "test",
@@ -596,6 +589,38 @@ test("runScriptRemotely", async () => {
       host: "somehost",
     })
   ).resolves.toBeUndefined()
+
+  // Without Node or Octopus
+  tool.debug = false
+  tool.assertHasNode = () => false
+  tool.assertHasOctopus = () => false
+  tool.rectifyHasNode = async () => undefined
+  tool.rectifyHasOctopus = async () => undefined
+  tool.flattenScript = async () => ({
+    assertions: [{ assert: "Thing", become: true, _assertNode: {} }],
+  })
+  await expect(
+    tool.runScriptRemotely("test.json5", {
+      user: "test",
+      password: "test",
+      host: "somehost",
+    })
+  ).resolves.toBeUndefined()
+
+  // SSH creation throws
+  tool.createSsh = () => ({
+    connect: async () => {
+      throw new Error("bad ssh connect")
+    },
+    close: () => undefined,
+  })
+  await expect(
+    tool.runScriptRemotely("test.json5", {
+      user: "test",
+      password: "test",
+      host: "somehost",
+    })
+  ).rejects.toThrow("bad ssh connect")
 })
 
 test("run", async () => {

@@ -437,7 +437,7 @@ export class OctopusTool {
     }
   }
 
-  async runScriptLocally(scriptPath, options = {}) {
+  async runScriptLocally(scriptPath) {
     const scriptNode = await this.readScriptFile(scriptPath)
     const state = await this.flattenScript(scriptNode)
     const scriptHasBecomes = !!state.assertions.find((assertion) =>
@@ -528,7 +528,7 @@ export class OctopusTool {
     }
   }
 
-  async runScriptRemotely(scriptPath, options = {}) {
+  async runScriptRemotely(scriptPath, options) {
     const scriptNode = await this.readScriptFile(scriptPath)
     const state = Object.assign(
       await this.flattenScript(scriptNode),
@@ -622,10 +622,8 @@ export class OctopusTool {
         sftp.close()
       }
 
-      if (ssh) {
-        ssh.close()
-        this.log.info(`Disconnected from ${options.host}`)
-      }
+      ssh.close()
+      this.log.info(`Disconnected from ${options.host}`)
     }
   }
 
