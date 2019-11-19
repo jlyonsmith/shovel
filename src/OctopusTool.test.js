@@ -357,11 +357,33 @@ test("mergeIncludeNodes", async () => {
 test("flattenScript", async () => {
   const tool = new OctopusTool(container)
   const scriptNode = testUtil.createScriptNode("a.json5")
+  const assertionsNode = scriptNode.value.assertions
+
+  assertionsNode.value.push(
+    testUtil.createNode(scriptNode.filename, { assert: "something" })
+  )
 
   await expect(tool.flattenScript(scriptNode)).resolves.toMatchObject({
-    vars: {},
-    settings: {},
-    assertions: [],
+    assertions: [
+      {
+        _assertNode: {
+          column: 0,
+          filename: "a.json5",
+          line: 0,
+          type: "object",
+          value: {
+            assert: {
+              column: 0,
+              filename: "a.json5",
+              line: 0,
+              type: "string",
+              value: "something",
+            },
+          },
+        },
+        assert: "something",
+      },
+    ],
   })
 })
 
