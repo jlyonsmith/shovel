@@ -627,6 +627,10 @@ test("run", async () => {
   container.util = {
     parsePort: () => 0,
   }
+  container.fs = {
+    readFile: async () =>
+      '[{ host: "foo", port: 22, user: "fred", identity: "bar" }]',
+  }
 
   const tool = new OctopusTool(container)
 
@@ -669,17 +673,21 @@ test("run", async () => {
     tool.run(["somescript.json5", "--host", "somehost"])
   ).resolves.toBeUndefined()
 
+  // Hosts file
+  await tool.run(["somescript.json5", "--host-file", "hostfile.json5"])
+  // await expect(
+  //   tool.run(["somescript.json5", "--host-file", "hostfile.json5"])
+  // ).resolves.toBeUndefined()
+
   // Running remote script that fails
-  tool.debug = true
   tool.runScriptRemotely = async () => {
     throw new Error()
   }
   await expect(
-    tool.run(["somescript.json5", "--host", "somehost"])
-  ).rejects.toThrow(Error)
+    tool.run(["somescript.json5", "--debug", "--host", "somehost"])
+  ).rejects.toThrow("hosts")
 
   // Running remote script that fails (no debug)
-  tool.debug = false
   await expect(
     tool.run(["somescript.json5", "--host", "somehost"])
   ).rejects.toThrow(Error)

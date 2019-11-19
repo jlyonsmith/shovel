@@ -696,7 +696,9 @@ Arguments:
       hosts = []
 
       if (args["host-file"]) {
-        hosts = hosts.concat(JSON5.parse(fs.readFile(args["host-file"])))
+        hosts = hosts.concat(
+          JSON5.parse(await this.fs.readFile(args["host-file"]))
+        )
       }
 
       if (args.host) {
@@ -721,14 +723,7 @@ Arguments:
             identity: host.identity,
           })
         } catch (error) {
-          if (error) {
-            this.log.error(error.message || error)
-
-            if (this.debug) {
-              console.error(error)
-            }
-          }
-
+          this.log.error(this.debug ? error : error.message)
           failures += 1
         }
       }

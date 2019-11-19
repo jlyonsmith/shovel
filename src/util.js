@@ -115,9 +115,14 @@ export class Utility {
   }
 
   parsePort(s) {
-    const port = parseInt(s)
+    const port =
+      typeof s === "string"
+        ? parseInt(s)
+        : typeof s === "number"
+        ? s
+        : undefined
 
-    if (port && (port < 0 || port > 65535)) {
+    if (!port || port < 0 || port > 65535) {
       throw new Error("Port must be a number between 0 and 65535")
     }
 
