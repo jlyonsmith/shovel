@@ -488,8 +488,7 @@ export class OctopusTool {
       if (whenNode) {
         if (
           (whenNode.type === "boolean" && !whenNode.value) ||
-          (whenNode.type === "string" &&
-            !state.expandStringNode(assertion._assertNode.value.when))
+          (whenNode.type === "string" && !state.expandStringNode(whenNode))
         ) {
           continue
         }

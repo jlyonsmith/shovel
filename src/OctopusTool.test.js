@@ -324,69 +324,6 @@ test("readScriptFile", async () => {
   await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
 })
 
-test("mergeIncludeNodes", async () => {
-  Object.assign(container, {
-    fs: {
-      readFile: async (path) => {
-        if (path.endsWith("b.json5")) {
-          return `{
-            settings: { blah: "x"},
-            vars: { blah : "y"},
-            scripts: [],
-            assertions: [{ assert: "something" }],
-          }`
-        } else if (path.endsWith("c.json5")) {
-          return "{}"
-        }
-      },
-    },
-  })
-
-  const tool = new OctopusTool(container)
-  const scriptNode = testUtil.createScriptNode("a.json5")
-  const includesNode = scriptNode.value.includes
-
-  includesNode.value.push(testUtil.createNode(scriptNode.filename, "b.json5"))
-  includesNode.value.push(testUtil.createNode(scriptNode.filename, "c.json5"))
-
-  await expect(
-    tool.mergeIncludeNodes(scriptNode, ".", includesNode)
-  ).resolves.toBeUndefined()
-})
-
-test("flattenScript", async () => {
-  const tool = new OctopusTool(container)
-  const scriptNode = testUtil.createScriptNode("a.json5")
-  const assertionsNode = scriptNode.value.assertions
-
-  assertionsNode.value.push(
-    testUtil.createNode(scriptNode.filename, { assert: "something" })
-  )
-
-  await expect(tool.flattenScript(scriptNode)).resolves.toMatchObject({
-    assertions: [
-      {
-        _assertNode: {
-          column: 0,
-          filename: "a.json5",
-          line: 0,
-          type: "object",
-          value: {
-            assert: {
-              column: 0,
-              filename: "a.json5",
-              line: 0,
-              type: "string",
-              value: "something",
-            },
-          },
-        },
-        assert: "something",
-      },
-    ],
-  })
-})
-
 test("createRunContext", async () => {
   Object.assign(container, {
     util: {
@@ -456,13 +393,81 @@ test("createRunContext", async () => {
   ).toBe("foo")
 })
 
+test("mergeIncludeNodes", async () => {
+  Object.assign(container, {
+    fs: {
+      readFile: async (path) => {
+        if (path.endsWith("b.json5")) {
+          return `{
+            settings: { blah: "x"},
+            vars: { blah : "y"},
+            scripts: [],
+            assertions: [{ assert: "something" }],
+          }`
+        } else if (path.endsWith("c.json5")) {
+          return "{}"
+        }
+      },
+    },
+  })
+
+  const tool = new OctopusTool(container)
+  const scriptNode = testUtil.createScriptNode("a.json5")
+  const includesNode = scriptNode.value.includes
+
+  includesNode.value.push(testUtil.createNode(scriptNode.filename, "b.json5"))
+  includesNode.value.push(testUtil.createNode(scriptNode.filename, "c.json5"))
+
+  await expect(
+    tool.mergeIncludeNodes(scriptNode, ".", includesNode)
+  ).resolves.toBeUndefined()
+})
+
+test("flattenScript", async () => {
+  const tool = new OctopusTool(container)
+  const scriptNode = testUtil.createScriptNode("a.json5")
+  const assertionsNode = scriptNode.value.assertions
+
+  assertionsNode.value.push(
+    testUtil.createNode(scriptNode.filename, { assert: "something" })
+  )
+
+  await expect(tool.flattenScript(scriptNode)).resolves.toMatchObject({
+    assertions: [
+      {
+        _assertNode: {
+          column: 0,
+          filename: "a.json5",
+          line: 0,
+          type: "object",
+          value: {
+            assert: {
+              column: 0,
+              filename: "a.json5",
+              line: 0,
+              type: "string",
+              value: "something",
+            },
+          },
+        },
+        assert: "something",
+      },
+    ],
+  })
+})
+
 test("runScriptLocally", async () => {
   Object.assign(container, {
+    debug: true,
     asserters: {
       TestAssert: class TestAssert {
         constructor() {}
-        assert() {}
-        rectify() {}
+        async assert(node) {
+          const withNode = node.value.with
+
+          return withNode && withNode.value.assert
+        }
+        async rectify() {}
         result() {}
       },
     },
@@ -478,20 +483,45 @@ test("runScriptLocally", async () => {
   })
 
   const tool = new OctopusTool(container)
+  const assert1 = {
+    assert: "TestAssert",
+    description: "hmmm",
+    with: {},
+    become: "root",
+    when: "",
+  }
+  const assert2 = {
+    assert: "TestAssert",
+    with: {},
+    when: false,
+  }
+  const assert3 = {
+    assert: "TestAssert",
+    with: {
+      assert: true,
+    },
+  }
+  const assert4 = {
+    assert: "TestAssert",
+    with: {},
+  }
 
   tool.readScriptFile = jest.fn(async () => {})
   tool.flattenScript = jest.fn(async () => ({
-    settings: {},
+    settings: {
+      description: "Blah",
+    },
     vars: {},
     assertions: [
-      {
-        assert: "TestAssert",
-        with: {},
-        _assertNode: testUtil.createNode("test.json5", {
-          assert: "TestAssert",
-          with: {},
-        }),
-      },
+      Object.assign({}, assert1, {
+        _assertNode: testUtil.createNode("test.json5", assert1),
+      }),
+      Object.assign({}, assert2, {
+        _assertNode: testUtil.createNode("test.json5", assert2),
+      }),
+      Object.assign({}, assert3, {
+        _assertNode: testUtil.createNode("test.json5", assert3),
+      }),
     ],
   }))
   tool.createRunContext = jest.fn(async () => ({
@@ -499,6 +529,26 @@ test("runScriptLocally", async () => {
     expandStringNode: jest.fn((s) => s),
   }))
 
+  // Has becomes
+  await expect(tool.runScriptLocally("test.json5")).resolves.toBeUndefined()
+
+  // Has becomes and not running as root
+  container.util.runningAsRoot = () => false
+  await expect(tool.runScriptLocally("test.json5")).rejects.toThrow(
+    "not running as root"
+  )
+
+  // No becomes
+  tool.debug = false
+  tool.flattenScript = jest.fn(async () => ({
+    settings: {},
+    vars: {},
+    assertions: [
+      Object.assign({}, assert4, {
+        _assertNode: testUtil.createNode("test.json5", assert4),
+      }),
+    ],
+  }))
   await expect(tool.runScriptLocally("test.json5")).resolves.toBeUndefined()
 })
 
