@@ -327,16 +327,16 @@ test("readScriptFile", async () => {
 test("mergeIncludeNodes", async () => {
   Object.assign(container, {
     fs: {
-      readFile: (path) => {
+      readFile: async (path) => {
         if (path.endsWith("b.json5")) {
           return `{
-      settings: { blah: "x"},
-      vars: { blah : "y"},
-      scripts: [],
-      assertions: [{ assert: "something" }],
-    }`
-        } else {
-          return ""
+            settings: { blah: "x"},
+            vars: { blah : "y"},
+            scripts: [],
+            assertions: [{ assert: "something" }],
+          }`
+        } else if (path.endsWith("c.json5")) {
+          return "{}"
         }
       },
     },
@@ -344,13 +344,13 @@ test("mergeIncludeNodes", async () => {
 
   const tool = new OctopusTool(container)
   const scriptNode = testUtil.createScriptNode("a.json5")
+  const includesNode = scriptNode.value.includes
 
-  scriptNode.value.includes.value.push(
-    testUtil.createNode(scriptNode.filename, "b.json5")
-  )
+  includesNode.value.push(testUtil.createNode(scriptNode.filename, "b.json5"))
+  includesNode.value.push(testUtil.createNode(scriptNode.filename, "c.json5"))
 
   await expect(
-    tool.mergeIncludeNodes(scriptNode, ".", scriptNode.value.includes)
+    tool.mergeIncludeNodes(scriptNode, ".", includesNode)
   ).resolves.toBeUndefined()
 })
 

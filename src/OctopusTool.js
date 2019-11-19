@@ -396,21 +396,15 @@ export class OctopusTool {
         assertions: newAssertionsNode,
       } = newScriptNode.value
 
-      if (newSettingsNode) {
-        settingsNode.value = merge.recursive(
-          settingsNode.value,
-          newSettingsNode.value
-        )
-      }
-      if (newVarsNode) {
-        varsNode.value = merge.recursive(varsNode.value, newVarsNode.value)
-      }
-      if (newAssertionsNode) {
-        assertionsNode.value = [
-          ...assertionsNode.value,
-          ...newAssertionsNode.value,
-        ]
-      }
+      settingsNode.value = merge.recursive(
+        settingsNode.value,
+        newSettingsNode.value
+      )
+      varsNode.value = merge.recursive(varsNode.value, newVarsNode.value)
+      assertionsNode.value = [
+        ...assertionsNode.value,
+        ...newAssertionsNode.value,
+      ]
     }
   }
 
