@@ -19,6 +19,71 @@ export class SSH {
     this.pty = null
   }
 
+  static parseLines(data) {
+    const stripAnsiEscapes = (s) => s.replace(ansiEscapeRegex, "")
+    const outputLines = []
+    const errorLines = []
+    const jsonLines = []
+    let exitCode = undefined
+    let ready = false
+    let permissionDenied = false
+    let loginPasswordPrompt = undefined
+    let sudoPasswordPrompt = undefined
+    let verificationPrompt = undefined
+    let lines = stripAnsiEscapes(data.toString()).match(/^.*((\r\n|\n|\r)|$)/gm)
+
+    lines = lines.map((line) => line.trim())
+
+    // NOTE: Keep for debugging
+    //console.log(lines)
+
+    // TODO: Support 'Enter passphrase for key...' for ssh-add
+
+    for (const line of lines) {
+      if (!line) {
+        continue
+      } else if (line.startsWith("error:") || line.startsWith("warning:")) {
+        errorLines.push(line)
+      } else if (/^\d+$/.test(line)) {
+        exitCode = parseInt(line)
+      } else if (/^v?\d+\.\d+\.\d+/.test(line)) {
+        // Version numbers
+        outputLines.push(line)
+      } else if (line.startsWith("/")) {
+        // Paths
+        outputLines.push(line)
+      } else if (line.startsWith("{")) {
+        jsonLines.push(line)
+      } else if (line.startsWith("[sudo] password for")) {
+        sudoPasswordPrompt = line
+      } else if (/^.+@.+'s password:/.test(line)) {
+        loginPasswordPrompt = line
+      } else if (/^.+@.+: Permission denied/.test(line)) {
+        permissionDenied = true
+      } else if (line.startsWith("Verification code:")) {
+        verificationPrompt = line
+      }
+    }
+
+    const lastLine = lines[lines.length - 1]
+
+    if (lastLine.endsWith(ps1) || lastLine.endsWith(ps2)) {
+      ready = true
+    }
+
+    return {
+      outputLines,
+      errorLines,
+      jsonLines,
+      exitCode,
+      ready,
+      permissionDenied,
+      loginPasswordPrompt,
+      sudoPasswordPrompt,
+      verificationPrompt,
+    }
+  }
+
   async connect(options = {}) {
     if (this.pty) {
       throw new Error("Already connected")
@@ -120,71 +185,6 @@ export class SSH {
         this.options = undefined
       })
     })
-  }
-
-  static parseLines(data) {
-    const stripAnsiEscapes = (s) => s.replace(ansiEscapeRegex, "")
-    const outputLines = []
-    const errorLines = []
-    const jsonLines = []
-    let exitCode = undefined
-    let ready = false
-    let permissionDenied = false
-    let loginPasswordPrompt = undefined
-    let sudoPasswordPrompt = undefined
-    let verificationPrompt = undefined
-    let lines = stripAnsiEscapes(data.toString()).match(/^.*((\r\n|\n|\r)|$)/gm)
-
-    lines = lines.map((line) => line.trim())
-
-    // NOTE: Keep for debugging
-    //console.log(lines)
-
-    // TODO: Support 'Enter passphrase for key...' for ssh-add
-
-    for (const line of lines) {
-      if (!line) {
-        continue
-      } else if (line.startsWith("error:") || line.startsWith("warning:")) {
-        errorLines.push(line)
-      } else if (/^\d+$/.test(line)) {
-        exitCode = parseInt(line)
-      } else if (/^v?\d+\.\d+\.\d+/.test(line)) {
-        // Version numbers
-        outputLines.push(line)
-      } else if (line.startsWith("/")) {
-        // Paths
-        outputLines.push(line)
-      } else if (line.startsWith("{")) {
-        jsonLines.push(line)
-      } else if (line.startsWith("[sudo] password for")) {
-        sudoPasswordPrompt = line
-      } else if (/^.+@.+'s password:/.test(line)) {
-        loginPasswordPrompt = line
-      } else if (/^.+@.+: Permission denied/.test(line)) {
-        permissionDenied = true
-      } else if (line.startsWith("Verification code:")) {
-        verificationPrompt = line
-      }
-    }
-
-    const lastLine = lines[lines.length - 1]
-
-    if (lastLine.endsWith(ps1) || lastLine.endsWith(ps2)) {
-      ready = true
-    }
-
-    return {
-      outputLines,
-      errorLines,
-      jsonLines,
-      exitCode,
-      ready,
-      permissionDenied,
-      loginPasswordPrompt,
-      sudoPasswordPrompt,
-      verificationPrompt,
-    }
   }
 
   async showPrompt(prompt) {

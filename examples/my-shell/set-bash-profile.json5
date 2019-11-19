@@ -7,6 +7,12 @@
   },
   assertions: [
     {
+      assert: "FileExists",
+      with: {
+        path: "{vars.bashProfile}",
+      },
+    },
+    {
       assert: "FileContains",
       with: {
         path: "{vars.bashProfile}",

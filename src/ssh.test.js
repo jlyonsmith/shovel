@@ -73,7 +73,10 @@ test("connect", async () => {
     setImmediate(() => {
       pty.emit("data", "")
       pty.emit("data", "x@y's password:") // Twice to test caching
-      pty.emit("data", "PS1>")
+      setImmediate(() => {
+        pty.emit("data", "Verification code:")
+        pty.emit("data", "PS1>")
+      })
     })
   })
   await expect(ssh.connect({ host: "host" })).resolves.toBeUndefined()

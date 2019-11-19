@@ -58,7 +58,6 @@ alias ls='ls --color=auto'
 alias edit="vi"
 alias bn="babel-node"
 alias mq=rabbitmqctl
-alias node=alias node="NODE_NO_READLINE=1 rlwrap -pcyan node"
 alias an=ansible
 alias ap=ansible-playbook
 alias ag=ansible-galaxy

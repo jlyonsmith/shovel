@@ -14,7 +14,6 @@ import { ScriptError } from "./ScriptError"
 
 @autobind
 export class OctopusTool {
-  q
   constructor(container = {}) {
     this.toolName = container.toolName
     this.fs = container.fs || fs
@@ -50,12 +49,13 @@ export class OctopusTool {
         curl -sL https://rpm.nodesource.com/setup_10.x | bash -
         yum clean all
         yum makecache fast
-        yum install -y -q gcc-c++ make
+        yum install -y -q make
         yum install -y -q nodejs node-gyp
         ;;
       "(Ubuntu")
         curl -sL https://deb.nodesource.com/setup_10.x | bash -
         apt update
+        apt install -y -q g++ make
         apt install -y -q nodejs node-gyp
         ;;
       *)
