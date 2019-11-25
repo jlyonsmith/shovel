@@ -1,8 +1,8 @@
 import stream from "stream"
 import { createNode } from "./testUtil"
 import { ScriptError } from "./ScriptError"
-import { EventEmitter } from "events"
 import { Utility } from "./util"
+import fs from "fs-extra"
 
 const testString = "the quick brown fox jumps over the lazy dog"
 
@@ -31,6 +31,84 @@ test("generateDigest", () => {
   expect(util.generateDigest(testString)).toBe(
     "05c6e08f1d9fdafa03147fcb8f82f124c76d2f70e3d989dc8aadb5e7d7450bec"
   )
+})
+
+test("pathInfo", async () => {
+  const util = new Utility({
+    fs: {
+      lstat: async (pathName) => {
+        if (pathName === "/y/noexist") {
+          throw new Error()
+        } else if (pathName === "/y/other") {
+          return {
+            isFile: () => false,
+            isDirectory: () => false,
+          }
+        } else if (pathName === "/x/file") {
+          return {
+            isFile: () => true,
+            isDirectory: () => false,
+            gid: 1,
+            uid: 1,
+            size: 100,
+            mode: 0o777,
+          }
+        } else if (pathName === "/" || pathName === "/x") {
+          return {
+            isFile: () => false,
+            isDirectory: () => true,
+            gid: 0,
+            uid: 0,
+            size: 0,
+            mode: 0,
+          }
+        }
+      },
+      access: async (pathName) => {
+        if (pathName === "/x/file" || pathName === "/x") {
+          return fs.constants.R_OK | fs.constants.W_OK
+        } else if (pathName === "/" || pathName == "/y") {
+          return 0
+        }
+      },
+    },
+  })
+
+  // File
+  await expect(util.pathInfo("/x/file")).resolves.toEqual({
+    access: "rw",
+    gid: 1,
+    mode: "rwxrwxrwx",
+    parentAccess: "rw",
+    size: 100,
+    type: "f",
+    uid: 1,
+  })
+
+  // Root (and directory)
+  await expect(util.pathInfo("/")).resolves.toEqual({
+    access: "--",
+    gid: 0,
+    uid: 0,
+    mode: "---------",
+    parentAccess: "--",
+    size: 0,
+    type: "d",
+  })
+
+  // Bad file
+  await expect(util.pathInfo("/y/noexist")).resolves.toEqual({
+    type: "-",
+    access: "--",
+    parentAccess: "--",
+  })
+
+  // Other
+  await expect(util.pathInfo("/y/other")).resolves.toEqual({
+    type: "o",
+    access: "--",
+    parentAccess: "--",
+  })
 })
 
 test("fileExists", async () => {

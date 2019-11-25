@@ -1,5 +1,4 @@
 import { FileContains } from "./FileContains"
-import stream from "stream"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
 
@@ -7,20 +6,21 @@ test("assert", async () => {
   const container = {
     expandStringNode: (node) => node.value,
     fs: {
-      access: jest.fn(async () => undefined),
-      createReadStream: jest.fn((fileName) => {
-        expect(typeof fileName).toBe("string")
-        return new stream.Readable({
-          read(size) {
-            this.push(testString)
-            this.push(null)
-          },
-        })
+      readFile: jest.fn(async (path) => {
+        if (path === "/somefile") {
+          return "#start\ncontent\n#end"
+        }
       }),
+      outputFile: jest.fn(async (path, content) => undefined),
     },
     util: {
-      generateDigestFromFile: jest.fn(async () => "1234567890"),
-      generateDigest: jest.fn(() => "1234567890"),
+      pathInfo: async (path) => {
+        if (path === "/somefile") {
+          return { type: "f", access: "rw" }
+        } else if (path === "/missing") {
+          return { type: "-", access: "--" }
+        }
+      },
       canAccess: jest.fn(async () => true),
     },
   }
@@ -47,37 +47,140 @@ test("assert", async () => {
     asserter.assert(createAssertNode(asserter, { path: "", contents: 1 }))
   ).rejects.toThrow(ScriptError)
 
+  // Bad position
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, { path: "", contents: 1, position: 1 })
+    )
+  ).rejects.toThrow(ScriptError)
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, { path: "", contents: 1, position: "other" })
+    )
+  ).rejects.toThrow(ScriptError)
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, { path: "", contents: 1, position: "after" })
+    )
+  ).rejects.toThrow(ScriptError)
+
+  // Bad regex
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        path: "",
+        contents: "",
+        position: "over",
+        regex: "[x",
+      })
+    )
+  ).rejects.toThrow(ScriptError)
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        path: "",
+        contents: "",
+        position: "over",
+        regex: 1,
+      })
+    )
+  ).rejects.toThrow(ScriptError)
+
+  // File missing or inaccessible
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        path: "/missing",
+        contents: "xyz",
+      })
+    )
+  ).rejects.toThrow(ScriptError)
+
   // Everything the same
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
         path: "/somefile",
-        contents: "abc",
+        contents: "#start\ncontent\n#end",
       })
     )
   ).resolves.toBe(true)
 
   // Contents different
-  container.util.generateDigest = jest.fn(async () => "0987654321")
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
         path: "/somefile",
-        contents: "xyz",
+        contents: "#different",
       })
     )
   ).resolves.toBe(false)
 
-  // File missing or inaccessible
-  container.util.canAccess = jest.fn(async () => false)
+  // With explicit 'over'
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
         path: "/somefile",
-        contents: "xyz",
+        position: "over",
+        regex: "^content$",
+        contents: "Setting=yes\n",
+      })
+    )
+  ).resolves.toBe(false)
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        path: "/somefile",
+        position: "over",
+        regex: "^#foobar\n",
+        contents: "foobar\n",
       })
     )
   ).rejects.toThrow(ScriptError)
+
+  // With 'before'
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        path: "/somefile",
+        position: "before",
+        regex: "^#end",
+        contents: "content\n",
+      })
+    )
+  ).resolves.toBe(true)
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        path: "/somefile",
+        position: "before",
+        regex: "^#end",
+        contents: "other\n",
+      })
+    )
+  ).resolves.toBe(false)
+
+  // With 'after'
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        path: "/somefile",
+        position: "after",
+        regex: "^#start\n",
+        contents: "content\n",
+      })
+    )
+  ).resolves.toBe(true)
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        path: "/somefile",
+        position: "after",
+        regex: "^#start$",
+        contents: "other\n",
+      })
+    )
+  ).resolves.toBe(false)
 })
 
 test("rectify", async () => {

@@ -37,19 +37,61 @@ export class Utility {
     return hash.digest("hex")
   }
 
-  // TODO: Write a pathInfo function that returns this object:
-  //
-  // {
-  //   type: "none|file|dir|other",
-  //   access: "none|read|write"
-  //   parentAccess: "none|read|write"
-  //   size: size,
-  //   uid: uid,
-  //   gid: gid,
-  //   mode: mode,
-  // }
-  //
-  // Needs to use both stat and access calls
+  async pathInfo(pathName) {
+    let stat = null
+    const modeString = (mode) =>
+      (mode & 0o400 ? "r" : "-") +
+      (mode & 0o200 ? "w" : "-") +
+      (mode & 0o100 ? "x" : "-") +
+      (mode & 0o040 ? "r" : "-") +
+      (mode & 0o020 ? "w" : "-") +
+      (mode & 0o010 ? "x" : "-") +
+      (mode & 0o004 ? "r" : "-") +
+      (mode & 0o002 ? "w" : "-") +
+      (mode & 0o001 ? "x" : "-")
+    const info = {}
+
+    try {
+      stat = await this.fs.lstat(pathName)
+    } catch (e) {
+      info.type = "-"
+    }
+
+    if (info.type !== "-") {
+      info.type = stat.isFile() ? "f" : stat.isDirectory() ? "d" : "o"
+
+      if (info.type !== "o") {
+        info.size = stat.size
+        info.uid = stat.uid
+        info.gid = stat.gid
+        info.mode = modeString(stat.mode)
+
+        const access = await this.fs.access(pathName)
+
+        info.access =
+          (access & fs.constants.R_OK ? "r" : "-") +
+          (access & fs.constants.W_OK ? "w" : "-")
+      } else {
+        info.access = "--"
+      }
+    } else {
+      info.access = "--"
+    }
+
+    const parentPath = path.dirname(pathName)
+
+    if (parentPath !== pathName) {
+      const parentAccess = await this.fs.access(parentPath)
+
+      info.parentAccess =
+        (parentAccess & fs.constants.R_OK ? "r" : "-") +
+        (parentAccess & fs.constants.W_OK ? "w" : "-")
+    } else {
+      info.parentAccess = "--"
+    }
+
+    return info
+  }
 
   async fileExists(filePath) {
     try {
@@ -59,17 +101,17 @@ export class Utility {
     }
   }
 
-  async dirExists(path) {
+  async dirExists(pathName) {
     try {
-      return (await this.fs.lstat(path)).isDirectory()
+      return (await this.fs.lstat(pathName)).isDirectory()
     } catch (e) {
       return false
     }
   }
 
-  async canAccess(path) {
+  async canAccess(pathName) {
     try {
-      await this.fs.access(path, fs.constants.W_OK | fs.constants.R_OK)
+      await this.fs.access(pathName, fs.constants.W_OK | fs.constants.R_OK)
     } catch (e) {
       return false
     }
