@@ -176,15 +176,15 @@ export class FileContains {
     switch (this.position) {
       case "before":
         contents =
-          this.fileContents.substring(0, this.lastIndex) +
-          this.expandedContents +
-          this.fileContents.substring(this.lastIndex)
-        break
-      case "after":
-        contents =
           this.fileContents.substring(0, this.firstIndex) +
           this.expandedContents +
           this.fileContents.substring(this.firstIndex)
+        break
+      case "after":
+        contents =
+          this.fileContents.substring(0, this.lastIndex) +
+          this.expandedContents +
+          this.fileContents.substring(this.lastIndex)
         break
       case "over":
       default:

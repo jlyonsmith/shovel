@@ -186,17 +186,40 @@ test("assert", async () => {
 test("rectify", async () => {
   const container = {
     fs: {
-      outputFile: jest.fn(async (fileName, data) => {
-        expect(typeof fileName).toBe("string")
-        expect(typeof data).toBe("string")
-      }),
+      outputFile: jest.fn(async () => undefined),
     },
   }
   const asserter = new FileContains(container)
 
   asserter.expandedPath = "/somefile.txt"
-  asserter.expandedContents = "some contents"
+  asserter.expandedContents = "xyz\n"
+  asserter.fileContents = "#start\ncontent\n#end"
 
+  // Before
+  asserter.firstIndex = asserter.fileContents.indexOf("#end")
+  asserter.lastIndex = asserter.fileContents.length
+  asserter.position = "before"
+  container.fs.outputFile = async (fileName, data) => {
+    expect(data).toBe("#start\ncontent\nxyz\n#end")
+  }
+  await expect(asserter.rectify()).resolves.toBeUndefined()
+
+  // After
+  asserter.firstIndex = asserter.fileContents.indexOf("#start")
+  asserter.lastIndex = asserter.fileContents.indexOf("content")
+  asserter.position = "after"
+  container.fs.outputFile = async (fileName, data) => {
+    expect(data).toBe("#start\nxyz\ncontent\n#end")
+  }
+  await expect(asserter.rectify()).resolves.toBeUndefined()
+
+  // Over
+  asserter.firstIndex = asserter.fileContents.indexOf("content\n")
+  asserter.lastIndex = asserter.fileContents.indexOf("#end")
+  asserter.position = "over"
+  container.fs.outputFile = async (fileName, data) => {
+    expect(data).toBe("#start\nxyz\n#end")
+  }
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
 
