@@ -2,9 +2,7 @@
 
 ## Summary
 
-Asserts that a file exists.  If not, the file is created.
-
-The directory can have contents.
+Asserts that a file exists.  If not, the file is created. The directory can have contents.
 
 ## Arguments
 
@@ -18,7 +16,7 @@ The user and group owners for the file.  Defaults to current user and group.
 
 ### `mode: String`
 
-The permissions flags for the file.  Defaults to `{ user: "rwx", group: "r--", other: "r--" }`.  See [Permission Flags](Permission_FLags.md)
+The permissions flags for the file.  Defaults to `{ user: "rwx", group: "r--", other: "r--" }`.  See [Permission Flags](PermissionFlags.md)
 
 ## Possible Errors
 

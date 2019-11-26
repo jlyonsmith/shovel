@@ -1,6 +1,6 @@
 # Octopus: Simple, agentless IT automation
 
-Octopus is a system for performing IT automation.  It's written in Javascript using Node.js.  Script files are created in [JSON5](https://json5.org/) format and consist of a sequence of *idempotent* assertions that ensure the state of target system.  Script idempotency means that after one run of a script to set things into a desired state, subsequent runs of the same script result in *no changes to the target*.
+Octopus is a system for performing IT automation.  It's written in Javascript using Node.js.  Script files are created in [JSON5](https://json5.org/) format and consist of a sequence of assertions that ensure the state of target system.  Scripts are idempotent in that after one run of a script to set things into a desired state, subsequent runs of the same script result in no changes to the target.
 
 ## Installation
 
@@ -29,33 +29,25 @@ Here is a valid Octopus script that creates some directories and files on a remo
   },
   // Global variables go here
   vars: {
-    TEST_DIR_1: "octo-dir-1",
-    TEST_DIR_2: "octo-dir-2",
-    TEST_FILE_1: "octo-file-1",
+    testDir1: "octo-dir-1",
+    testFile1: "octo-file-1",
   },
   // Every script must have a list of assertions
   assertions: [
     {
-      description: "Create Test Directory",
-      // Each assertion specifies an asserter...
+      description: "Ensure a test directory",
+      // Each assertion specifies an asserter
       assert: "DirectoryExists",
       // And arguments
       with: {
-        // Arguments can include template substitutions, exactly like Javascript
-        path: "scratch/${TEST_DIR_1}",
-      },
-    },
-    {
-      description: "Create A Second Directory",
-      assert: "DirectoryExists",
-      with: {
-        path: "scratch/${TEST_DIR_2}",
+        // Arguments can include Javascript
+        path: "{var.testDir1}",
       },
     },
     {
       assert: "FileExists",
       with: {
-        path: "scratch/${TEST_FILE_1}",
+        path: "{path.join(var.testDir1, var.testFile1)}",
       },
     },
   ],
@@ -64,50 +56,66 @@ Here is a valid Octopus script that creates some directories and files on a remo
 
 ## Overview
 
-Octopus has the following features:
+Octopus has the following key features:
 
 - Bootstraps itself on a remote system, installing Node.js and Octopus as needed
-- Able to set script wide variables
-- Can safely use Javascripts templated string functionality in scripts
-- Cross platform (macOS, Linux, Windows) by leveraging Node's inherent cross platform capabilities
-- An easy to read JSON5 format script format that allows multi-line strings and comments
+- Cross platform (macOS/Linux) by leveraging Node's inherent cross platform capabilities
+- Comes with a wide range of built-in asserters
+- Able to set script wide variables and safely use Javascript for calculated values
+- Uses an easy-to-read JSON5 script format, allowing multi-line strings and comments
 
-### Design
+## Design
 
-Octopus borrows heavily from the design of [Ansible](https://www.ansible.com/). For example, the use of SSH to avoid having remote agents.  Also Ansible's idempotent *plays* are similar to Octopuses *asserters*.
+Not surprisingly, Octopus borrows from the design of [Ansible](https://www.ansible.com/). It uses SSH to avoid having remote agents. Ansible's *plays* are similar to Octopuses *asserters*.
 
 The *design goals* of Octopus are:
 
-- Be written in and use Javascript and Node.js
-- Use Javascript for templated strings to keep the learning curve low
-- Use JSON instead of YAML as a script format
-- Be fast
-- Must bootstrap the remote system with Node.js
-- Must bootstrap the remote system with Octopus
-- Leverage SSH as a remote transport
-- Have asserters use idempotency consistently (no empty assertions)
+- Be written in and use Javascript and Node.js for platform independence
+- Bootstrap the remote system with Node.js and Octopus if not present
+- Leverage SSH as the remote transport and for agentless scripting
+- Use JSON instead of YAML as the script format
+- Use plain old Javascript as the string template language
+- Be fast and very low footprint
+- Use idempotency to avoid unnecessary changes to systems
 - Have an easy to parse output format
-- Whenever possible leverage Node.js for platform independence
+- Be easily extensible
 
-### Scripts and Asserters
+## Local and Remote Hosts
 
-Octopus scripts are made up of a collections of assertions about a host state.  Assertions are run one at a time, from the top to bottom.  Each assertion invokes an *asserter* class to assert some particular type of machine state.  There are asserters for files, directories, users, groups, file downsloads, file contents, and so on.
+## Scripts
 
-Asserters are the core of Octopus.  They are simple Javascript objects that contain two methods, `assert` and `rectify`. The `assert` method confirms the machine state. If `assert` returns `true` then the script proceeds. If `assert` returns `false`, then the machine is not in the correct state and the `rectify` method is called to fix things. If `rectify` cannot put the machine in the correct state so that `assert` will succeed next time then it throws an exception and the script ends.  The `assert` will throw an exception if it is impossible for the `assert` to ever succeed, e.g. unzipping a file that is not actually present.
+Octopus scripts are made up of:
+
+1. Settings
+2. Variables
+3. Includes
+4. Assertions
+
+### Variables
+
+### Includes
+
+### Assertions
+
+Assertions are a collections of assertions about a host state.  Assertions are run one at a time, from the top of the script to bottom.  Each assertion makes a statement about some particular type of the host machine state.  If that state is not true, then the asserter tries to rectify the situation and make that assertion true.  There are asserters for files, directories, users, groups, file downsloads, file contents, and so on.
 
 See the full list of built-in [asserters](doc/Asserters.md) in the documentation directory.
 
-### SSH Authentication
+## SSH
 
-When run against one or more hosts, Octopus uses SSH to run scripts on those hostes. When run without a remote host, Octopus just runs the script directly on your local system.
+Octopus uses SSH to run scripts on remote hosts. When run against one or more hosts, Octopus uses SSH to run scripts on those hostes. When run without a remote host, Octopus just runs the script directly on your local system.
 
 ## Advanced
 
-### Writing an Asserter Class
+### JSON5 Nodes
 
-Each script assertions runs with a new instance of the specified asserter. `assert` will always be called before `rectify`.
+Octopus uses an enhanced fork of the [JSON5](https://www.npmjs.com/package/@johnls/json5) library that returns `Node` objects instead of simple Javascript values for each value, array or object in the JSON5. A node object has `type` and `value` fields, plus `line` and `column` fields showing where in the JSON5 file the node comes from.  This allows error messages that contain location information to help the Octopus user to find and fix errors in their script.
 
-The assertert must be a Javascript ES6 class.  The `constructor` will be called with a container object as follows:
+### Writing an Asserter
+
+The asserter must be a Javascript class.  The `constructor` will be called with a `container` object, which at a minimum contains:
+
+Each script assertions runs with a new instance of the specified asserter. `assert` will always be called. `rectify` will only be called if the assertion condition has not been met.
 
 ```js
 {
@@ -118,10 +126,27 @@ The assertert must be a Javascript ES6 class.  The `constructor` will be called 
 }
 ```
 
-The method `assert(assertNode)` receives an assert *node object* (see below) and must return `true` or `false`.  `true` is returned if the system state matches the assertion, `false` otherwise. `assert` should throw if it is going to return `false` and the `rectify` call could never succeed, e.g. the user needs to be root to rectify something or a situation exists which blocks rectifying the situation. Save anything to `this` that you calculate or need from the `assertNode` in the `assert` call so that it can be used by `rectify`.
+The `constructor` should:
 
-A node object is a Javascript object that was generated from JSON5 with a `type` and `value` fields, plus `line` and `column` fields showing where in the JSON5 file the object was created from.  This allows outputting error messages that enable the Octopus user to find and fix errors in their script. See the [JSON5](https://www.npmjs.com/package/@johnls/json5) fork for more details.
+1. Save desired `container` object references to `this`.
+2. Grab any global modules that are needed by the asserter if they are not passed in in the `container`.  In this way mock modules can be injected for testing.
+3. Do any required setup for the asserter
 
-The method `rectify()` is called to modify the host state.  The key thing is that when `rectify` finishes the next call to `assert` *must succeed*.  If rectify cannot ensure this, then it should throw a new `ScriptError` or some other `Error` with enough information for the user to be able to fix the problem.
+The goals for the `assert` method are:
 
-Finally, the `result()` method will always be called to output the result of the asserter.  This method should contain an object that helps the user understand what the assert checked or modified.
+1. Validate the passed in `assertNode` in the `assertNode.value.with` node.  Throw a `ScriptError` if the arguments are invalid passing the error message and the node causing the error.
+2. Call `this.expandStringNode()` on any `with` arguments that can be expanded.
+3. Cache any values that may be needed by `rectify` in `this`, including the passed in `assertNode`.
+4. Check to see if the asserted condition is already met. If it *cannot be met* for whatever reason, throw a `ScriptError` on the `assertNode`.  If the condition has already been met, return `true`.
+5. Return `false` if the assertion condition can be met but has not been yet.
+
+The method `rectify()` is called to modify the host state:
+
+1. Make it so the condition that `assert` checks for will succeed next time.
+2. Throw a `ScriptError` on `this.assertNode` if the condition cannot be satisfied.
+3. Make use of any values cached in `this` from the `assert` method.
+
+Finally, the `result()` method will *always* be called to output the result of the asserter, with a `rectified` flag:
+
+1. Return an object with information that helps the user understand what the assert checked or modified.
+2. Do not `throw` from this method
