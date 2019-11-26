@@ -52,6 +52,7 @@ export class ServiceActive {
   }
 
   async rectify() {
+    // TODO: Do not run sudo directly here
     await this.childProcess.exec(`sudo systemctl restart ${this.expandedName}`)
 
     let output = null

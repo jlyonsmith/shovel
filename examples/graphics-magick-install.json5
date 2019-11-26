@@ -1,0 +1,21 @@
+{
+  assertions: [
+    {
+      assert: "DirectoryExists",
+      with: {
+        path: "scratch/",
+        mode: {
+          user: "rwx",
+          group: "rwx",
+          other: "r-x",
+        },
+      },
+    },
+    {
+      assert: "MakeConfigured",
+      with: {
+        directory: "scratch/GraphicsMagick-1.3.33/",
+      },
+    },
+  ],
+}

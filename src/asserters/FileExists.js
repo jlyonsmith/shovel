@@ -13,6 +13,7 @@ Example:
   assert: "FileExists",
   with: {
     path: "/path/to/file"
+
   }
 }
 */

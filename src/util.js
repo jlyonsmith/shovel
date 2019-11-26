@@ -49,47 +49,45 @@ export class Utility {
       (mode & 0o004 ? "r" : "-") +
       (mode & 0o002 ? "w" : "-") +
       (mode & 0o001 ? "x" : "-")
-    const info = {}
+    const accessString = (mode) =>
+      (mode & 4 ? "r" : "-") + (mode & 2 ? "w" : "-")
 
     try {
       stat = await this.fs.lstat(pathName)
     } catch (e) {
-      info.type = "-"
+      return { type: "-", access: "--" }
     }
 
-    if (info.type !== "-") {
-      info.type = stat.isFile() ? "f" : stat.isDirectory() ? "d" : "o"
+    const info = {}
 
-      if (info.type !== "o") {
-        info.size = stat.size
-        info.uid = stat.uid
-        info.gid = stat.gid
-        info.mode = modeString(stat.mode)
+    info.type = stat.isFile() ? "f" : stat.isDirectory() ? "d" : "o"
 
-        const access = await this.fs.access(pathName)
-
-        info.access =
-          (access & fs.constants.R_OK ? "r" : "-") +
-          (access & fs.constants.W_OK ? "w" : "-")
-      } else {
-        info.access = "--"
-      }
-    } else {
+    if (info.type === "o") {
       info.access = "--"
+      return info
     }
 
-    const parentPath = path.dirname(pathName)
+    info.size = stat.size
+    info.uid = stat.uid
+    info.gid = stat.gid
+    info.mode = modeString(stat.mode)
 
-    if (parentPath !== pathName) {
-      const parentAccess = await this.fs.access(parentPath)
+    const euid = this.process.geteuid()
 
-      info.parentAccess =
-        (parentAccess & fs.constants.R_OK ? "r" : "-") +
-        (parentAccess & fs.constants.W_OK ? "w" : "-")
-    } else {
-      info.parentAccess = "--"
+    if (euid === stat.uid) {
+      info.access = accessString(stat.mode >> 6)
+      return info
     }
 
+    const egid = this.process.getegid()
+    const groups = this.process.getgroups()
+
+    if (groups.includes(egid)) {
+      info.access = accessString(stat.mode >> 3)
+      return info
+    }
+
+    info.access = accessString(stat.mode)
     return info
   }
 
@@ -164,7 +162,7 @@ export class Utility {
         ? s
         : undefined
 
-    if (!port || port < 0 || port > 65535) {
+    if (port && (port < 0 || port > 65535)) {
       throw new Error("Port must be a number between 0 and 65535")
     }
 

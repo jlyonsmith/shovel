@@ -391,7 +391,7 @@ test("parsePort", () => {
 
   expect(util.parsePort("123")).toBe(123)
   expect(util.parsePort(123)).toBe(123)
-  expect(() => util.parsePort(true)).toThrow(Error)
+  expect(util.parsePort(true)).toBeUndefined()
   expect(() => util.parsePort("70000")).toThrow(Error)
 })
 

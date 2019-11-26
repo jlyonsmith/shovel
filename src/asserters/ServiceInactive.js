@@ -52,6 +52,7 @@ export class ServiceInactive {
   }
 
   async rectify() {
+    // TODO: This should not be running sudo directly!
     await this.childProcess.exec(`sudo systemctl stop ${this.expandedName}`)
 
     let output = null
@@ -60,6 +61,7 @@ export class ServiceInactive {
       output = await this.childProcess.exec(
         `systemctl is-active ${this.expandedName}`
       )
+      // TODO: Put a wait in here!
     } while (output.stdout !== "inactive" && output.stdout !== "failed")
   }
 
