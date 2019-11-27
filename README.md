@@ -129,16 +129,17 @@ Each script assertions runs with a new instance of the specified asserter. `asse
 The `constructor` should:
 
 1. Save desired `container` object references to `this`.
-2. Grab any global modules that are needed by the asserter if they are not passed in in the `container`.  In this way mock modules can be injected for testing.
-3. Do any required setup for the asserter
+2. Grab any global modules that are needed by the asserter if they are not passed in in the `container`.  In this way mock modules can be injected for testing. See existing asserters for examples of making asserters testable.
+3. Do any required setup for the asserter (not common)
 
 The goals for the `assert` method are:
 
-1. Validate the passed in `assertNode` in the `assertNode.value.with` node.  Throw a `ScriptError` if the arguments are invalid passing the error message and the node causing the error.
-2. Call `this.expandStringNode()` on any `with` arguments that can be expanded.
-3. Cache any values that may be needed by `rectify` in `this`, including the passed in `assertNode`.
-4. Check to see if the asserted condition is already met. If it *cannot be met* for whatever reason, throw a `ScriptError` on the `assertNode`.  If the condition has already been met, return `true`.
-5. Return `false` if the assertion condition can be met but has not been yet.
+1. Ensure the asserter can run on the current platform given by `this.util.osInfo()`. Throw `ScriptError` on the `assertNode` if not.
+2. Validate the passed in `assertNode` in the `assertNode.value.with` node.  Throw a `ScriptError` if the arguments are invalid passing the error message and the node causing the error.
+3. Call `this.expandStringNode()` on any `with` arguments that can be expanded.
+4. Cache any values that may be needed by `rectify` in `this`, including the passed in `assertNode`.
+5. Check to see if the asserted condition is already met. If it *cannot be met* for whatever reason, throw a `ScriptError` on the `assertNode`.  If the condition has already been met, return `true`.
+6. Return `false` if the assertion condition can be met but has not been yet.
 
 The method `rectify()` is called to modify the host state:
 

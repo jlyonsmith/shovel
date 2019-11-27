@@ -468,21 +468,29 @@ export class OctopusTool {
       await this.createRunContext(scriptNode, { inRunScriptLocally: true })
     )
 
-    if (this.debug) {
+    if (this.debug && Object.keys(state.runContext.vars).length > 0) {
       this.log.info(JSON5.stringify(state.runContext.vars, null, "  "))
     }
 
-    if (state.settings && state.settings.description) {
+    if (state.settings && Object.keys(state.settings).length > 0) {
       this.log.output(
         JSON5.stringify({ description: state.settings.description })
       )
     }
 
     for (const assertion of state.assertions) {
-      const asserter = new this.asserters[assertion.assert]({
+      const asserterConstructor = this.asserters[assertion.assert]
+
+      if (!asserterConstructor) {
+        throw new ScriptError(
+          `${assertion.assert} is not a valid asserter`,
+          assertion._assertNode
+        )
+      }
+
+      const asserter = new asserterConstructor({
         expandStringNode: state.expandStringNode,
       })
-
       const { when: whenNode } = assertion._assertNode.value
 
       if (whenNode) {
@@ -519,6 +527,7 @@ export class OctopusTool {
       }
 
       output.result = asserter.result(rectified)
+      // TODO: Add result into array of results in context
       this.log.output(JSON5.stringify(output))
     }
 

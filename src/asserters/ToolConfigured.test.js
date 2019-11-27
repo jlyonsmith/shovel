@@ -1,4 +1,4 @@
-import { MakeConfigured } from "./MakeConfigured"
+import { ToolConfigured } from "./ToolConfigured"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
 
@@ -11,17 +11,17 @@ test("assert", async () => {
     },
   }
 
-  const asserter = new MakeConfigured(container)
+  const asserter = new ToolConfigured(container)
 
   // Bad args
   await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
     ScriptError
   )
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: 1 }))
+    asserter.assert(createAssertNode(asserter, { directory: 1 }))
   ).rejects.toThrow(ScriptError)
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: "", configure: 1 }))
+    asserter.assert(createAssertNode(asserter, { directory: "", args: 1 }))
   ).rejects.toThrow(ScriptError)
 })
 
@@ -33,19 +33,19 @@ test("rectify", async () => {
       }),
     },
   }
-  const asserter = new MakeConfigured(container)
+  const asserter = new ToolConfigured(container)
 
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
 
 test("result", () => {
-  const asserter = new MakeConfigured({})
+  const asserter = new ToolConfigured({})
 
-  asserter.expandedPath = "blah"
-  asserter.expandedConfigure = "blah"
+  asserter.expandedDirectory = "blah"
+  asserter.expandedArgs = "blah"
 
   expect(asserter.result()).toEqual({
-    path: asserter.expandedPath,
-    configure: asserter.expandedConfigure,
+    directory: asserter.expandedDirectory,
+    args: asserter.expandedArgs,
   })
 })

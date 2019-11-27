@@ -12,6 +12,7 @@ export { GroupAbsent } from "./GroupAbsent"
 export { GroupExists } from "./GroupExists"
 export { UserAbsent } from "./UserAbsent"
 export { UserExists } from "./UserExists"
-export { MakeConfigured } from "./MakeConfigured"
+export { ToolConfigured } from "./ToolConfigured"
+export { ToolMade } from "./ToolMade"
 
 // TODO: Add FileCopiedToRemote which copies file from local to remote

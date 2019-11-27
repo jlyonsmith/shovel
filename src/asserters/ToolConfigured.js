@@ -9,7 +9,7 @@ Ensures that an AutoTools based package configure command has been run
 Example:
 
 {
-  assert: "MakeConfigured",
+  assert: "ToolConfigured",
   with: {
     directory: <string>,
     args: <string>,
@@ -17,7 +17,7 @@ Example:
 }
 */
 
-export class MakeConfigured {
+export class ToolConfigured {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
     this.util = container.util || util
@@ -61,10 +61,9 @@ export class MakeConfigured {
   }
 
   async rectify() {
-    await this.childProcess.exec(
-      `configure ${this.expandedName} ${this.expandedArgs}`,
-      { cwd: this.expandedDirectory }
-    )
+    await this.childProcess.exec(`configure ${this.expandedArgs}`, {
+      cwd: this.expandedDirectory,
+    })
   }
 
   result() {
