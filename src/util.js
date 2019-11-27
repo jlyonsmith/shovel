@@ -61,12 +61,6 @@ export class Utility {
     const info = {}
 
     info.type = stat.isFile() ? "f" : stat.isDirectory() ? "d" : "o"
-
-    if (info.type === "o") {
-      info.access = "--"
-      return info
-    }
-
     info.size = stat.size
     info.uid = stat.uid
     info.gid = stat.gid
@@ -82,7 +76,7 @@ export class Utility {
     const egid = this.process.getegid()
     const groups = this.process.getgroups()
 
-    if (groups.includes(egid)) {
+    if (groups.includes(stat.gid)) {
       info.access = accessString(stat.mode >> 3)
       return info
     }

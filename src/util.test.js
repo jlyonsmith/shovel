@@ -35,16 +35,25 @@ test("generateDigest", () => {
 
 test("pathInfo", async () => {
   const util = new Utility({
+    process: {
+      geteuid: () => 1,
+      getegid: () => 1,
+      getgroups: () => [1, 2],
+    },
     fs: {
       lstat: async (pathName) => {
-        if (pathName === "/y/noexist") {
+        if (pathName === "/noexist") {
           throw new Error()
-        } else if (pathName === "/y/other") {
+        } else if (pathName === "/other") {
           return {
             isFile: () => false,
             isDirectory: () => false,
+            uid: 0,
+            gid: 0,
+            size: 0,
+            mode: 0o444,
           }
-        } else if (pathName === "/x/file") {
+        } else if (pathName === "/file") {
           return {
             isFile: () => true,
             isDirectory: () => false,
@@ -53,61 +62,54 @@ test("pathInfo", async () => {
             size: 100,
             mode: 0o777,
           }
-        } else if (pathName === "/" || pathName === "/x") {
+        } else if (pathName === "/") {
           return {
             isFile: () => false,
             isDirectory: () => true,
-            gid: 0,
             uid: 0,
+            gid: 2,
             size: 0,
-            mode: 0,
+            mode: 0o050,
           }
-        }
-      },
-      access: async (pathName) => {
-        if (pathName === "/x/file" || pathName === "/x") {
-          return fs.constants.R_OK | fs.constants.W_OK
-        } else if (pathName === "/" || pathName == "/y") {
-          return 0
         }
       },
     },
   })
 
   // File
-  await expect(util.pathInfo("/x/file")).resolves.toEqual({
+  await expect(util.pathInfo("/file")).resolves.toEqual({
     access: "rw",
+    uid: 1,
     gid: 1,
     mode: "rwxrwxrwx",
-    parentAccess: "rw",
     size: 100,
     type: "f",
-    uid: 1,
   })
 
-  // Root (and directory)
+  // Directory
   await expect(util.pathInfo("/")).resolves.toEqual({
-    access: "--",
-    gid: 0,
+    access: "r-",
     uid: 0,
-    mode: "---------",
-    parentAccess: "--",
+    gid: 2,
+    mode: "---r-x---",
     size: 0,
     type: "d",
   })
 
-  // Bad file
-  await expect(util.pathInfo("/y/noexist")).resolves.toEqual({
-    type: "-",
-    access: "--",
-    parentAccess: "--",
+  // Other
+  await expect(util.pathInfo("/other")).resolves.toEqual({
+    type: "o",
+    access: "r-",
+    mode: "r--r--r--",
+    uid: 0,
+    gid: 0,
+    size: 0,
   })
 
-  // Other
-  await expect(util.pathInfo("/y/other")).resolves.toEqual({
-    type: "o",
+  // Bad file
+  await expect(util.pathInfo("/noexist")).resolves.toEqual({
+    type: "-",
     access: "--",
-    parentAccess: "--",
   })
 })
 
