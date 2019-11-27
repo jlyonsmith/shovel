@@ -15,6 +15,7 @@
     "start": "babel-node src/octopus.js",
     "start:debug": "babel-node --inspect-brk src/octopus.js",
     "test": "jest",
+    "show-coverage": "open coverage/lcov-report/index.html",
     "test:debug": "babel-node --inspect-brk ./node_modules/jest-cli/bin/jest.js --runInBand",
     "deploy": "npm publish --access public"
   },

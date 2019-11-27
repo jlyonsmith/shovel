@@ -48,11 +48,11 @@ export class ToolMade {
       this.expandedTarget = ""
     }
 
-    const configFile = path.join(this.expandedDirectory, "configure")
-    let pathInfo = await this.util.pathInfo(configFile)
+    const makeFile = path.join(this.expandedDirectory, "Makefile")
+    let pathInfo = await this.util.pathInfo(makeFile)
 
     if (pathInfo.access[0] !== "r") {
-      throw new ScriptError(`'${configFile}' not found`, directoryNode)
+      throw new ScriptError(`'${makeFile}' not found`, directoryNode)
     }
 
     try {
