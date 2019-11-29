@@ -10,6 +10,84 @@ export const ansiEscapeRegex = new RegExp(
   /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g
 )
 
+export class PathAccess {
+  constructor(flags) {
+    this.flags = flags & 7
+  }
+
+  isReadable() {
+    return !!(this.flags & 4)
+  }
+  isWritable() {
+    return !!(this.flags & 2)
+  }
+  isReadWrite() {
+    return !!(this.flags & 6)
+  }
+  isExecutable() {
+    return !!(this.flags & 1)
+  }
+  isTraversable() {
+    return this.isExecutable()
+  }
+}
+
+export class PathInfo {
+  constructor(stat, _process) {
+    if (!stat) {
+      this.type = 0
+    } else {
+      this.type = stat.isFile() ? 1 : stat.isDirectory() ? 2 : 3
+      this.size = stat.size
+      this.uid = stat.uid
+      this.gid = stat.gid
+      this.mode = stat.mode
+    }
+
+    this.process = _process || process
+  }
+
+  isMissing() {
+    return this.type === 0
+  }
+
+  isFile() {
+    return this.type === 1
+  }
+
+  isDirectory() {
+    return this.type === 2
+  }
+
+  isOther() {
+    return this.type > 2
+  }
+
+  getAccess(uid, groups) {
+    uid = uid === undefined ? this.process.geteuid() : uid
+
+    if (uid === this.uid) {
+      return new PathAccess(stat.mode >> 6)
+    }
+
+    groups = groups === undefined ? this.process.getgroups() : groups
+
+    if (groups.includes(this.gid)) {
+      return new PathAccess(stat.mode >> 3)
+    }
+
+    return new PathAccess(this.mode)
+  }
+
+  modeString() {
+    const format = (flags) =>
+      (flags & 4 ? "r" : "-") +
+      (flags & 2 ? "w" : "-") +
+      (flags & 1 ? "x" : "-")
+    return format(this.mode >> 6) + format(this.mode >> 3) + format(this.mode)
+  }
+}
+
 export class Utility {
   constructor(container = {}) {
     this.fs = container.fs || fs
@@ -39,50 +117,14 @@ export class Utility {
 
   async pathInfo(pathName) {
     let stat = null
-    const modeString = (mode) =>
-      (mode & 0o400 ? "r" : "-") +
-      (mode & 0o200 ? "w" : "-") +
-      (mode & 0o100 ? "x" : "-") +
-      (mode & 0o040 ? "r" : "-") +
-      (mode & 0o020 ? "w" : "-") +
-      (mode & 0o010 ? "x" : "-") +
-      (mode & 0o004 ? "r" : "-") +
-      (mode & 0o002 ? "w" : "-") +
-      (mode & 0o001 ? "x" : "-")
-    const accessString = (mode) =>
-      (mode & 4 ? "r" : "-") + (mode & 2 ? "w" : "-")
 
     try {
       stat = await this.fs.lstat(pathName)
     } catch (e) {
-      return { type: "-", access: "--" }
+      return new PathInfo()
     }
 
-    const info = {}
-
-    info.type = stat.isFile() ? "f" : stat.isDirectory() ? "d" : "o"
-    info.size = stat.size
-    info.uid = stat.uid
-    info.gid = stat.gid
-    info.mode = modeString(stat.mode)
-
-    const euid = this.process.geteuid()
-
-    if (euid === stat.uid) {
-      info.access = accessString(stat.mode >> 6)
-      return info
-    }
-
-    const egid = this.process.getegid()
-    const groups = this.process.getgroups()
-
-    if (groups.includes(stat.gid)) {
-      info.access = accessString(stat.mode >> 3)
-      return info
-    }
-
-    info.access = accessString(stat.mode)
-    return info
+    return new PathInfo(stat)
   }
 
   async fileExists(filePath) {

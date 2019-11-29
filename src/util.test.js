@@ -1,7 +1,7 @@
 import stream from "stream"
 import { createNode } from "./testUtil"
 import { ScriptError } from "./ScriptError"
-import { Utility } from "./util"
+import { Utility, PathInfo } from "./util"
 import fs from "fs-extra"
 
 const testString = "the quick brown fox jumps over the lazy dog"
@@ -34,82 +34,103 @@ test("generateDigest", () => {
 })
 
 test("pathInfo", async () => {
+  const mockProcess = {
+    geteuid: () => 1,
+    getegid: () => 1,
+    getgroups: () => [1, 2],
+  }
   const util = new Utility({
-    process: {
-      geteuid: () => 1,
-      getegid: () => 1,
-      getgroups: () => [1, 2],
-    },
+    process: mockProcess,
     fs: {
       lstat: async (pathName) => {
         if (pathName === "/noexist") {
           throw new Error()
         } else if (pathName === "/other") {
-          return {
-            isFile: () => false,
-            isDirectory: () => false,
-            uid: 0,
-            gid: 0,
-            size: 0,
-            mode: 0o444,
-          }
+          return new PathInfo(
+            {
+              isFile: () => false,
+              isDirectory: () => false,
+              uid: 0,
+              gid: 0,
+              size: 0,
+              mode: 0o444,
+            },
+            mockProcess
+          )
         } else if (pathName === "/file") {
-          return {
-            isFile: () => true,
-            isDirectory: () => false,
-            gid: 1,
-            uid: 1,
-            size: 100,
-            mode: 0o777,
-          }
+          return new PathInfo(
+            {
+              isFile: () => true,
+              gid: 1,
+              uid: 1,
+              size: 100,
+              mode: 0o777,
+            },
+            mockProcess
+          )
         } else if (pathName === "/") {
-          return {
-            isFile: () => false,
-            isDirectory: () => true,
-            uid: 0,
-            gid: 2,
-            size: 0,
-            mode: 0o050,
-          }
+          return new PathInfo(
+            {
+              isFile: () => false,
+              isDirectory: () => true,
+              uid: 0,
+              gid: 2,
+              size: 0,
+              mode: 0o050,
+            },
+            mockProcess
+          )
         }
       },
     },
   })
 
   // File
-  await expect(util.pathInfo("/file")).resolves.toEqual({
-    access: "rw",
+  let info = await util.pathInfo("/file")
+
+  expect(info).toMatchObject({
     uid: 1,
     gid: 1,
-    mode: "rwxrwxrwx",
+    mode: 0o777,
     size: 100,
-    type: "f",
+    type: 1,
   })
+  expect(info.isFile()).toBe(true)
+
+  let access = info.getAccess()
+
+  expect(access.isReadable())
 
   // Directory
-  await expect(util.pathInfo("/")).resolves.toEqual({
-    access: "r-",
+  info = await util.pathInfo("/")
+  expect(info).toMatchObject({
     uid: 0,
     gid: 2,
-    mode: "---r-x---",
     size: 0,
-    type: "d",
+    mode: 0o050,
+    type: 2,
   })
+  expect(info.isDirectory()).toBe(true)
+  access = info.getAccess()
+  expect(access.isWritable())
 
   // Other
-  await expect(util.pathInfo("/other")).resolves.toEqual({
-    type: "o",
-    access: "r-",
-    mode: "r--r--r--",
+  info = await util.pathInfo("/other")
+
+  expect(info).toMatchObject({
+    type: 3,
+    mode: 0o444,
     uid: 0,
     gid: 0,
     size: 0,
   })
+  access = info.getAccess()
+  expect(access.isReadWrite())
 
   // Bad file
-  await expect(util.pathInfo("/noexist")).resolves.toEqual({
-    type: "-",
-    access: "--",
+  info = await util.pathInfo("/noexist")
+  expect(info).toMatchObject({
+    type: 0,
   })
 })
 

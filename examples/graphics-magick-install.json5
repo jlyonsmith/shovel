@@ -11,19 +11,26 @@
         },
       },
     },
+    {
+      assert: "DirectoryUnarchived",
+      with: {
+        archive: "scratch/GraphicsMagick-1.3.33.tar.gz",
+        directory: "scratch/",
+      },
+    },
     // TODO: Download the tar file and rename it
     // TODO: Expand the tar file
-    {
-      assert: "ToolConfigured",
-      with: {
-        directory: "scratch/GraphicsMagick-1.3.33/",
-      },
-    },
-    {
-      assert: "ToolMade",
-      with: {
-        directory: "scratch/GraphicsMagick-1.3.33/",
-      },
-    },
+    // {
+    //   assert: "ToolConfigured",
+    //   with: {
+    //     directory: "scratch/GraphicsMagick-1.3.33/",
+    //   },
+    // },
+    // {
+    //   assert: "ToolMade",
+    //   with: {
+    //     directory: "scratch/GraphicsMagick-1.3.33/",
+    //   },
+    // },
   ],
 }
