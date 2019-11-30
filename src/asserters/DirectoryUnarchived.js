@@ -3,6 +3,7 @@ import tar from "tar"
 import util from "../util"
 import path from "path"
 import { ScriptError } from "../ScriptError"
+import { resolve } from "dns"
 
 /*
 Ensures that an archive has been unpacked to a directory
@@ -49,7 +50,7 @@ export class DirectoryUnarchived {
 
     const archivePathInfo = await this.util.pathInfo(this.expandedArchive)
 
-    if (archivePathInfo.access[0] !== "r") {
+    if (archivePathInfo.getAccess().isReadable()) {
       throw new ScriptError(
         `Archive file ${this.expandedArchive} does not exist or is not readable`,
         archiveNode
@@ -65,28 +66,43 @@ export class DirectoryUnarchived {
       )
     }
 
-    await tar.t({
-      file: this.expandedArchive,
-      noResume: true,
-      onentry: (entry) => {
+    const ok = await new Promise((resolve, reject) => {
+      const readable = fs.createReadStream(this.expandedArchive)
+      const writeable = new tar.Parse()
+
+      writeable.on("entry", (entry) => {
         const fullPath = path.join(this.expandedDirectory, entry.path)
 
         this.util
           .pathInfo(fullPath)
           .then((info) => {
-            // TODO: Compare size, uid, gid, mode
-            entry.resume()
+            // Compare size, uid, gid, mode
+            if (
+              info.size !== entry.size ||
+              info.mode !== (entry.mode & 0o777) ||
+              info.uid !== entry.uid ||
+              info.gid !== entry.gid
+            ) {
+              resolve(false)
+              readable.destroy()
+            } else {
+              entry.resume()
+            }
           })
           .catch((error) => {
-            throw new ScriptError(
-              `Error reading archive. ${e.message}`,
-              archiveNode
+            reject(
+              new ScriptError(
+                `Error reading archive ${this.expandedArchive}. ${e.message}`,
+                archiveNode
+              )
             )
           })
-      },
+      })
+      readable.on("close", () => resolve(true))
+      readable.pipe(writeable)
     })
 
-    return true
+    return ok
   }
 
   async rectify() {
