@@ -33,7 +33,7 @@ export class PathAccess {
 }
 
 export class PathInfo {
-  constructor(stat, _process) {
+  constructor(stat, container) {
     if (!stat) {
       this.type = 0
     } else {
@@ -44,7 +44,7 @@ export class PathInfo {
       this.mode = stat.mode
     }
 
-    this.process = _process || process
+    this.process = (container && container.process) || process
   }
 
   isMissing() {
@@ -67,13 +67,13 @@ export class PathInfo {
     uid = uid === undefined ? this.process.geteuid() : uid
 
     if (uid === this.uid) {
-      return new PathAccess(stat.mode >> 6)
+      return new PathAccess(this.mode >> 6)
     }
 
     groups = groups === undefined ? this.process.getgroups() : groups
 
     if (groups.includes(this.gid)) {
-      return new PathAccess(stat.mode >> 3)
+      return new PathAccess(this.mode >> 3)
     }
 
     return new PathAccess(this.mode)

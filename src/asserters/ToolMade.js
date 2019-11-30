@@ -49,9 +49,9 @@ export class ToolMade {
     }
 
     const makeFile = path.join(this.expandedDirectory, "Makefile")
-    let pathInfo = await this.util.pathInfo(makeFile)
+    const pathInfo = await this.util.pathInfo(makeFile)
 
-    if (pathInfo.access[0] !== "r") {
+    if (!pathInfo.getAccess().isReadable()) {
       throw new ScriptError(`'${makeFile}' not found`, directoryNode)
     }
 

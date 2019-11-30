@@ -49,7 +49,7 @@ export class ToolConfigured {
     const configFile = path.join(this.expandedDirectory, "configure")
     let pathInfo = await this.util.pathInfo(configFile)
 
-    if (pathInfo.access[0] !== "r") {
+    if (!pathInfo.getAccess().isReadable()) {
       throw new ScriptError(`'${configFile}' not found`, directoryNode)
     }
 
@@ -57,7 +57,7 @@ export class ToolConfigured {
       path.join(this.expandedDirectory, "config.status")
     )
 
-    return pathInfo.type === "f"
+    return pathInfo.isFile()
   }
 
   async rectify() {

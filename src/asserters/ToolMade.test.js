@@ -1,9 +1,14 @@
 import { ToolMade } from "./ToolMade"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
+import { PathInfo } from "../util"
 
 test("assert", async () => {
   const container = {
+    process: {
+      geteuid: () => 1,
+      getgroups: () => [1, 2],
+    },
     expandStringNode: (node) => node.value,
     childProcess: {
       exec: async (command) => {
@@ -18,9 +23,16 @@ test("assert", async () => {
       },
     },
     util: {
-      pathInfo: () => ({
-        access: "rw",
-      }),
+      pathInfo: async () =>
+        new PathInfo(
+          {
+            isFile: () => true,
+            uid: 1,
+            gid: 1,
+            mode: 0o777,
+          },
+          container
+        ),
     },
   }
 

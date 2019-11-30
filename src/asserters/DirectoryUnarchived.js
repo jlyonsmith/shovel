@@ -56,9 +56,9 @@ export class DirectoryUnarchived {
       )
     }
 
-    const directoryPathInfo = await this.util.pathInfo(this.expandedDirectory)
+    const dirPathInfo = await this.util.pathInfo(this.expandedDirectory)
 
-    if (directoryPathInfo.access !== "rw") {
+    if (!dirPathInfo.getAccess().isReadWrite()) {
       throw new ScriptError(
         `Directory ${this.expandedDirectory} does not exist or is not readable and writable`,
         directoryNode

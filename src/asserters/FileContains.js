@@ -100,9 +100,9 @@ export class FileContains {
 
     const pathInfo = await this.util.pathInfo(this.expandedPath)
 
-    if (pathInfo.access !== "rw") {
+    if (!pathInfo.getAccess().isReadWrite()) {
       throw new ScriptError(
-        `${this.expandedPath} cannot be read and/or written`,
+        `${this.expandedPath} cannot be read and written`,
         pathNode
       )
     }

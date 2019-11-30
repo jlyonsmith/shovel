@@ -34,13 +34,11 @@ test("generateDigest", () => {
 })
 
 test("pathInfo", async () => {
-  const mockProcess = {
-    geteuid: () => 1,
-    getegid: () => 1,
-    getgroups: () => [1, 2],
-  }
-  const util = new Utility({
-    process: mockProcess,
+  const container = {
+    process: {
+      geteuid: () => 1,
+      getgroups: () => [1, 2],
+    },
     fs: {
       lstat: async (pathName) => {
         if (pathName === "/noexist") {
@@ -55,7 +53,7 @@ test("pathInfo", async () => {
               size: 0,
               mode: 0o444,
             },
-            mockProcess
+            container
           )
         } else if (pathName === "/file") {
           return new PathInfo(
@@ -66,7 +64,7 @@ test("pathInfo", async () => {
               size: 100,
               mode: 0o777,
             },
-            mockProcess
+            container
           )
         } else if (pathName === "/") {
           return new PathInfo(
@@ -78,12 +76,13 @@ test("pathInfo", async () => {
               size: 0,
               mode: 0o050,
             },
-            mockProcess
+            container
           )
         }
       },
     },
-  })
+  }
+  const util = new Utility(container)
 
   // File
   let info = await util.pathInfo("/file")

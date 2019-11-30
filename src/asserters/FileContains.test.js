@@ -1,6 +1,7 @@
 import { FileContains } from "./FileContains"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
+import { PathInfo } from "../util"
 
 test("assert", async () => {
   const container = {
@@ -13,12 +14,19 @@ test("assert", async () => {
       }),
       outputFile: jest.fn(async (path, content) => undefined),
     },
+    process: {
+      geteuid: () => 1,
+      getgroups: () => [1, 2],
+    },
     util: {
       pathInfo: async (path) => {
         if (path === "/somefile") {
-          return { type: "f", access: "rw" }
+          return new PathInfo(
+            { isFile: () => true, uid: 1, mode: 0o777 },
+            container
+          )
         } else if (path === "/missing") {
-          return { type: "-", access: "--" }
+          return new PathInfo(null, container)
         }
       },
       canAccess: jest.fn(async () => true),
