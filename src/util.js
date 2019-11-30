@@ -47,6 +47,16 @@ export class PathInfo {
     this.process = (container && container.process) || process
   }
 
+  toString() {
+    return JSON.stringify({
+      type: this.type,
+      size: this.size,
+      uid: this.uid,
+      gid: this.gid,
+      mode: this.mode,
+    })
+  }
+
   isMissing() {
     return this.type === 0
   }

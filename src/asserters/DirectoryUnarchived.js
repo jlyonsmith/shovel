@@ -50,9 +50,9 @@ export class DirectoryUnarchived {
 
     const archivePathInfo = await this.util.pathInfo(this.expandedArchive)
 
-    if (archivePathInfo.getAccess().isReadable()) {
+    if (!archivePathInfo.getAccess().isReadable()) {
       throw new ScriptError(
-        `Archive file ${this.expandedArchive} does not exist or is not readable`,
+        `Archive file '${this.expandedArchive}' does not exist or is not readable`,
         archiveNode
       )
     }
@@ -61,7 +61,7 @@ export class DirectoryUnarchived {
 
     if (!dirPathInfo.getAccess().isReadWrite()) {
       throw new ScriptError(
-        `Directory ${this.expandedDirectory} does not exist or is not readable and writable`,
+        `Directory '${this.expandedDirectory}' does not exist or is not readable and writable`,
         directoryNode
       )
     }
@@ -76,13 +76,7 @@ export class DirectoryUnarchived {
         this.util
           .pathInfo(fullPath)
           .then((info) => {
-            // Compare size, uid, gid, mode
-            if (
-              info.size !== entry.size ||
-              info.mode !== (entry.mode & 0o777) ||
-              info.uid !== entry.uid ||
-              info.gid !== entry.gid
-            ) {
+            if (info.size !== entry.size) {
               resolve(false)
               readable.destroy()
             } else {
@@ -106,7 +100,7 @@ export class DirectoryUnarchived {
   }
 
   async rectify() {
-    // TODO: Expand the archive into the directory
+    await tar.x({ file: this.expandedArchive, cwd: this.expandedDirectory })
   }
 
   result() {
