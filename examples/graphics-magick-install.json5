@@ -27,13 +27,13 @@
       },
     },
     // {
-    //   assert: "ToolConfigured",
+    //   assert: "AutoToolProjectConfigured",
     //   with: {
     //     directory: "scratch/GraphicsMagick-1.3.33/",
     //   },
     // },
     // {
-    //   assert: "ToolMade",
+    //   assert: "AutoToolProjectMade",
     //   with: {
     //     directory: "scratch/GraphicsMagick-1.3.33/",
     //   },

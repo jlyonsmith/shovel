@@ -1,4 +1,4 @@
-# `ToolMade`
+# `AutoToolProjectMade`
 
 ## Summary
 
@@ -17,13 +17,13 @@ The target for the `make` command.
 ## Possible Errors
 
 - The `directory` does not exist or the user does not have read/write permission.
-- There is not a `Makefile` in the project root, meaning you probably did not do a [`ToolConfigured`](./ToolConfigured.md) assert first.
+- There is not a `Makefile` in the project root, meaning you probably did not do a [`AutoToolProjectConfigured`](./AutoToolProjectConfigured.md) assert first.
 
 ## Example
 
 ```json5
 {
-  assert: "ToolMade",
+  assert: "AutoToolProjectMade",
   with: {
     directory: "/path/to/project",
     target: "install",

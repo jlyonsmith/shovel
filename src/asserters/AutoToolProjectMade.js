@@ -9,7 +9,7 @@ Ensures that a make target has been built
 Example:
 
 {
-  assert: "ToolMade",
+  assert: "AutoToolProjectMade",
   with: {
     directory: <string>,
     target: <string>,
@@ -17,7 +17,7 @@ Example:
 }
 */
 
-export class ToolMade {
+export class AutoToolProjectMade {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
     this.util = container.util || util

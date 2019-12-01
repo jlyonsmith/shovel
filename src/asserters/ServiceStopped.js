@@ -8,14 +8,14 @@ Ensures that an O/S service is inactive
 Example:
 
 {
-  assert: "ServiceActive",
+  assert: "ServiceRunning",
   with: {
     name: <string>,
   }
 }
 */
 
-export class ServiceInactive {
+export class ServiceStopped {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
     this.util = container.util || util

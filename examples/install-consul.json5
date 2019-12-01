@@ -14,7 +14,7 @@
     },
     {
       description: "Download consul zip file",
-      assert: "FileDownloaded",
+      assert: "HttpUrlDownloaded",
       with: {
         url: "https://releases.hashicorp.com/consul/${consulVersion}/consul_${consulVersion}_linux_amd64.zip",
         checksum: "658f4f3b305cd357a9501728b8a1dc5f",
@@ -24,7 +24,7 @@
     },
     {
       description: "Unzip consul",
-      assert: "DirectoryUnzipped",
+      assert: "ZipFileUnzipped",
       with: {
         zipFile: "${consulZipFile}",
         toDir: "${consulUnzipDir}",

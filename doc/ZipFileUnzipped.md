@@ -1,4 +1,4 @@
-# `FileUnzipped`
+# `ZipFileUnzipped`
 
 ## Summary
 
@@ -18,7 +18,7 @@ The directory in which to place the unzipped files.
 
 ```json5
 {
-  assert: "FileUnzipped",
+  assert: "ZipFileUnzipped",
   with: {
     zipFile: "zipfile.gz",
     toDirectory: "/some/dir",

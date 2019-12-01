@@ -1,4 +1,4 @@
-import { ToolMade } from "./ToolMade"
+import { AutoToolProjectMade } from "./AutoToolProjectMade"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
 import { PathInfo } from "../util"
@@ -36,7 +36,7 @@ test("assert", async () => {
     },
   }
 
-  const asserter = new ToolMade(container)
+  const asserter = new AutoToolProjectMade(container)
 
   // Bad command
   await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
@@ -66,7 +66,7 @@ test("assert", async () => {
 
 test("rectify", async () => {
   const container = { childProcess: {} }
-  const asserter = new ToolMade(container)
+  const asserter = new AutoToolProjectMade(container)
 
   // Good config
   container.childProcess.exec = async () => ({})
@@ -81,7 +81,7 @@ test("rectify", async () => {
 })
 
 test("result", () => {
-  const asserter = new ToolMade({})
+  const asserter = new AutoToolProjectMade({})
 
   asserter.expandedDirectory = "blah"
   asserter.expandedTarget = "blah"

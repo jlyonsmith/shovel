@@ -462,6 +462,7 @@ export class OctopusTool {
     }
 
     // TODO: Warn if Node version is not correct
+    // TODO: Check settings for disk space requirements and fail if there is insufficient
 
     Object.assign(
       state,

@@ -1,4 +1,4 @@
-# `FileDownloaded`
+# `HttpUrlDownloaded`
 
 ## Summary
 
@@ -28,7 +28,7 @@ The directory into which the dowloaded file should be placed.
 
 ```json5
 {
-  assert: "FileDownloaded",
+  assert: "HttpUrlDownloaded",
   with: {
     url: "https://sourcehost.com/linux_amd64.zip",
     digest: "658f4f3b305cd357a9501728b8a1dc5f...",

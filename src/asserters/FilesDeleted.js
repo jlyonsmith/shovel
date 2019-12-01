@@ -7,7 +7,7 @@ Checks and ensures that a file does not exist.
 Example:
 
 {
-  assert: "FilesAbsent",
+  assert: "FilesDeleted",
   with: {
     paths: [
       "/path/to/file1",
@@ -17,7 +17,7 @@ Example:
 }
 */
 
-export class FilesAbsent {
+export class FilesDeleted {
   constructor(container) {
     this.fs = container.fs || fs
     this.expandStringNode = container.expandStringNode

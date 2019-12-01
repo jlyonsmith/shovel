@@ -1,18 +1,17 @@
-import { UserAbsent } from "./UserAbsent"
+import { ServiceStopped } from "./ServiceStopped"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
-import { Script } from "vm"
 
 test("assert", async () => {
   const container = {
     expandStringNode: (node) => node.value,
+    childProcess: {},
     util: {
-      runningAsRoot: () => true,
-      getUsers: async () => [{ name: "games" }],
+      runningAsRoot: jest.fn(() => true),
     },
   }
 
-  const asserter = new UserAbsent(container)
+  const asserter = new ServiceStopped(container)
 
   // Bad args
   await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
@@ -22,40 +21,42 @@ test("assert", async () => {
     asserter.assert(createAssertNode(asserter, { name: 1 }))
   ).rejects.toThrow(ScriptError)
 
-  // With user absent
+  // With service inactive
+  container.childProcess.exec = async () => ({ stdout: "inactive" })
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
+    asserter.assert(createAssertNode(asserter, { name: "service" }))
   ).resolves.toBe(true)
 
-  // With user present
+  // With service active
+  container.childProcess.exec = async () => ({ stdout: "active" })
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "games" }))
+    asserter.assert(createAssertNode(asserter, { name: "otherService" }))
   ).resolves.toBe(false)
 
-  // With user present and not running as root
+  // With service active and not root
   container.util.runningAsRoot = () => false
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "games" }))
+    asserter.assert(createAssertNode(asserter, { name: "otherService" }))
   ).rejects.toThrow(ScriptError)
 })
 
 test("rectify", async () => {
   const container = {
     childProcess: {
-      exec: async () => undefined,
+      exec: async () => ({
+        stdout: "failed",
+      }),
     },
   }
-  const asserter = new UserAbsent(container)
-
-  asserter.expandedName = "blah"
+  const asserter = new ServiceStopped(container)
 
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
 
 test("result", () => {
-  const asserter = new UserAbsent({})
+  const asserter = new ServiceStopped({})
 
-  asserter.expandedName = "name"
+  asserter.expandedName = "blah"
 
   expect(asserter.result()).toEqual({ name: asserter.expandedName })
 })

@@ -91,6 +91,8 @@ Octopus scripts are made up of:
 3. Includes
 4. Assertions
 
+Scripts are a sequence of assertions executed sequentially. The order of the assertions is important. Later assertions can expect the assertions higher up in the script to have either be true or to have been rectified to be true.  Note that it is fine to write a script where all the assertions are not expected to be true each time the script is run.  For example, you might write a script to stop a service so you can set some configuration files, then start the service again.  The stop/start assertions will always be triggered.  The important thing is that assertions ensure that the script doesn't make changes it doesn't have too.  This is really helpful when restarting a script after an unexpected failure, for example.
+
 ### Variables
 
 ### Includes
@@ -152,7 +154,16 @@ Finally, the `result()` method will *always* be called to output the result of t
 1. Return an object with information that helps the user understand what the assert checked or modified.
 2. Do not `throw` from this method
 
-Argument naming should generally follow these rules:
+Asserter class naming should generally follow these conventions:
+
+- The name should be a noun and a verb
+- Use a noun that describes the thing being asserted on as closely as possible, e.g. File, ZipFile, Package, etc..
+- Where the asserter does a from/to operation, the noun should be be the from item, e.g. from a URL to a file.
+- The verb should describe the desired state of the thing being asserted in the present tense, e.g. Running, Deleted, Exists, Made, etc..
+- Use a verb that is commonly associated with the noun, e.g. running for services, unzipped for zip files, etc..
+- The naming should hint at what the asserter does internally as an aid to helping people find the right asserter for a given situation.
+
+Asserter argument naming should generally follow these conventions:
 
 - The argument should include a noun for the thing it pertains too, e.g. `user`, `directory`, `file`, `group`, etc..
 - If there are multiple arguments with the same noun, add a pronoun to differentiate, e.g. `fromFile` and `toFile`

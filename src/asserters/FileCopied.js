@@ -3,19 +3,6 @@ import path from "path"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
 
-/*
-That a file was copied from one location to another.
-
-Example:
-    {
-      assert: "FileCopied",
-      with: {
-        from: <string>,
-        to: <string>,
-      },
-    },
-*/
-
 export class FileCopied {
   constructor(container) {
     this.fs = container.fs || fs

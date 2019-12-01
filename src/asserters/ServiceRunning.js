@@ -8,14 +8,14 @@ Ensures that an O/S service is running
 Example:
 
 {
-  assert: "ServiceActive",
+  assert: "ServiceRunning",
   with: {
     name: <string>,
   }
 }
 */
 
-export class ServiceActive {
+export class ServiceRunning {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
     this.util = container.util || util

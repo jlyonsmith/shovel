@@ -1,4 +1,4 @@
-import { DirectoryUnzipped } from "./DirectoryUnzipped"
+import { ZipFileUnzipped } from "./ZipFileUnzipped"
 import stream from "stream"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
@@ -122,7 +122,7 @@ test("assert", async () => {
     },
   }
 
-  const asserter = new DirectoryUnzipped(container)
+  const asserter = new ZipFileUnzipped(container)
 
   // With bad zip path
   await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
@@ -268,7 +268,7 @@ test("rectify", async () => {
       }),
     },
   }
-  const asserter = new DirectoryUnzipped(container)
+  const asserter = new ZipFileUnzipped(container)
 
   asserter.expandedZipPath = "/xyz.zip"
   asserter.expandedToPath = "/"
@@ -283,7 +283,7 @@ test("rectify", async () => {
 })
 
 test("result", () => {
-  const asserter = new DirectoryUnzipped({})
+  const asserter = new ZipFileUnzipped({})
 
   asserter.expandedZipPath = "blah.zip"
   asserter.expandedToPath = "file/"

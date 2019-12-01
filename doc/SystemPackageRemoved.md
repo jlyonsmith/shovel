@@ -1,4 +1,4 @@
-# `PackageRemoved`
+# `SystemPackageRemoved`
 
 ## Summary
 
@@ -14,7 +14,7 @@ The name of the package to remove.
 
 ```json5
 {
-  assert: "PackageRemoved",
+  assert: "SystemPackageRemoved",
   with: {
     package: "gzip",
   }

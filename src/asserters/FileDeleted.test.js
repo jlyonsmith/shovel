@@ -1,4 +1,4 @@
-import { FileAbsent } from "./FileAbsent"
+import { FileDeleted } from "./FileDeleted"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
 
@@ -26,7 +26,7 @@ test("assert", async () => {
     },
   }
 
-  const asserter = new FileAbsent(container)
+  const asserter = new FileDeleted(container)
 
   // Missing args
   await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
@@ -56,7 +56,7 @@ test("assert", async () => {
 
 test("rectify", async () => {
   const container = { fs: { unlink: jest.fn(async () => null) } }
-  const asserter = new FileAbsent(container)
+  const asserter = new FileDeleted(container)
 
   asserter.expandedPath = "foo.txt"
 
@@ -64,7 +64,7 @@ test("rectify", async () => {
 })
 
 test("result", () => {
-  const asserter = new FileAbsent({})
+  const asserter = new FileDeleted({})
 
   asserter.expandedPath = "foo.txt"
 

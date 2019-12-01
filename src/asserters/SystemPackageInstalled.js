@@ -2,21 +2,7 @@ import childProcess from "child-process-promise"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
 
-/*
-Asserts and ensures that an O/S package is installed
-
-Example:
-
-{
-  assert: "PackageRemoved",
-  with: {
-    name: <string> | <array>,
-  }
-}
-
-*/
-
-export class PackageRemoved {
+export class SystemPackageInstalled {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
     this.util = container.util || util
@@ -49,30 +35,30 @@ export class PackageRemoved {
 
     if (info.id === "ubuntu") {
       command = `dpkg --list ${this.expandedName}`
-      this.installCommand = `apt remove -y ${this.expandedName}`
+      this.installCommand = `apt install -y ${this.expandedName}`
     } else {
       command = `rpm -qa | grep '^${this.expandedName}-[0-9]'`
-      this.installCommand = `yum remove -y ${this.expandedName}`
+      this.installCommand = `yum install -y ${this.expandedName}`
     }
 
     try {
       await this.childProcess.exec(command)
-    } catch (e) {
-      return true
+    } catch {
+      if (!this.util.runningAsRoot()) {
+        throw new ScriptError(
+          "Must be running as root to install packages",
+          withNode
+        )
+      }
+
+      return false
     }
 
-    if (!this.util.runningAsRoot()) {
-      throw new ScriptError(
-        "Must be running as root to remove packages",
-        withNode
-      )
-    }
-
-    return false
+    return true
   }
 
   async rectify() {
-    await this.childProcess.exec(`apt remove -y ${this.expandedName}`)
+    await this.childProcess.exec(this.installCommand)
   }
 
   result() {

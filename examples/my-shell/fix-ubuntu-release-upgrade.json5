@@ -3,7 +3,7 @@
   // See https://askubuntu.com/questions/919441/failed-to-connect-to-http-changelogs-ubuntu-com-meta-release
   assertions: [
     {
-      assert: "FileAbsent",
+      assert: "FileDeleted",
       with: {
         path: "/var/lib/ubuntu-release-upgrader/release-upgrade-available",
       },

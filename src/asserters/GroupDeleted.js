@@ -4,19 +4,19 @@ import util from "../util"
 import { ScriptError } from "../ScriptError"
 
 /*
-Asserts and ensures that a user is absent.
+Asserts and ensures that a group is absent.
 
 Example:
 
 {
-  assert: "UserAbsent",
+  assert: "GroupDeleted",
   with: {
     name: "string",
   }
 }
 */
 
-export class UserAbsent {
+export class GroupDeleted {
   constructor(container) {
     this.fs = container.fs || fs
     this.util = container.util || util
@@ -37,20 +37,19 @@ export class UserAbsent {
 
     this.expandedName = this.expandStringNode(nameNode)
 
+    const groups = await this.util.getGroups()
     const ok =
-      (await this.util.getUsers()).find(
-        (user) => user.name === this.expandedName
-      ) === undefined
+      groups.find((group) => group.name === this.expandedName) === undefined
 
     if (!ok && !this.util.runningAsRoot()) {
-      throw new ScriptError("Only root user can delete users", assertNode)
+      throw new ScriptError("Only root user can delete groups", assertNode)
     }
 
     return ok
   }
 
   async rectify() {
-    await this.childProcess.exec(`userdel ${this.expandedName}`)
+    await this.childProcess.exec(`groupdel ${this.expandedName}`)
   }
 
   result() {

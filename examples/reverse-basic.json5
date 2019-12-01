@@ -23,7 +23,7 @@
       },
     },
     {
-      assert: "FileAbsent",
+      assert: "FileDeleted",
       with: {
         path: "scratch/${TEST_FILE_1}",
       },

@@ -10,7 +10,7 @@ Checks and ensures that a .zip file is unzipped to a directory.
 Example:
 
     {
-      assert: "DirectoryUnzipped",
+      assert: "ZipFileUnzipped",
       with: {
         zipPath: "${consulZipPath}",
         to: "./xyz",
@@ -18,7 +18,7 @@ Example:
     }
 */
 
-export class DirectoryUnzipped {
+export class ZipFileUnzipped {
   constructor(container) {
     this.fs = container.fs || fs
     this.yauzl = container.yauzl || yauzl

@@ -1,4 +1,4 @@
-import { ServiceActive } from "./ServiceActive"
+import { ServiceRunning } from "./ServiceRunning"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
 
@@ -13,7 +13,7 @@ test("assert", async () => {
     },
   }
 
-  const asserter = new ServiceActive(container)
+  const asserter = new ServiceRunning(container)
 
   // Bad args
   await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
@@ -50,7 +50,7 @@ test("rectify", async () => {
       }),
     },
   }
-  const asserter = new ServiceActive(container)
+  const asserter = new ServiceRunning(container)
 
   asserter.expandedName = "service"
 
@@ -68,7 +68,7 @@ test("rectify", async () => {
 })
 
 test("result", () => {
-  const asserter = new ServiceActive({})
+  const asserter = new ServiceRunning({})
 
   asserter.expandedName = "otherService"
 

@@ -9,7 +9,7 @@ Ensures that an AutoTools based package configure command has been run
 Example:
 
 {
-  assert: "ToolConfigured",
+  assert: "AutoToolProjectConfigured",
   with: {
     directory: <string>,
     args: <string>,
@@ -17,7 +17,7 @@ Example:
 }
 */
 
-export class ToolConfigured {
+export class AutoToolProjectConfigured {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
     this.util = container.util || util

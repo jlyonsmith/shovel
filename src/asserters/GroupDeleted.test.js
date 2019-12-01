@@ -1,17 +1,24 @@
-import { ServiceInactive } from "./ServiceInactive"
+import { GroupDeleted } from "./GroupDeleted"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
+import { Script } from "vm"
 
 test("assert", async () => {
   const container = {
     expandStringNode: (node) => node.value,
-    childProcess: {},
     util: {
-      runningAsRoot: jest.fn(() => true),
+      runningAsRoot: () => true,
+      getGroups: async (fs) => [{ name: "news", gid: 10, users: [] }],
+    },
+    childProcess: {
+      exec: jest.fn(async (path) => {
+        expect(typeof path).toBe("string")
+        return 0
+      }),
     },
   }
 
-  const asserter = new ServiceInactive(container)
+  const asserter = new GroupDeleted(container)
 
   // Bad args
   await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
@@ -21,42 +28,40 @@ test("assert", async () => {
     asserter.assert(createAssertNode(asserter, { name: 1 }))
   ).rejects.toThrow(ScriptError)
 
-  // With service inactive
-  container.childProcess.exec = async () => ({ stdout: "inactive" })
+  // With group absent
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "service" }))
+    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
   ).resolves.toBe(true)
 
-  // With service active
-  container.childProcess.exec = async () => ({ stdout: "active" })
+  // With group present
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "otherService" }))
+    asserter.assert(createAssertNode(asserter, { name: "news" }))
   ).resolves.toBe(false)
 
-  // With service active and not root
+  // With group absent and not root
   container.util.runningAsRoot = () => false
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "otherService" }))
+    asserter.assert(createAssertNode(asserter, { name: "news" }))
   ).rejects.toThrow(ScriptError)
 })
 
 test("rectify", async () => {
   const container = {
     childProcess: {
-      exec: async () => ({
-        stdout: "failed",
-      }),
+      exec: async () => undefined,
     },
   }
-  const asserter = new ServiceInactive(container)
+  const asserter = new GroupDeleted(container)
+
+  asserter.expandedName = "blah"
 
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
 
 test("result", () => {
-  const asserter = new ServiceInactive({})
+  const asserter = new GroupDeleted({})
 
-  asserter.expandedName = "blah"
+  asserter.expandedName = "news"
 
   expect(asserter.result()).toEqual({ name: asserter.expandedName })
 })

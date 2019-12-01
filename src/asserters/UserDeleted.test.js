@@ -1,4 +1,4 @@
-import { GroupAbsent } from "./GroupAbsent"
+import { UserDeleted } from "./UserDeleted"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
 import { Script } from "vm"
@@ -8,17 +8,11 @@ test("assert", async () => {
     expandStringNode: (node) => node.value,
     util: {
       runningAsRoot: () => true,
-      getGroups: async (fs) => [{ name: "news", gid: 10, users: [] }],
-    },
-    childProcess: {
-      exec: jest.fn(async (path) => {
-        expect(typeof path).toBe("string")
-        return 0
-      }),
+      getUsers: async () => [{ name: "games" }],
     },
   }
 
-  const asserter = new GroupAbsent(container)
+  const asserter = new UserDeleted(container)
 
   // Bad args
   await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
@@ -28,20 +22,20 @@ test("assert", async () => {
     asserter.assert(createAssertNode(asserter, { name: 1 }))
   ).rejects.toThrow(ScriptError)
 
-  // With group absent
+  // With user absent
   await expect(
     asserter.assert(createAssertNode(asserter, { name: "notthere" }))
   ).resolves.toBe(true)
 
-  // With group present
+  // With user present
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "news" }))
+    asserter.assert(createAssertNode(asserter, { name: "games" }))
   ).resolves.toBe(false)
 
-  // With group absent and not root
+  // With user present and not running as root
   container.util.runningAsRoot = () => false
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "news" }))
+    asserter.assert(createAssertNode(asserter, { name: "games" }))
   ).rejects.toThrow(ScriptError)
 })
 
@@ -51,7 +45,7 @@ test("rectify", async () => {
       exec: async () => undefined,
     },
   }
-  const asserter = new GroupAbsent(container)
+  const asserter = new UserDeleted(container)
 
   asserter.expandedName = "blah"
 
@@ -59,9 +53,9 @@ test("rectify", async () => {
 })
 
 test("result", () => {
-  const asserter = new GroupAbsent({})
+  const asserter = new UserDeleted({})
 
-  asserter.expandedName = "news"
+  asserter.expandedName = "name"
 
   expect(asserter.result()).toEqual({ name: asserter.expandedName })
 })

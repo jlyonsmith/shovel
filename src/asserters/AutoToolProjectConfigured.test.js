@@ -1,4 +1,4 @@
-import { ToolConfigured } from "./ToolConfigured"
+import { AutoToolProjectConfigured } from "./AutoToolProjectConfigured"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
 
@@ -11,7 +11,7 @@ test("assert", async () => {
     },
   }
 
-  const asserter = new ToolConfigured(container)
+  const asserter = new AutoToolProjectConfigured(container)
 
   // Bad args
   await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
@@ -33,13 +33,13 @@ test("rectify", async () => {
       }),
     },
   }
-  const asserter = new ToolConfigured(container)
+  const asserter = new AutoToolProjectConfigured(container)
 
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
 
 test("result", () => {
-  const asserter = new ToolConfigured({})
+  const asserter = new AutoToolProjectConfigured({})
 
   asserter.expandedDirectory = "blah"
   asserter.expandedArgs = "blah"

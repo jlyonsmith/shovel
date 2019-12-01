@@ -1,4 +1,4 @@
-import { PackageInstalled } from "./PackageInstalled"
+import { SystemPackageRemoved } from "./SystemPackageRemoved"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
 
@@ -12,7 +12,7 @@ test("assert", async () => {
       runningAsRoot: jest.fn(() => true),
     },
   }
-  const asserter = new PackageInstalled(container)
+  const asserter = new SystemPackageRemoved(container)
 
   // Not supported OS
   container.util.osInfo = jest.fn(async () => ({ platform: "windows" }))
@@ -34,62 +34,61 @@ test("assert", async () => {
     asserter.assert(createAssertNode(asserter, { name: 1 }))
   ).rejects.toThrow(ScriptError)
 
-  // Package present on Ubuntu
-  container.childProcess.exec = jest.fn(async () => ({
-    stdout: "",
-    stderr: "",
-  }))
+  // Package not present on Ubuntu
+  container.childProcess.exec = jest.fn(async (command) => {
+    throw new Error()
+  })
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "package" }))
+    asserter.assert(createAssertNode(asserter, { name: "there" }))
   ).resolves.toBe(true)
 
-  // Package present on CentOS
+  // Package not present on CentOS
   container.util.osInfo = jest.fn(async () => ({
     platform: "linux",
     id: "centos",
   }))
-  container.childProcess.exec = jest.fn(async () => ({
+  await expect(
+    asserter.assert(createAssertNode(asserter, { name: "there" }))
+  ).resolves.toBe(true)
+
+  // Package present and running as root
+  container.childProcess.exec = jest.fn(async (command) => ({
     stdout: "",
     stderr: "",
   }))
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "package" }))
-  ).resolves.toBe(true)
-
-  // Package not present and running as root
-  container.childProcess.exec = jest.fn(async () => {
-    throw new Error()
-  })
-  await expect(
     asserter.assert(createAssertNode(asserter, { name: "notthere" }))
   ).resolves.toBe(false)
 
-  // Package not present and not running as root
+  // Package present and not running as root
   container.util.runningAsRoot = jest.fn(() => false)
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
+    asserter.assert(createAssertNode(asserter, { name: "there" }))
   ).rejects.toThrow(ScriptError)
 })
 
 test("rectify", async () => {
   const container = {
+    expandStringNode: (node) => node.value,
     childProcess: {
       exec: jest.fn(async (command) => ({
         stdout: "",
         stderr: "",
       })),
     },
+    util: {
+      runningAsRoot: jest.fn(() => true),
+    },
   }
+  const asserter = new SystemPackageRemoved(container)
 
-  const asserter = new PackageInstalled(container)
-
-  asserter.installCommand = ""
+  asserter.expandedName = "somepackage"
 
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
 
 test("result", () => {
-  const asserter = new PackageInstalled({})
+  const asserter = new SystemPackageRemoved({})
 
   asserter.expandedName = "somepackage"
 

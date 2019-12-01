@@ -1,4 +1,4 @@
-import { FilesAbsent } from "./FilesAbsent"
+import { FilesDeleted } from "./FilesDeleted"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
 
@@ -24,7 +24,7 @@ test("assert", async () => {
     },
   }
 
-  const asserter = new FilesAbsent(container)
+  const asserter = new FilesDeleted(container)
 
   // Bad args
   await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
@@ -37,7 +37,7 @@ test("assert", async () => {
     asserter.assert(createAssertNode(asserter, { paths: [1] }))
   ).rejects.toThrow(ScriptError)
 
-  // FilesAbsent with no dir or files existing
+  // FilesDeleted with no dir or files existing
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -46,7 +46,7 @@ test("assert", async () => {
     )
   ).resolves.toBe(true)
 
-  // FilesAbsent with file existing
+  // FilesDeleted with file existing
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -55,7 +55,7 @@ test("assert", async () => {
     )
   ).resolves.toBe(false)
 
-  // FilesAbsent with dir instead of file existing
+  // FilesDeleted with dir instead of file existing
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -71,7 +71,7 @@ test("rectify", async () => {
       unlink: jest.fn(async (fileName) => null),
     },
   }
-  const asserter = new FilesAbsent(container)
+  const asserter = new FilesDeleted(container)
 
   asserter.unlinkedPaths = ["blah"]
 
@@ -79,7 +79,7 @@ test("rectify", async () => {
 })
 
 test("result", () => {
-  const asserter = new FilesAbsent({})
+  const asserter = new FilesDeleted({})
 
   asserter.unlinkedPaths = ["blah"]
 

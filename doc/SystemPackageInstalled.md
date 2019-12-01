@@ -1,4 +1,4 @@
-# `PackageInstalled`
+# `SystemPackageInstalled`
 
 ## Summary
 
@@ -14,7 +14,7 @@ Then name of the package to install.
 
 ```json5
 {
-  assert: "PackageInstalled",
+  assert: "SystemPackageInstalled",
   with: {
     package: "gzip",
   }
