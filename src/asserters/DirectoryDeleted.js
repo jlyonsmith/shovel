@@ -7,14 +7,14 @@ Asserts and ensures that a directory is absent.
 Example:
 
 {
-  assert: "DirectoryAbsent",
+  assert: "DirectoryDeleted",
   with: {
     path: "/path/to/dir"
   }
 }
 */
 
-export class DirectoryAbsent {
+export class DirectoryDeleted {
   constructor(container) {
     this.fs = container.fs || fs
     this.expandStringNode = container.expandStringNode

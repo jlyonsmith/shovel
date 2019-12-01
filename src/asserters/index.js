@@ -1,4 +1,4 @@
-export { DirectoryAbsent } from "./DirectoryAbsent"
+export { DirectoryDeleted } from "./DirectoryDeleted"
 export { DirectoryExists } from "./DirectoryExists"
 export { FileAbsent } from "./FileAbsent"
 export { FilesAbsent } from "./FilesAbsent"

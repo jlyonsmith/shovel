@@ -9,14 +9,14 @@
   },
   assertions: [
     {
-      assert: "DirectoryAbsent",
+      assert: "DirectoryDeleted",
       description: "The first directory",
       with: {
         path: "scratch/${TEST_DIR_1}",
       },
     },
     {
-      assert: "DirectoryAbsent",
+      assert: "DirectoryDeleted",
       description: "The second directory",
       with: {
         path: "scratch/${TEST_DIR_2}",
