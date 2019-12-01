@@ -1,4 +1,4 @@
-# `FileExtracted`
+# `TarFileExtracted`
 
 ## Summary
 
@@ -18,7 +18,7 @@ The directory in which to place the unzipped files.
 
 ```json5
 {
-  assert: "FileExtracted",
+  assert: "TarFileExtracted",
   with: {
     tarFile: "archive.tgz",
     toDirectory: "/some/dir",

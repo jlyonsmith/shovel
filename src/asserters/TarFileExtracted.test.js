@@ -1,4 +1,4 @@
-import { DirectoryUnarchived } from "./DirectoryUnarchived"
+import { TarFileExtracted } from "./TarFileExtracted"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
 
@@ -9,7 +9,7 @@ test("assert", async () => {
       pathInfo: async (path) => undefined,
     },
   }
-  const asserter = new DirectoryUnarchived(container)
+  const asserter = new TarFileExtracted(container)
 
   // With bad zip path
   await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
@@ -29,7 +29,7 @@ test("assert", async () => {
 })
 
 test("rectify", async () => {
-  const asserter = new DirectoryUnarchived({})
+  const asserter = new TarFileExtracted({})
 })
 
 test("result", () => {})

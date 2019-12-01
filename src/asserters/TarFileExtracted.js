@@ -11,7 +11,7 @@ Ensures that an archive has been unpacked to a directory
 Example:
 
     {
-      assert: "DirectoryUnarchived",
+      assert: "TarFileExtracted",
       with: {
         archive: "${tarPath}",
         directory: "./xyz",
@@ -19,7 +19,7 @@ Example:
     }
 */
 
-export class DirectoryUnarchived {
+export class TarFileExtracted {
   constructor(container) {
     this.fs = container.fs || fs
     this.tar = container.tar || tar
