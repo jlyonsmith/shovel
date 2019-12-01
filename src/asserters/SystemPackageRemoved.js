@@ -11,12 +11,12 @@ export class SystemPackageRemoved {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { name: nameNode } = withNode.value
+    const { package: packageNode } = withNode.value
 
-    if (!nameNode || nameNode.type !== "string") {
+    if (!packageNode || packageNode.type !== "string") {
       throw new ScriptError(
-        "'name' must be supplied and be a string",
-        nameNode || withNode
+        "'package' must be supplied and be a string",
+        packageNode || withNode
       )
     }
 
@@ -29,16 +29,16 @@ export class SystemPackageRemoved {
       throw new ScriptError("Only supported on Ubuntu and CentOS", assertNode)
     }
 
-    this.expandedName = this.expandStringNode(nameNode)
+    this.expandedPackageName = this.expandStringNode(packageNode)
 
     let command
 
     if (info.id === "ubuntu") {
-      command = `dpkg --list ${this.expandedName}`
-      this.installCommand = `apt remove -y ${this.expandedName}`
+      command = `dpkg --list ${this.expandedPackageName}`
+      this.installCommand = `apt remove -y ${this.expandedPackageName}`
     } else {
-      command = `rpm -qa | grep '^${this.expandedName}-[0-9]'`
-      this.installCommand = `yum remove -y ${this.expandedName}`
+      command = `rpm -qa | grep '^${this.expandedPackageName}-[0-9]'`
+      this.installCommand = `yum remove -y ${this.expandedPackageName}`
     }
 
     try {
@@ -58,10 +58,10 @@ export class SystemPackageRemoved {
   }
 
   async rectify() {
-    await this.childProcess.exec(`apt remove -y ${this.expandedName}`)
+    await this.childProcess.exec(`apt remove -y ${this.expandedPackageName}`)
   }
 
   result() {
-    return { name: this.expandedName }
+    return { package: this.expandedPackageName }
   }
 }

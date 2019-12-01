@@ -6,9 +6,9 @@ Asserts that a file exists.  If not, the file is created. The directory can have
 
 ## Arguments
 
-### `path: String`
+### `file: String`
 
-The path to the directory.
+The file to check or create.
 
 ### `owner: String`
 

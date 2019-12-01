@@ -3,19 +3,6 @@ import childProcess from "child-process-promise"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
 
-/*
-Asserts and ensures that a group is absent.
-
-Example:
-
-{
-  assert: "GroupDeleted",
-  with: {
-    name: "string",
-  }
-}
-*/
-
 export class GroupDeleted {
   constructor(container) {
     this.fs = container.fs || fs
@@ -26,20 +13,21 @@ export class GroupDeleted {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { name: nameNode } = withNode.value
+    const { group: groupNode } = withNode.value
 
-    if (!nameNode || nameNode.type !== "string") {
+    if (!groupNode || groupNode.type !== "string") {
       throw new ScriptError(
-        "'name' must be supplied and be a string",
-        nameNode || withNode
+        "'group' must be supplied and be a string",
+        groupNode || withNode
       )
     }
 
-    this.expandedName = this.expandStringNode(nameNode)
+    this.expandedGroupName = this.expandStringNode(groupNode)
 
     const groups = await this.util.getGroups()
     const ok =
-      groups.find((group) => group.name === this.expandedName) === undefined
+      groups.find((group) => group.name === this.expandedGroupName) ===
+      undefined
 
     if (!ok && !this.util.runningAsRoot()) {
       throw new ScriptError("Only root user can delete groups", assertNode)
@@ -49,10 +37,10 @@ export class GroupDeleted {
   }
 
   async rectify() {
-    await this.childProcess.exec(`groupdel ${this.expandedName}`)
+    await this.childProcess.exec(`groupdel ${this.expandedGroupName}`)
   }
 
   result() {
-    return { name: this.expandedName }
+    return { group: this.expandedGroupName }
   }
 }

@@ -2,22 +2,6 @@ import fs from "fs-extra"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
 
-/*
-Ensures that a text file contains specific contents.
-
-Example:
-
-{
-  assert: "FileContains",
-  with: {
-    path: <string>,
-    position: "before|after|over"
-    regex: "<string>"
-    contents: <string>
-  }
-}
-*/
-
 export class FileContains {
   constructor(container) {
     this.fs = container.fs || fs
@@ -28,20 +12,20 @@ export class FileContains {
   async assert(assertNode) {
     const withNode = assertNode.value.with
     const {
-      path: pathNode,
+      file: fileNode,
       position: positionNode,
       regex: regexNode,
       contents: contentsNode,
     } = withNode.value
 
-    if (!pathNode || pathNode.type !== "string") {
+    if (!fileNode || fileNode.type !== "string") {
       throw new ScriptError(
-        "'path' must be supplied and be a string",
-        pathNode || withNode
+        "'file' must be supplied and be a string",
+        fileNode || withNode
       )
     }
 
-    this.expandedPath = this.expandStringNode(pathNode)
+    this.expandedPath = this.expandStringNode(fileNode)
 
     if (regexNode) {
       if (regexNode.type !== "string") {
@@ -103,7 +87,7 @@ export class FileContains {
     if (!pathInfo.getAccess().isReadWrite()) {
       throw new ScriptError(
         `${this.expandedPath} cannot be read and written`,
-        pathNode
+        fileNode
       )
     }
 
@@ -199,6 +183,6 @@ export class FileContains {
   }
 
   result() {
-    return { path: this.expandedPath, contents: this.expandedContents }
+    return { file: this.expandedPath, contents: this.expandedContents }
   }
 }

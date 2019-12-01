@@ -2,19 +2,6 @@ import childProcess from "child-process-promise"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
 
-/*
-Ensures that an O/S service is running
-
-Example:
-
-{
-  assert: "ServiceRunning",
-  with: {
-    name: <string>,
-  }
-}
-*/
-
 export class ServiceRunning {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
@@ -24,19 +11,19 @@ export class ServiceRunning {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { name: nameNode } = withNode.value
+    const { service: serviceNode } = withNode.value
 
-    if (!nameNode || nameNode.type !== "string") {
+    if (!serviceNode || serviceNode.type !== "string") {
       throw new ScriptError(
-        "'name' must be supplied and be a string",
-        nameNode || withNode
+        "'service' must be supplied and be a string",
+        serviceNode || withNode
       )
     }
 
-    this.expandedName = this.expandStringNode(nameNode)
+    this.expandedServiceName = this.expandStringNode(serviceNode)
 
     const output = await this.childProcess.exec(
-      `systemctl is-active ${this.expandedName}`
+      `systemctl is-active ${this.expandedServiceName}`
     )
 
     const ok = output.stdout === "active"
@@ -53,13 +40,15 @@ export class ServiceRunning {
 
   async rectify() {
     // TODO: Do not run sudo directly here
-    await this.childProcess.exec(`sudo systemctl restart ${this.expandedName}`)
+    await this.childProcess.exec(
+      `sudo systemctl restart ${this.expandedServiceName}`
+    )
 
     let output = null
 
     do {
       output = await this.childProcess.exec(
-        `sudo systemctl is-active ${this.expandedName}`
+        `sudo systemctl is-active ${this.expandedServiceName}`
       )
 
       if (output.stdout === "failed" || output.stdout === "inactive") {
@@ -69,6 +58,6 @@ export class ServiceRunning {
   }
 
   result() {
-    return { name: this.expandedName }
+    return { service: this.expandedServiceName }
   }
 }

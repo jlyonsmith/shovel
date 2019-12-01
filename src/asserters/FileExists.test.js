@@ -43,9 +43,9 @@ test("assert", async () => {
     ScriptError
   )
 
-  // Bad path
+  // Bad file
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: 1 }))
+    asserter.assert(createAssertNode(asserter, { file: 1 }))
   ).rejects.toThrow(ScriptError)
 
   // File exists
@@ -59,7 +59,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somefile",
+        file: "/somefile",
         owner: { uid: 0, gid: 0 },
         mode: { user: "rw-", group: "r--", other: "r--" },
       })
@@ -77,7 +77,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somefile",
+        file: "/somefile",
         owner: { uid: 0, gid: 0 },
         mode: { user: "rw-", group: "r--", other: "r--" },
       })
@@ -92,7 +92,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somefile",
+        file: "/somefile",
         owner: { uid: 0, gid: 0 },
         mode: { user: "rw-", group: "r--", other: "r--" },
       })
@@ -114,7 +114,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somefile",
+        file: "/somefile",
         owner: { uid: 0, gid: 0 },
         mode: { user: "rw-", group: "r--", other: "r--" },
       })
@@ -136,7 +136,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somefile",
+        file: "/somefile",
         owner: { uid: 0, gid: 0 },
         mode: { user: "rw-", group: "r--", other: "r--" },
       })
@@ -153,7 +153,7 @@ test("assert", async () => {
     isFile: jest.fn(() => false),
   }))
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: "/notthere" }))
+    asserter.assert(createAssertNode(asserter, { file: "/notthere" }))
   ).rejects.toThrow(ScriptError)
 
   // File does not exist and root directory accessible
@@ -161,7 +161,7 @@ test("assert", async () => {
     throw new Error()
   })
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: "/bar/notthere" }))
+    asserter.assert(createAssertNode(asserter, { file: "/bar/notthere" }))
   ).resolves.toBe(false)
 
   // File does not exist and root directory not accessible
@@ -170,7 +170,7 @@ test("assert", async () => {
   })
   container.util.canAccess = jest.fn(async () => false)
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: "/foo/notthere" }))
+    asserter.assert(createAssertNode(asserter, { file: "/foo/notthere" }))
   ).rejects.toThrow(ScriptError)
 })
 
@@ -185,7 +185,7 @@ test("rectify", async () => {
   }
   const asserter = new FileExists(container)
 
-  asserter.expandedPath = "/notthere"
+  asserter.expandedFile = "/notthere"
   asserter.mode = 0o777
   asserter.owner = { uid: 0, gid: 0 }
 
@@ -195,7 +195,7 @@ test("rectify", async () => {
 test("result", () => {
   const asserter = new FileExists({})
 
-  asserter.expandedPath = "/notthere"
+  asserter.expandedFile = "/notthere"
 
-  expect(asserter.result()).toEqual({ path: asserter.expandedPath })
+  expect(asserter.result()).toEqual({ file: asserter.expandedFile })
 })

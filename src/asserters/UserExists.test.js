@@ -29,29 +29,29 @@ test("assert", async () => {
     ScriptError
   )
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: 1 }))
+    asserter.assert(createAssertNode(asserter, { user: 1 }))
   ).rejects.toThrow(ScriptError)
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "x", uid: "1" }))
+    asserter.assert(createAssertNode(asserter, { user: "x", uid: "1" }))
   ).rejects.toThrow(ScriptError)
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "x", gid: "1" }))
+    asserter.assert(createAssertNode(asserter, { user: "x", gid: "1" }))
   ).rejects.toThrow(ScriptError)
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "x", shell: 1 }))
+    asserter.assert(createAssertNode(asserter, { user: "x", shell: 1 }))
   ).rejects.toThrow(ScriptError)
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "x", homeDir: 1 }))
+    asserter.assert(createAssertNode(asserter, { user: "x", homeDir: 1 }))
   ).rejects.toThrow(ScriptError)
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "x", comment: 1 }))
+    asserter.assert(createAssertNode(asserter, { user: "x", comment: 1 }))
   ).rejects.toThrow(ScriptError)
 
   // With user existing
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        name: "user1",
+        user: "user1",
       })
     )
   ).resolves.toBe(true)
@@ -60,7 +60,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        name: "user1",
+        user: "user1",
         gid: 2,
       })
     )
@@ -68,7 +68,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        name: "user1",
+        user: "user1",
         uid: 2,
       })
     )
@@ -76,7 +76,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        name: "user1",
+        user: "user1",
         shell: "/bin/bash",
       })
     )
@@ -84,7 +84,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        name: "user1",
+        user: "user1",
         homeDir: "/home/user1",
       })
     )
@@ -92,7 +92,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        name: "user1",
+        user: "user1",
         comment: "User1",
       })
     )
@@ -100,20 +100,20 @@ test("assert", async () => {
 
   // With user absent
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
+    asserter.assert(createAssertNode(asserter, { user: "notthere" }))
   ).resolves.toBe(false)
 
   // With user absent and not root
   container.util.runningAsRoot = () => false
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
+    asserter.assert(createAssertNode(asserter, { user: "notthere" }))
   ).rejects.toThrow(ScriptError)
 
   // With user different and not root
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        name: "user1",
+        user: "user1",
         gid: 2,
       })
     )

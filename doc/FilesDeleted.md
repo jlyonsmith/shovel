@@ -2,7 +2,7 @@
 
 ## Summary
 
-Asserts that one or more files are deleted from the host. If present, the files are deleted.
+Asserts that one or more files are deleted from the host. If any of the files are present they are deleted.
 
 ## Arguments
 
@@ -14,9 +14,9 @@ An array of files to delete.
 
 ```json5
 {
-  assert: "DirectoryDeleted",
+  assert: "FilesDeleted",
   with: {
-    directory: "/path/to/dir"
+    files: ["a.txt", "b.txt"]
   }
 }
 ```

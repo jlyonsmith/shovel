@@ -6,13 +6,17 @@ Asserts that a directory has been zipped by comparing the sizes of the files in 
 
 ## Arguments
 
-### `fromDirectory: string`
+### `directory: string` (Required)
 
 The directory from which to recursively zip files.
 
-### `zipFile: string`
+### `zipFile: string` (Required)
 
 The location of the zip file.
+
+### `globs: string` (Required)
+
+Array of glob strings which defines the files to include or exclude. See [readdirp](https://www.npmjs.com/package/readdirp) and [picomatch](https://github.com/micromatch/picomatch) for glob details.
 
 ## Example
 
@@ -20,8 +24,9 @@ The location of the zip file.
 {
   assert: "DirectoryZipped",
   with: {
-    fromDirectory: "/some/dir",
+    directory: "/some/dir",
     zipFile: "zipfile.gz",
+    glob: ["*.js"]
   }
 }
 ```

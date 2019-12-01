@@ -2,19 +2,6 @@ import childProcess from "child-process-promise"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
 
-/*
-Ensures that an O/S service is inactive
-
-Example:
-
-{
-  assert: "ServiceRunning",
-  with: {
-    name: <string>,
-  }
-}
-*/
-
 export class ServiceStopped {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
@@ -24,19 +11,19 @@ export class ServiceStopped {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { name: nameNode } = withNode.value
+    const { service: serviceNode } = withNode.value
 
-    if (!nameNode || nameNode.type !== "string") {
+    if (!serviceNode || serviceNode.type !== "string") {
       throw new ScriptError(
-        "'name' must be supplied and be a string",
-        nameNode || withNode
+        "'service' must be supplied and be a string",
+        serviceNode || withNode
       )
     }
 
-    this.expandedName = this.expandStringNode(nameNode)
+    this.expandedServiceName = this.expandStringNode(serviceNode)
 
     const output = await this.childProcess.exec(
-      `systemctl is-active ${this.expandedName}`
+      `systemctl is-active ${this.expandedServiceName}`
     )
 
     const ok = output.stdout === "inactive" || output.stdout === "failed"
@@ -53,19 +40,21 @@ export class ServiceStopped {
 
   async rectify() {
     // TODO: This should not be running sudo directly!
-    await this.childProcess.exec(`sudo systemctl stop ${this.expandedName}`)
+    await this.childProcess.exec(
+      `sudo systemctl stop ${this.expandedServiceName}`
+    )
 
     let output = null
 
     do {
       output = await this.childProcess.exec(
-        `systemctl is-active ${this.expandedName}`
+        `systemctl is-active ${this.expandedServiceName}`
       )
       // TODO: Put a wait in here!
     } while (output.stdout !== "inactive" && output.stdout !== "failed")
   }
 
   result() {
-    return { name: this.expandedName }
+    return { service: this.expandedServiceName }
   }
 }

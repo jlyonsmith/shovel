@@ -18,25 +18,25 @@ test("assert", async () => {
     ScriptError
   )
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: 1 }))
+    asserter.assert(createAssertNode(asserter, { service: 1 }))
   ).rejects.toThrow(ScriptError)
 
   // With service inactive
   container.childProcess.exec = async () => ({ stdout: "inactive" })
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "service" }))
+    asserter.assert(createAssertNode(asserter, { service: "service" }))
   ).resolves.toBe(true)
 
   // With service active
   container.childProcess.exec = async () => ({ stdout: "active" })
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "otherService" }))
+    asserter.assert(createAssertNode(asserter, { service: "otherService" }))
   ).resolves.toBe(false)
 
   // With service active and not root
   container.util.runningAsRoot = () => false
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "otherService" }))
+    asserter.assert(createAssertNode(asserter, { service: "otherService" }))
   ).rejects.toThrow(ScriptError)
 })
 
@@ -56,7 +56,7 @@ test("rectify", async () => {
 test("result", () => {
   const asserter = new ServiceStopped({})
 
-  asserter.expandedName = "blah"
+  asserter.expandedServiceName = "blah"
 
-  expect(asserter.result()).toEqual({ name: asserter.expandedName })
+  expect(asserter.result()).toEqual({ service: asserter.expandedServiceName })
 })

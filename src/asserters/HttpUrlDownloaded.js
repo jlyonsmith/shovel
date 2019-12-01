@@ -4,21 +4,6 @@ import fetch from "node-fetch"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
 
-/*
-Asserts that a file is downloaded. Uses SHA256 digest to verify proper file.
-
-Example:
-
-{
-  assert: "HttpUrlDownloaded",
-  with: {
-        url: "https://sourcehost.com/linux_amd64.zip",
-        digest: "658f4f3b305cd357a9501728b8a1dc5f...",
-        toPath: "${destZipFile}",
-  }
-}
-*/
-
 export class HttpUrlDownloaded {
   constructor(container) {
     this.fs = container.fs || fs
@@ -29,11 +14,7 @@ export class HttpUrlDownloaded {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const {
-      url: urlNode,
-      digest: digestNode,
-      toPath: toPathNode,
-    } = withNode.value
+    const { url: urlNode, digest: digestNode, file: fileNode } = withNode.value
 
     if (!urlNode || urlNode.type !== "string") {
       throw new ScriptError(
@@ -49,16 +30,16 @@ export class HttpUrlDownloaded {
       )
     }
 
-    if (!toPathNode || toPathNode.type !== "string") {
+    if (!fileNode || fileNode.type !== "string") {
       throw new ScriptError(
-        "'toPath' must be supplied and be a string",
-        toPathNode || withNode
+        "'file' must be supplied and be a string",
+        fileNode || withNode
       )
     }
 
     this.expandedUrl = this.expandStringNode(urlNode)
-    this.expandedToPath = this.expandStringNode(toPathNode)
-    this.toFileExists = await this.util.fileExists(this.expandedToPath)
+    this.expandedFile = this.expandStringNode(fileNode)
+    this.toFileExists = await this.util.fileExists(this.expandedFile)
 
     if (!this.toFileExists) {
       return false
@@ -67,7 +48,7 @@ export class HttpUrlDownloaded {
     // TODO: Ensure we can access the download directory
 
     const toFileDigest = await this.util.generateDigestFromFile(
-      this.expandedToPath
+      this.expandedFile
     )
 
     return toFileDigest === digestNode.value
@@ -75,11 +56,11 @@ export class HttpUrlDownloaded {
 
   async rectify() {
     if (this.toFileExists) {
-      await this.fs.remove(this.expandedToPath)
+      await this.fs.remove(this.expandedFile)
     }
 
     const result = await this.fetch(this.expandedUrl)
-    const writeable = this.fs.createWriteStream(this.expandedToPath)
+    const writeable = this.fs.createWriteStream(this.expandedFile)
 
     await this.util.pipeToPromise(result.body, writeable)
 
@@ -88,6 +69,6 @@ export class HttpUrlDownloaded {
 
   result() {
     // TODO: Add hash to output of actual file or the asserted hash
-    return { toPath: this.expandedToPath }
+    return { file: this.expandedFile }
   }
 }

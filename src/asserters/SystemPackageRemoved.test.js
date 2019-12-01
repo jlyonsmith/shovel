@@ -17,10 +17,10 @@ test("assert", async () => {
   // Not supported OS
   container.util.osInfo = jest.fn(async () => ({ platform: "windows" }))
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "test" }))
+    asserter.assert(createAssertNode(asserter, { package: "test" }))
   ).rejects.toThrow(ScriptError)
 
-  // Missing name
+  // Missing package
   container.util.osInfo = jest.fn(async () => ({
     platform: "linux",
     id: "ubuntu",
@@ -29,9 +29,9 @@ test("assert", async () => {
     ScriptError
   )
 
-  // Bad name
+  // Bad package
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: 1 }))
+    asserter.assert(createAssertNode(asserter, { package: 1 }))
   ).rejects.toThrow(ScriptError)
 
   // Package not present on Ubuntu
@@ -39,7 +39,7 @@ test("assert", async () => {
     throw new Error()
   })
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "there" }))
+    asserter.assert(createAssertNode(asserter, { package: "there" }))
   ).resolves.toBe(true)
 
   // Package not present on CentOS
@@ -48,7 +48,7 @@ test("assert", async () => {
     id: "centos",
   }))
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "there" }))
+    asserter.assert(createAssertNode(asserter, { package: "there" }))
   ).resolves.toBe(true)
 
   // Package present and running as root
@@ -57,13 +57,13 @@ test("assert", async () => {
     stderr: "",
   }))
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
+    asserter.assert(createAssertNode(asserter, { package: "notthere" }))
   ).resolves.toBe(false)
 
   // Package present and not running as root
   container.util.runningAsRoot = jest.fn(() => false)
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "there" }))
+    asserter.assert(createAssertNode(asserter, { package: "there" }))
   ).rejects.toThrow(ScriptError)
 })
 
@@ -82,7 +82,7 @@ test("rectify", async () => {
   }
   const asserter = new SystemPackageRemoved(container)
 
-  asserter.expandedName = "somepackage"
+  asserter.expandedPackageName = "somepackage"
 
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
@@ -90,7 +90,7 @@ test("rectify", async () => {
 test("result", () => {
   const asserter = new SystemPackageRemoved({})
 
-  asserter.expandedName = "somepackage"
+  asserter.expandedPackageName = "somepackage"
 
-  expect(asserter.result()).toEqual({ name: asserter.expandedName })
+  expect(asserter.result()).toEqual({ package: asserter.expandedPackageName })
 })

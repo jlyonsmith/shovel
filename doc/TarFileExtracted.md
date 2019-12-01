@@ -6,13 +6,13 @@ Asserts that a `.tar`, `.tar.gz` or `.tgz` file has been extracted by comparing 
 
 ## Arguments
 
-### `zipFile: string`
+### `file: string` (Required)
 
 The file to unzip.
 
-### `toDirectory: string`
+### `toDirectory: string` (Optional)
 
-The directory in which to place the unzipped files.
+The directory in which to place the unzipped files. Defaults to the same directory as the tar file.
 
 ## Example
 
@@ -20,7 +20,7 @@ The directory in which to place the unzipped files.
 {
   assert: "TarFileExtracted",
   with: {
-    tarFile: "archive.tgz",
+    file: "archive.tgz",
     toDirectory: "/some/dir",
   }
 }

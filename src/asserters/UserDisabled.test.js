@@ -41,23 +41,23 @@ disabled:!:18113:0:99999:7::1:`
     ScriptError
   )
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: 1 }))
+    asserter.assert(createAssertNode(asserter, { user: 1 }))
   ).rejects.toThrow(ScriptError)
 
   // With user disabled
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "disabled" }))
+    asserter.assert(createAssertNode(asserter, { user: "disabled" }))
   ).resolves.toBe(true)
 
   // With user enabled
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "enabled" }))
+    asserter.assert(createAssertNode(asserter, { user: "enabled" }))
   ).resolves.toBe(false)
 
   // With user enabled and not root
   container.util.runningAsRoot = () => false
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "enabled" }))
+    asserter.assert(createAssertNode(asserter, { user: "enabled" }))
   ).rejects.toThrow(ScriptError)
 })
 
@@ -79,5 +79,5 @@ test("result", () => {
 
   asserter.expandedName = "blah"
 
-  expect(asserter.result()).toEqual({ name: asserter.expandedName })
+  expect(asserter.result()).toEqual({ user: asserter.expandedName })
 })

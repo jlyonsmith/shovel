@@ -13,11 +13,11 @@ Asserts that a file contains some content.  You can either:
 
 ### `file: string`
 
-The file to unzip.
+The file to check the contents of.
 
 ### `content: string`
 
-The directory in which to place the unzipped files.
+The content to place in the file.
 
 ### `position: string`
 
@@ -29,7 +29,7 @@ The desired position of the `content`, one of:
 
 ### `regex: string`
 
-The regular expression to match.  The meaning of this match is dependent on `position`.
+The regular expression to match. The meaning of this match is dependent on `position`.
 
 ## Example
 

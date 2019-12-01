@@ -2,27 +2,21 @@
 
 ## Summary
 
-Asserts that a has been downloaded from a URL. If not, the file is downloaded.
+Asserts that a file has been downloaded from a URL with HTTP or HTTPS.
 
 ## Arguments
 
-### `url: String`
+### `url: String` (Required)
 
 The HTTP/HTTPS URL of the file to be downloaded.
 
-### `digest: String`
+### `digest: String` (Required)
 
 The SHA256 digest of the file in hexadecimal.
 
-### `directory: String`
+### `file: String` (Required)
 
-The directory into which the dowloaded file should be placed.
-
-## Possible Errors
-
-- `url` is not valid
-- `directory` is not an existing directory
-- The user does not have permission to write to `directory`
+The name of the downloaded file.
 
 ## Example
 
@@ -32,7 +26,7 @@ The directory into which the dowloaded file should be placed.
   with: {
     url: "https://sourcehost.com/linux_amd64.zip",
     digest: "658f4f3b305cd357a9501728b8a1dc5f...",
-    directory: "{path.join(env.HOME, '/downloads'}",
+    file: "{path.join(env.HOME, '/downloads/linux_amd64.zip'}",
   }
 }
 ```

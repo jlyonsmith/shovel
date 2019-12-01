@@ -35,40 +35,40 @@ test("assert", async () => {
 
   const asserter = new FileContains(container)
 
-  // Missing path
+  // Missing file
   await expect(
     asserter.assert(createAssertNode(asserter, { contents: "" }))
   ).rejects.toThrow(ScriptError)
 
-  // Bad path
+  // Bad file
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: 1 }))
+    asserter.assert(createAssertNode(asserter, { file: 1 }))
   ).rejects.toThrow(ScriptError)
 
   // Missing contents
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: "" }))
+    asserter.assert(createAssertNode(asserter, { file: "" }))
   ).rejects.toThrow(ScriptError)
 
   // Bad contents
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: "", contents: 1 }))
+    asserter.assert(createAssertNode(asserter, { file: "", contents: 1 }))
   ).rejects.toThrow(ScriptError)
 
   // Bad position
   await expect(
     asserter.assert(
-      createAssertNode(asserter, { path: "", contents: 1, position: 1 })
+      createAssertNode(asserter, { file: "", contents: 1, position: 1 })
     )
   ).rejects.toThrow(ScriptError)
   await expect(
     asserter.assert(
-      createAssertNode(asserter, { path: "", contents: 1, position: "other" })
+      createAssertNode(asserter, { file: "", contents: 1, position: "other" })
     )
   ).rejects.toThrow(ScriptError)
   await expect(
     asserter.assert(
-      createAssertNode(asserter, { path: "", contents: 1, position: "after" })
+      createAssertNode(asserter, { file: "", contents: 1, position: "after" })
     )
   ).rejects.toThrow(ScriptError)
 
@@ -76,7 +76,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "",
+        file: "",
         contents: "",
         position: "over",
         regex: "[x",
@@ -86,7 +86,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "",
+        file: "",
         contents: "",
         position: "over",
         regex: 1,
@@ -98,7 +98,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/missing",
+        file: "/missing",
         contents: "xyz",
       })
     )
@@ -108,7 +108,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somefile",
+        file: "/somefile",
         contents: "#start\ncontent\n#end",
       })
     )
@@ -118,7 +118,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somefile",
+        file: "/somefile",
         contents: "#different",
       })
     )
@@ -128,7 +128,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somefile",
+        file: "/somefile",
         position: "over",
         regex: "^content$",
         contents: "Setting=yes\n",
@@ -138,7 +138,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somefile",
+        file: "/somefile",
         position: "over",
         regex: "^#foobar\n",
         contents: "foobar\n",
@@ -150,7 +150,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somefile",
+        file: "/somefile",
         position: "before",
         regex: "^#end",
         contents: "content\n",
@@ -160,7 +160,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somefile",
+        file: "/somefile",
         position: "before",
         regex: "^#end",
         contents: "other\n",
@@ -172,7 +172,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somefile",
+        file: "/somefile",
         position: "after",
         regex: "^#start\n",
         contents: "content\n",
@@ -182,7 +182,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somefile",
+        file: "/somefile",
         position: "after",
         regex: "^#start$",
         contents: "other\n",
@@ -238,7 +238,7 @@ test("result", () => {
   asserter.expandedContents = "some contents"
 
   expect(asserter.result()).toEqual({
-    path: asserter.expandedPath,
+    file: asserter.expandedPath,
     contents: asserter.expandedContents,
   })
 })

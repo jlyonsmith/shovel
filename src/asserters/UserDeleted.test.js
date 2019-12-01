@@ -1,14 +1,13 @@
 import { UserDeleted } from "./UserDeleted"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
-import { Script } from "vm"
 
 test("assert", async () => {
   const container = {
     expandStringNode: (node) => node.value,
     util: {
       runningAsRoot: () => true,
-      getUsers: async () => [{ name: "games" }],
+      getUsers: async () => [{ user: "games" }],
     },
   }
 
@@ -19,23 +18,23 @@ test("assert", async () => {
     ScriptError
   )
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: 1 }))
+    asserter.assert(createAssertNode(asserter, { user: 1 }))
   ).rejects.toThrow(ScriptError)
 
   // With user absent
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
+    asserter.assert(createAssertNode(asserter, { user: "notthere" }))
   ).resolves.toBe(true)
 
   // With user present
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "games" }))
+    asserter.assert(createAssertNode(asserter, { user: "games" }))
   ).resolves.toBe(false)
 
   // With user present and not running as root
   container.util.runningAsRoot = () => false
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "games" }))
+    asserter.assert(createAssertNode(asserter, { user: "games" }))
   ).rejects.toThrow(ScriptError)
 })
 
@@ -55,7 +54,7 @@ test("rectify", async () => {
 test("result", () => {
   const asserter = new UserDeleted({})
 
-  asserter.expandedName = "name"
+  asserter.expandedName = "user"
 
-  expect(asserter.result()).toEqual({ name: asserter.expandedName })
+  expect(asserter.result()).toEqual({ user: asserter.expandedName })
 })

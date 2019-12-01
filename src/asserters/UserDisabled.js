@@ -3,21 +3,6 @@ import childProcess from "child-process-promise"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
 
-/*
-Asserts and ensures that a user is disabled.
-
-Example:
-
-{
-  assert: "UserDisabled",
-  with: {
-    name: <string>,
-  }
-}
-
-See https://www.thegeekdiary.com/unix-linux-how-to-lock-or-disable-an-user-account/ for more details
-*/
-
 export class UserDisabled {
   constructor(container) {
     this.fs = container.fs || fs
@@ -28,16 +13,16 @@ export class UserDisabled {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { name: nameNode } = withNode.value
+    const { user: userNode } = withNode.value
 
-    if (!nameNode || nameNode.type !== "string") {
+    if (!userNode || userNode.type !== "string") {
       throw new ScriptError(
-        "'name' must be supplied and be a string",
-        nameNode || withNode
+        "'user' must be supplied and be a string",
+        userNode || withNode
       )
     }
 
-    this.expandedName = this.expandStringNode(nameNode)
+    this.expandedName = this.expandStringNode(userNode)
 
     if (!this.util.runningAsRoot()) {
       throw new ScriptError(
@@ -59,6 +44,6 @@ export class UserDisabled {
   }
 
   result() {
-    return { name: this.expandedName }
+    return { user: this.expandedName }
   }
 }

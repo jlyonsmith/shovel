@@ -1,5 +1,4 @@
 import { FileCopied } from "./FileCopied"
-import stream from "stream"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
 
@@ -33,41 +32,41 @@ test("assert", async () => {
     ScriptError
   )
   await expect(
-    asserter.assert(createAssertNode(asserter, { from: 1 }))
+    asserter.assert(createAssertNode(asserter, { fromFile: 1 }))
   ).rejects.toThrow(ScriptError)
   await expect(
-    asserter.assert(createAssertNode(asserter, { from: "" }))
+    asserter.assert(createAssertNode(asserter, { fromFile: "" }))
   ).rejects.toThrow(ScriptError)
   await expect(
-    asserter.assert(createAssertNode(asserter, { from: "", to: 1 }))
+    asserter.assert(createAssertNode(asserter, { fromFile: "", toFile: 1 }))
   ).rejects.toThrow(ScriptError)
 
   // With files the same
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        from: "/somefile",
-        to: "/otherfile",
+        fromFile: "/somefile",
+        toFile: "/otherfile",
       })
     )
   ).resolves.toBe(true)
 
-  // With from file non-existent
+  // With fromFile file non-existent
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        from: "/notthere",
-        to: "/otherfile",
+        fromFile: "/notthere",
+        toFile: "/otherfile",
       })
     )
   ).rejects.toThrow(ScriptError)
 
-  // FileCopied with to file non-existent
+  // FileCopied with toFile file non-existent
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        from: "/somefile",
-        to: "/notthere",
+        fromFile: "/somefile",
+        toFile: "/notthere",
       })
     )
   ).resolves.toBe(false)
@@ -76,8 +75,8 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        from: "/somefile",
-        to: "/badfile",
+        fromFile: "/somefile",
+        toFile: "/badfile",
       })
     )
   ).resolves.toBe(false)
@@ -90,8 +89,8 @@ test("rectify", async () => {
     },
   })
 
-  asserter.expandedFromPath = "/blah"
-  asserter.expandedToPath = "/blurp"
+  asserter.expandedFromFile = "/blah"
+  asserter.expandedToFile = "/blurp"
 
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
@@ -99,11 +98,11 @@ test("rectify", async () => {
 test("result", async () => {
   const asserter = new FileCopied({})
 
-  asserter.expandedFromPath = "/blah"
-  asserter.expandedToPath = "/blurp"
+  asserter.expandedFromFile = "/blah"
+  asserter.expandedToFile = "/blurp"
 
   expect(asserter.result()).toEqual({
-    fromPath: asserter.expandedFromPath,
-    toPath: asserter.expandedToPath,
+    fromFile: asserter.expandedFromFile,
+    toFile: asserter.expandedToFile,
   })
 })

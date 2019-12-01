@@ -1,14 +1,18 @@
-# `FileDeleted`
+# `FileCopied`
 
 ## Summary
 
-Asserts that a file is deleted from the host.
+Asserts that a file is copied from one location to another.
 
 ## Arguments
 
-### `file: string`
+### `fromFile: string`
 
-The file to ensure is deleted.
+The file to copy from.
+
+### `toFile: string`
+
+The file to copy to.
 
 ## Example
 

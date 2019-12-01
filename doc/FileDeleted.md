@@ -8,7 +8,7 @@ Asserts that a file is deleted from the host.
 
 ### `file: string`
 
-The file to ensure is deleted.
+The file to deleted.
 
 ## Example
 

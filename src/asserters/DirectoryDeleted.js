@@ -1,19 +1,6 @@
 import fs from "fs-extra"
 import { ScriptError } from "../ScriptError"
 
-/*
-Asserts and ensures that a directory is absent.
-
-Example:
-
-{
-  assert: "DirectoryDeleted",
-  with: {
-    path: "/path/to/dir"
-  }
-}
-*/
-
 export class DirectoryDeleted {
   constructor(container) {
     this.fs = container.fs || fs
@@ -22,29 +9,29 @@ export class DirectoryDeleted {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { path: pathNode } = withNode.value
+    const { directory: directoryNode } = withNode.value
 
-    if (!pathNode || pathNode.type !== "string") {
+    if (!directoryNode || directoryNode.type !== "string") {
       throw new ScriptError(
-        "'path' must be supplied and be a string",
-        pathNode || withNode
+        "'directory' must be supplied and be a string",
+        directoryNode || withNode
       )
     }
 
-    this.expandedPath = this.expandStringNode(pathNode)
+    this.expandedDirectory = this.expandStringNode(directoryNode)
 
     let stat = null
 
     try {
-      stat = await this.fs.lstat(this.expandedPath)
+      stat = await this.fs.lstat(this.expandedDirectory)
     } catch (e) {
       return true
     }
 
     if (stat && stat.isFile()) {
       throw new ScriptError(
-        `File exists with the name '${this.expandedPath}'`,
-        pathNode
+        `File exists with the name '${this.expandedDirectory}'`,
+        directoryNode
       )
     }
 
@@ -52,10 +39,10 @@ export class DirectoryDeleted {
   }
 
   async rectify() {
-    await this.fs.remove(this.expandedPath)
+    await this.fs.remove(this.expandedDirectory)
   }
 
   result() {
-    return { path: this.expandedPath }
+    return { directory: this.expandedDirectory }
   }
 }

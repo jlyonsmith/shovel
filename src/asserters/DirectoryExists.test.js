@@ -37,7 +37,7 @@ test("assert", async () => {
     ScriptError
   )
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: 1 }))
+    asserter.assert(createAssertNode(asserter, { directory: 1 }))
   ).rejects.toThrow(ScriptError)
 
   // Use this file for several tests
@@ -53,19 +53,19 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somedir",
+        directory: "/somedir",
         owner: { user: "user1", group: "group1" },
         mode: { user: "rwx", group: "r-x", other: "r--" },
       })
     )
   ).resolves.toBe(true)
-  expect(asserter.result()).toEqual({ path: "/somedir" })
+  expect(asserter.result()).toEqual({ directory: "/somedir" })
 
   // Directory there with different owners when root
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somedir",
+        directory: "/somedir",
         owner: { user: 0, group: "root" },
         mode: { user: "rwx", group: "r-x", other: "r--" },
       })
@@ -76,7 +76,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somedir",
+        directory: "/somedir",
         owner: { user: "user1", group: "group1" },
         mode: { user: "rw-", group: "r--", other: "---" },
       })
@@ -91,7 +91,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somedir",
+        directory: "/somedir",
         owner: { user: "root", group: "root" },
         mode: { user: "rwx", group: "r-x", other: "r--" },
       })
@@ -106,7 +106,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somedir",
+        directory: "/somedir",
         owner: { user: "user1", group: "group1" },
         mode: { user: "rw-", group: "r--", other: "---" },
       })
@@ -121,7 +121,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        path: "/somedir",
+        directory: "/somedir",
         owner: { user: "user1", group: "group1" },
         mode: { user: "rw-", group: "r--", other: "---" },
       })
@@ -137,13 +137,13 @@ test("assert", async () => {
     throw new Error("ENOENT")
   })
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: "/notthere" }))
+    asserter.assert(createAssertNode(asserter, { directory: "/notthere" }))
   ).resolves.toBe(false)
 
   // Directory not there and no file with same name
   container.util.canAccess = jest.fn(async () => false)
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: "/notthere" }))
+    asserter.assert(createAssertNode(asserter, { directory: "/notthere" }))
   ).rejects.toThrow(ScriptError)
 
   // File with same name present
@@ -152,22 +152,22 @@ test("assert", async () => {
     isFile: jest.fn(() => true),
   }))
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: "/somefile" }))
+    asserter.assert(createAssertNode(asserter, { directory: "/somefile" }))
   ).rejects.toThrow(ScriptError)
 })
 
 test("rectify", async () => {
   const container = {
     fs: {
-      ensureDir: jest.fn(async (path, options) => null),
-      chown: jest.fn(async (path, uid, gid) => null),
-      chmod: jest.fn(async (path, mode) => null),
+      ensureDir: jest.fn(async (directory, options) => null),
+      chown: jest.fn(async (directory, uid, gid) => null),
+      chmod: jest.fn(async (directory, mode) => null),
     },
   }
 
   const asserter = new DirectoryExists(container)
 
-  asserter.expandedPath = "/somefile"
+  asserter.expandedDirectory = "/somefile"
   asserter.mode = 0o777
   asserter.owner = { uid: 10, gid: 20 }
 
@@ -177,10 +177,10 @@ test("rectify", async () => {
 test("result", () => {
   const asserter = new DirectoryExists({})
 
-  asserter.expandedPath = "/somefile"
+  asserter.expandedDirectory = "/somefile"
   asserter.mode = 0o777
   asserter.owner = { uid: 10, gid: 20 }
 
-  expect(asserter.result(true)).toEqual({ path: "/somefile" })
-  expect(asserter.result(false)).toEqual({ path: "/somefile" })
+  expect(asserter.result(true)).toEqual({ directory: "/somefile" })
+  expect(asserter.result(false)).toEqual({ directory: "/somefile" })
 })

@@ -11,12 +11,12 @@ export class SystemPackageInstalled {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { name: nameNode } = withNode.value
+    const { package: packageNode } = withNode.value
 
-    if (!nameNode || nameNode.type !== "string") {
+    if (!packageNode || packageNode.type !== "string") {
       throw new ScriptError(
-        "'name' must be supplied and be a string",
-        nameNode || withNode
+        "'package' must be supplied and be a string",
+        packageNode || withNode
       )
     }
 
@@ -29,16 +29,16 @@ export class SystemPackageInstalled {
       throw new ScriptError("Only supported on Ubuntu and CentOS", assertNode)
     }
 
-    this.expandedName = this.expandStringNode(nameNode)
+    this.expandedPackageName = this.expandStringNode(packageNode)
 
     let command
 
     if (info.id === "ubuntu") {
-      command = `dpkg --list ${this.expandedName}`
-      this.installCommand = `apt install -y ${this.expandedName}`
+      command = `dpkg --list ${this.expandedPackageName}`
+      this.installCommand = `apt install -y ${this.expandedPackageName}`
     } else {
-      command = `rpm -qa | grep '^${this.expandedName}-[0-9]'`
-      this.installCommand = `yum install -y ${this.expandedName}`
+      command = `rpm -qa | grep '^${this.expandedPackageName}-[0-9]'`
+      this.installCommand = `yum install -y ${this.expandedPackageName}`
     }
 
     try {
@@ -62,6 +62,6 @@ export class SystemPackageInstalled {
   }
 
   result() {
-    return { name: this.expandedName }
+    return { package: this.expandedPackageName }
   }
 }

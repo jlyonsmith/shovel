@@ -1,22 +1,6 @@
 import fs from "fs-extra"
 import { ScriptError } from "../ScriptError"
 
-/*
-Checks and ensures that a file does not exist.
-
-Example:
-
-{
-  assert: "FilesDeleted",
-  with: {
-    paths: [
-      "/path/to/file1",
-      "path/to/file2"
-    ]
-  }
-}
-*/
-
 export class FilesDeleted {
   constructor(container) {
     this.fs = container.fs || fs
@@ -26,40 +10,40 @@ export class FilesDeleted {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { paths: pathsNode } = withNode.value
+    const { files: filesNode } = withNode.value
 
-    if (!pathsNode || pathsNode.type !== "array") {
+    if (!filesNode || filesNode.type !== "array") {
       throw new ScriptError(
-        "'paths' must be supplied and be an array",
-        pathsNode || withNode
+        "'files' must be supplied and be an array",
+        filesNode || withNode
       )
     }
 
-    this.unlinkedPaths = []
-    this.expandedPaths = []
+    this.unlinkedFiles = []
+    this.expandedFiles = []
 
     let ok = true
 
-    for (const pathNode of pathsNode.value) {
-      if (pathNode.type !== "string") {
-        throw new ScriptError("All 'paths' must be strings", pathNode)
+    for (const fileNode of filesNode.value) {
+      if (fileNode.type !== "string") {
+        throw new ScriptError("All 'files' must be strings", fileNode)
       }
 
-      const expandedPath = this.expandStringNode(pathNode)
+      const expandedPath = this.expandStringNode(fileNode)
       let stat = null
 
-      this.expandedPaths.push(expandedPath)
+      this.expandedFiles.push(expandedPath)
 
       try {
         stat = await this.fs.lstat(expandedPath)
-        this.unlinkedPaths.push(expandedPath)
+        this.unlinkedFiles.push(expandedPath)
         ok = false
       } catch (e) {}
 
       if (stat && stat.isDirectory()) {
         throw new ScriptError(
           `Not removing existing directory with the name '${expandedPath}'`,
-          pathNode
+          fileNode
         )
       }
     }
@@ -68,12 +52,12 @@ export class FilesDeleted {
   }
 
   async rectify() {
-    for (const expandedPath of this.unlinkedPaths) {
+    for (const expandedPath of this.unlinkedFiles) {
       await this.fs.unlink(expandedPath)
     }
   }
 
   result(rectified) {
-    return { paths: rectified ? this.unlinkedPaths : this.expandedPaths }
+    return { files: rectified ? this.unlinkedFiles : this.expandedFiles }
   }
 }

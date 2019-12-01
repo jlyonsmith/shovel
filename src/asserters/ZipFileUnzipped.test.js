@@ -129,23 +129,23 @@ test("assert", async () => {
     ScriptError
   )
   await expect(
-    asserter.assert(createAssertNode(asserter, { zip: 1 }))
+    asserter.assert(createAssertNode(asserter, { file: 1 }))
   ).rejects.toThrow(ScriptError)
 
-  // With bad to path
+  // With bad toDirectory path
   await expect(
-    asserter.assert(createAssertNode(asserter, { zip: "" }))
+    asserter.assert(createAssertNode(asserter, { file: "" }))
   ).rejects.toThrow(ScriptError)
   await expect(
-    asserter.assert(createAssertNode(asserter, { zip: "", to: 1 }))
+    asserter.assert(createAssertNode(asserter, { file: "", toDirectory: 1 }))
   ).rejects.toThrow(ScriptError)
 
-  // With zip file not present
+  // With file not present
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        zip: "./missing.zip",
-        to: "./outdir",
+        file: "./missing.zip",
+        toDirectory: "./outdir",
       })
     )
   ).rejects.toThrow(ScriptError)
@@ -154,8 +154,8 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        zip: "./somefile.zip",
-        to: "./outdir",
+        file: "./somefile.zip",
+        toDirectory: "./outdir",
       })
     )
   ).resolves.toBe(true)
@@ -164,8 +164,8 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        zip: "./somefile.zip",
-        to: "./notthere",
+        file: "./somefile.zip",
+        toDirectory: "./notthere",
       })
     )
   ).resolves.toBe(false)
@@ -174,8 +174,8 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        zip: "./filemissing.zip",
-        to: "./outdir",
+        file: "./filemissing.zip",
+        toDirectory: "./outdir",
       })
     )
   ).resolves.toBe(false)
@@ -184,8 +184,8 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        zip: "./filesize.zip",
-        to: "./outdir",
+        file: "./filesize.zip",
+        toDirectory: "./outdir",
       })
     )
   ).resolves.toBe(false)
@@ -194,8 +194,8 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        zip: "./filedir.zip",
-        to: "./outdir",
+        file: "./filedir.zip",
+        toDirectory: "./outdir",
       })
     )
   ).resolves.toBe(false)
@@ -206,7 +206,10 @@ test("assert", async () => {
   })
   await expect(
     asserter.assert(
-      createAssertNode(asserter, { zip: "./somefile.zip", to: "./outdir" })
+      createAssertNode(asserter, {
+        file: "./somefile.zip",
+        toDirectory: "./outdir",
+      })
     )
   ).resolves.toBe(false)
 })
@@ -270,7 +273,7 @@ test("rectify", async () => {
   }
   const asserter = new ZipFileUnzipped(container)
 
-  asserter.expandedZipPath = "/xyz.zip"
+  asserter.expandedFilePath = "/xyz.zip"
   asserter.expandedToPath = "/"
 
   await expect(asserter.rectify()).resolves.toBeUndefined()
@@ -285,11 +288,11 @@ test("rectify", async () => {
 test("result", () => {
   const asserter = new ZipFileUnzipped({})
 
-  asserter.expandedZipPath = "blah.zip"
+  asserter.expandedFilePath = "blah.zip"
   asserter.expandedToPath = "file/"
 
   expect(asserter.result()).toEqual({
-    zip: asserter.expandedZipPath,
-    to: asserter.expandedToPath,
+    file: asserter.expandedFilePath,
+    toDirectory: asserter.expandedToPath,
   })
 })

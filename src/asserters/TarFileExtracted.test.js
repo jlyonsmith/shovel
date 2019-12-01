@@ -16,15 +16,15 @@ test("assert", async () => {
     ScriptError
   )
   await expect(
-    asserter.assert(createAssertNode(asserter, { archive: 1 }))
+    asserter.assert(createAssertNode(asserter, { file: 1 }))
   ).rejects.toThrow(ScriptError)
 
   // With bad path
   await expect(
-    asserter.assert(createAssertNode(asserter, { archive: "" }))
+    asserter.assert(createAssertNode(asserter, { file: "" }))
   ).rejects.toThrow(ScriptError)
   await expect(
-    asserter.assert(createAssertNode(asserter, { archive: "", directory: 1 }))
+    asserter.assert(createAssertNode(asserter, { file: "", toDirectory: 1 }))
   ).rejects.toThrow(ScriptError)
 })
 

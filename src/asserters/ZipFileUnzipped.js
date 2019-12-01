@@ -4,20 +4,6 @@ import util from "../util"
 import path from "path"
 import { ScriptError } from "../ScriptError"
 
-/*
-Checks and ensures that a .zip file is unzipped to a directory.
-
-Example:
-
-    {
-      assert: "ZipFileUnzipped",
-      with: {
-        zipPath: "${consulZipPath}",
-        to: "./xyz",
-      },
-    }
-*/
-
 export class ZipFileUnzipped {
   constructor(container) {
     this.fs = container.fs || fs
@@ -28,29 +14,29 @@ export class ZipFileUnzipped {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { zip: zipPathNode, to: toPathNode } = withNode.value
+    const { file: fileNode, toDirectory: toDirectoryNode } = withNode.value
 
-    if (!zipPathNode || zipPathNode.type !== "string") {
+    if (!fileNode || fileNode.type !== "string") {
       throw new ScriptError(
-        "'zip' must be supplied and be a string",
-        zipPathNode || withNode
+        "'file' must be supplied and be a string",
+        fileNode || withNode
       )
     }
 
-    if (!toPathNode || toPathNode.type !== "string") {
+    if (!toDirectoryNode || toDirectoryNode.type !== "string") {
       throw new ScriptError(
-        "'to' must be supplied and be a string",
-        toPathNode || withNode
+        "'toDirectory' must be supplied and be a string",
+        toDirectoryNode || withNode
       )
     }
 
-    this.expandedZipPath = this.expandStringNode(zipPathNode)
-    this.expandedToPath = this.expandStringNode(toPathNode)
+    this.expandedFilePath = this.expandStringNode(fileNode)
+    this.expandedToPath = this.expandStringNode(toDirectoryNode)
 
-    if (!(await this.util.fileExists(this.expandedZipPath))) {
+    if (!(await this.util.fileExists(this.expandedFilePath))) {
       throw new ScriptError(
-        `Zip file ${this.expandedZipPath} does not exist`,
-        zipPathNode
+        `Zip file ${this.expandedFilePath} does not exist`,
+        fileNode
       )
     }
 
@@ -61,7 +47,7 @@ export class ZipFileUnzipped {
     let zipFile = null
 
     try {
-      zipFile = await this.yauzl.open(this.expandedZipPath)
+      zipFile = await this.yauzl.open(this.expandedFilePath)
       await zipFile.walkEntries(async (entry) => {
         const targetPath = path.join(this.expandedToPath, entry.fileName)
         const entryIsDir = entry.fileName.endsWith("/")
@@ -93,7 +79,7 @@ export class ZipFileUnzipped {
     let zipFile = null
 
     try {
-      zipFile = await this.yauzl.open(this.expandedZipPath)
+      zipFile = await this.yauzl.open(this.expandedFilePath)
       await zipFile.walkEntries(async (entry) => {
         const targetPath = path.join(this.expandedToPath, entry.fileName)
         const entryIsDir = entry.fileName.endsWith("/")
@@ -118,6 +104,6 @@ export class ZipFileUnzipped {
   }
 
   result() {
-    return { zip: this.expandedZipPath, to: this.expandedToPath }
+    return { file: this.expandedFilePath, toDirectory: this.expandedToPath }
   }
 }

@@ -2,6 +2,8 @@
 
 Here is an alphabetical list of the built-in asserters:
 
+- [`AutoToolProjectConfigured`](./AutoToolProjectConfigured.md)
+- [`AutoToolProjectMade`](./AutoToolProjectMade.md)
 - [`DirectoryDeleted`](./DirectoryDeleted.md)
 - [`DirectoryExists`](./DirectoryExists.md)
 - [`DirectoryZipped`](./DirectoryZipped.md)
@@ -19,8 +21,6 @@ Here is an alphabetical list of the built-in asserters:
 - [`ServiceRunning`](./ServiceRunning.md)
 - [`ServiceStopped`](./ServiceStopped.md)
 - [`TarFileExtracted`](./TarFileExtracted.md)
-- [`AutoToolProjectConfigured`](./AutoToolProjectConfigured.md)
-- [`AutoToolProjectMade`](./AutoToolProjectMade.md)
 - [`UserDeleted`](./UserDeleted.md)
 - [`UserDisabled`](./UserDisabled.md)
 - [`UserExists`](./UserExists.md)

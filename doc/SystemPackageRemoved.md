@@ -6,7 +6,7 @@ Asserts that a system package is removed from the system.
 
 ## Arguments
 
-### `package: string`
+### `package: string` (Required)
 
 The name of the package to remove.
 

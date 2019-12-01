@@ -6,7 +6,7 @@ Asserts that a system package is installed.
 
 ## Arguments
 
-### `package: string`
+### `package: string` (Required)
 
 Then name of the package to install.
 

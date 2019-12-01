@@ -5,20 +5,6 @@ import path from "path"
 import { ScriptError } from "../ScriptError"
 import { resolve } from "dns"
 
-/*
-Ensures that an archive has been unpacked to a directory
-
-Example:
-
-    {
-      assert: "TarFileExtracted",
-      with: {
-        archive: "${tarPath}",
-        directory: "./xyz",
-      },
-    }
-*/
-
 export class TarFileExtracted {
   constructor(container) {
     this.fs = container.fs || fs
@@ -29,31 +15,31 @@ export class TarFileExtracted {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { archive: archiveNode, directory: directoryNode } = withNode.value
+    const { file: fileNode, toDirectory: toDirectoryNode } = withNode.value
 
-    if (!archiveNode || archiveNode.type !== "string") {
+    if (!fileNode || fileNode.type !== "string") {
       throw new ScriptError(
-        "'archive' must be supplied and be a string",
-        archiveNode || withNode
+        "'file' must be supplied and be a string",
+        fileNode || withNode
       )
     }
 
-    if (!directoryNode || directoryNode.type !== "string") {
+    if (!toDirectoryNode || toDirectoryNode.type !== "string") {
       throw new ScriptError(
-        "'to' must be supplied and be a string",
-        directoryNode || withNode
+        "'toDirectory' must be supplied and be a string",
+        toDirectoryNode || withNode
       )
     }
 
-    this.expandedArchive = this.expandStringNode(archiveNode)
-    this.expandedDirectory = this.expandStringNode(directoryNode)
+    this.expandedArchive = this.expandStringNode(fileNode)
+    this.expandedDirectory = this.expandStringNode(toDirectoryNode)
 
-    const archivePathInfo = await this.util.pathInfo(this.expandedArchive)
+    const filePathInfo = await this.util.pathInfo(this.expandedArchive)
 
-    if (!archivePathInfo.getAccess().isReadable()) {
+    if (!filePathInfo.getAccess().isReadable()) {
       throw new ScriptError(
         `Archive file '${this.expandedArchive}' does not exist or is not readable`,
-        archiveNode
+        fileNode
       )
     }
 
@@ -62,7 +48,7 @@ export class TarFileExtracted {
     if (!dirPathInfo.getAccess().isReadWrite()) {
       throw new ScriptError(
         `Directory '${this.expandedDirectory}' does not exist or is not readable and writable`,
-        directoryNode
+        toDirectoryNode
       )
     }
 
@@ -86,8 +72,8 @@ export class TarFileExtracted {
           .catch((error) => {
             reject(
               new ScriptError(
-                `Error reading archive ${this.expandedArchive}. ${e.message}`,
-                archiveNode
+                `Error reading file ${this.expandedArchive}. ${e.message}`,
+                fileNode
               )
             )
           })
@@ -104,6 +90,6 @@ export class TarFileExtracted {
   }
 
   result() {
-    return { archive: this.expandedArchive, directory: this.expandedDirectory }
+    return { file: this.expandedArchive, toDirectory: this.expandedDirectory }
   }
 }

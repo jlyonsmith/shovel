@@ -2,7 +2,7 @@
 
 ## Summary
 
-Asserts that a directory is deleted from the host. If present, the directory is deleted recursively.
+Asserts that a directory is deleted (and all it's children) from the host.
 
 ## Arguments
 

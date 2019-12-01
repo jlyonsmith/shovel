@@ -4,20 +4,6 @@ import util from "../util"
 import os from "os"
 import { ScriptError } from "../ScriptError"
 
-/*
-Asserts and ensures that a group exists.
-
-Example:
-
-{
-  assert: "GroupExists",
-  with: {
-    name: <string>,
-    gid: <number>,
-  }
-}
-*/
-
 export class GroupExists {
   constructor(container) {
     this.fs = container.fs || fs
@@ -29,12 +15,12 @@ export class GroupExists {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { name: nameNode, gid: gidNode } = withNode.value
+    const { group: groupNode, gid: gidNode } = withNode.value
 
-    if (!nameNode || nameNode.type !== "string") {
+    if (!groupNode || groupNode.type !== "string") {
       throw new ScriptError(
-        "'name' must be supplied and be a string",
-        nameNode || withNode
+        "'group' must be supplied and be a string",
+        groupNode || withNode
       )
     }
 
@@ -46,10 +32,10 @@ export class GroupExists {
       this.gid = gidNode.value
     }
 
-    this.expandedName = this.expandStringNode(nameNode)
+    this.expandedGroupName = this.expandStringNode(groupNode)
 
     const group = (await this.util.getGroups()).find(
-      (group) => group.name === this.expandedName
+      (group) => group.name === this.expandedGroupName
     )
 
     const runningAsRoot = this.util.runningAsRoot()
@@ -83,22 +69,24 @@ export class GroupExists {
       (this.modify ? "groupmod" : "groupadd") +
       (this.gid ? " -g " + this.gid : "") +
       " " +
-      this.expandedName
+      this.expandedGroupName
 
     await this.childProcess.exec(command)
 
     const group = (await this.util.getGroups()).find(
-      (group) => group.name === this.expandedName
+      (group) => group.name === this.expandedGroupName
     )
 
     if (!group) {
-      throw new Error(`Group ${this.expandedName} not present in /etc/groups`)
+      throw new Error(
+        `Group ${this.expandedGroupName} not present in /etc/groups`
+      )
     }
 
     this.gid = group.gid
   }
 
   result(rectified) {
-    return { name: this.expandedName, gid: this.gid }
+    return { group: this.expandedGroupName, gid: this.gid }
   }
 }

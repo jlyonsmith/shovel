@@ -17,10 +17,10 @@ test("assert", async () => {
   // Not supported OS
   container.util.osInfo = jest.fn(async () => ({ platform: "windows" }))
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "test" }))
+    asserter.assert(createAssertNode(asserter, { package: "test" }))
   ).rejects.toThrow(ScriptError)
 
-  // Missing name
+  // Missing package
   container.util.osInfo = jest.fn(async () => ({
     platform: "linux",
     id: "ubuntu",
@@ -29,9 +29,9 @@ test("assert", async () => {
     ScriptError
   )
 
-  // Bad name
+  // Bad package
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: 1 }))
+    asserter.assert(createAssertNode(asserter, { package: 1 }))
   ).rejects.toThrow(ScriptError)
 
   // Package present on Ubuntu
@@ -40,7 +40,7 @@ test("assert", async () => {
     stderr: "",
   }))
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "package" }))
+    asserter.assert(createAssertNode(asserter, { package: "package" }))
   ).resolves.toBe(true)
 
   // Package present on CentOS
@@ -53,7 +53,7 @@ test("assert", async () => {
     stderr: "",
   }))
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "package" }))
+    asserter.assert(createAssertNode(asserter, { package: "package" }))
   ).resolves.toBe(true)
 
   // Package not present and running as root
@@ -61,13 +61,13 @@ test("assert", async () => {
     throw new Error()
   })
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
+    asserter.assert(createAssertNode(asserter, { package: "notthere" }))
   ).resolves.toBe(false)
 
   // Package not present and not running as root
   container.util.runningAsRoot = jest.fn(() => false)
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
+    asserter.assert(createAssertNode(asserter, { package: "notthere" }))
   ).rejects.toThrow(ScriptError)
 })
 
@@ -91,7 +91,7 @@ test("rectify", async () => {
 test("result", () => {
   const asserter = new SystemPackageInstalled({})
 
-  asserter.expandedName = "somepackage"
+  asserter.expandedPackageName = "somepackage"
 
-  expect(asserter.result()).toEqual({ name: asserter.expandedName })
+  expect(asserter.result()).toEqual({ package: asserter.expandedPackageName })
 })

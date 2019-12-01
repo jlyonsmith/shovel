@@ -4,28 +4,6 @@ import { ScriptError } from "../ScriptError"
 import util from "../util"
 import path from "path"
 
-/*
-Checks and ensures that a directory exists.
-
-Example:
-
-{
-  assert: "DirectoryExists",
-  with: {
-    path: <string>,
-    owner: {
-      user: <string>,
-      group: <string>
-    },
-    mode: {
-      user: <string>,
-      group: <string>,
-      other: <string>,
-    }
-  }
-}
-*/
-
 export class DirectoryExists {
   constructor(container) {
     this.fs = container.fs || fs
@@ -36,12 +14,16 @@ export class DirectoryExists {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { path: pathNode, owner: ownerNode, mode: modeNode } = withNode.value
+    const {
+      directory: directoryNode,
+      owner: ownerNode,
+      mode: modeNode,
+    } = withNode.value
 
-    if (!pathNode || pathNode.type !== "string") {
+    if (!directoryNode || directoryNode.type !== "string") {
       throw new ScriptError(
-        "'path' must be supplied and be a string",
-        pathNode || withNode
+        "'directory' must be supplied and be a string",
+        directoryNode || withNode
       )
     }
 
@@ -55,16 +37,16 @@ export class DirectoryExists {
     )
     // TODO: Default for dirs should be rwx
     this.mode = this.util.parseModeNode(modeNode)
-    this.expandedPath = this.expandStringNode(pathNode)
+    this.expandedDirectory = this.expandStringNode(directoryNode)
 
     let stat = null
 
     try {
-      stat = await this.fs.lstat(this.expandedPath)
+      stat = await this.fs.lstat(this.expandedDirectory)
     } catch (e) {
       // Ensure the root of the directory is accessible
-      if (!(await this.util.canAccess(path.dirname(this.expandedPath)))) {
-        throw new ScriptError(e.message, pathNode)
+      if (!(await this.util.canAccess(path.dirname(this.expandedDirectory)))) {
+        throw new ScriptError(e.message, directoryNode)
       }
 
       return false
@@ -72,8 +54,8 @@ export class DirectoryExists {
 
     if (stat.isFile()) {
       throw new ScriptError(
-        `A file with the name '${this.expandedPath}' exists`,
-        pathNode
+        `A file with the name '${this.expandedDirectory}' exists`,
+        directoryNode
       )
     } else if (stat.uid !== this.owner.uid || stat.gid !== this.owner.gid) {
       if (userInfo.uid !== 0) {
@@ -103,12 +85,12 @@ export class DirectoryExists {
   }
 
   async rectify() {
-    await this.fs.ensureDir(this.expandedPath)
-    await this.fs.chmod(this.expandedPath, this.mode)
-    await this.fs.chown(this.expandedPath, this.owner.uid, this.owner.gid)
+    await this.fs.ensureDir(this.expandedDirectory)
+    await this.fs.chmod(this.expandedDirectory, this.mode)
+    await this.fs.chown(this.expandedDirectory, this.owner.uid, this.owner.gid)
   }
 
   result() {
-    return { path: this.expandedPath }
+    return { directory: this.expandedDirectory }
   }
 }

@@ -2,13 +2,17 @@
 
 ## Summary
 
-Asserts that a Unix security group exists.
+Asserts that a Linux security group exists.
 
 ## Arguments
 
-### `group: string`
+### `group: string` (Required)
 
-The group to create.
+The name of the group to create.
+
+### `gid: number` (Optional)
+
+The desired group id number
 
 ## Example
 

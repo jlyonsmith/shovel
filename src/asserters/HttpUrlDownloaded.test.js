@@ -43,13 +43,13 @@ test("assert", async () => {
     asserter.assert(createAssertNode(asserter, { url: "", digest: 1 }))
   ).rejects.toThrow(ScriptError)
 
-  // Missing/bad toPath
+  // Missing/bad file
   await expect(
     asserter.assert(createAssertNode(asserter, { url: "", digest: "" }))
   ).rejects.toThrow(ScriptError)
   await expect(
     asserter.assert(
-      createAssertNode(asserter, { url: "", digest: "", toPath: 1 })
+      createAssertNode(asserter, { url: "", digest: "", file: 1 })
     )
   ).rejects.toThrow(ScriptError)
 
@@ -59,7 +59,7 @@ test("assert", async () => {
       createAssertNode(asserter, {
         url: testUrl,
         digest: "1234567890",
-        toPath: "somefile",
+        file: "somefile",
       })
     )
   ).resolves.toBe(true)
@@ -70,7 +70,7 @@ test("assert", async () => {
       createAssertNode(asserter, {
         url: testUrl,
         digest: "1234567890",
-        toPath: "missingfile",
+        file: "missingfile",
       })
     )
   ).resolves.toBe(false)
@@ -81,7 +81,7 @@ test("assert", async () => {
       createAssertNode(asserter, {
         url: testUrl,
         digest: "1234567890",
-        toPath: "badfile",
+        file: "badfile",
       })
     )
   ).resolves.toBe(false)
@@ -101,7 +101,7 @@ test("rectify", async () => {
   const asserter = new HttpUrlDownloaded(container)
 
   asserter.toFileExists = false
-  asserter.expandedToPath = "/foo/bar.txt"
+  asserter.expandedFile = "/foo/bar.txt"
   asserter.expandedUrl = "http://something.com"
 
   await expect(asserter.rectify()).resolves.toBeUndefined()
@@ -114,7 +114,7 @@ test("rectify", async () => {
 test("result", () => {
   const asserter = new HttpUrlDownloaded({})
 
-  asserter.expandedToPath = "/somedir/somefile.txt"
+  asserter.expandedFile = "/somedir/somefile.txt"
 
-  expect(asserter.result()).toEqual({ toPath: asserter.expandedToPath })
+  expect(asserter.result()).toEqual({ file: asserter.expandedFile })
 })

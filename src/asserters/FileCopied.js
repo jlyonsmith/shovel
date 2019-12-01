@@ -1,5 +1,4 @@
 import fs from "fs-extra"
-import path from "path"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
 
@@ -12,49 +11,51 @@ export class FileCopied {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { from: fromPathNode, to: toPathNode } = withNode.value
+    const { fromFile: fromFileNode, toFile: toFileNode } = withNode.value
 
-    if (!fromPathNode || fromPathNode.type !== "string") {
+    if (!fromFileNode || fromFileNode.type !== "string") {
       throw new ScriptError(
-        "'from' must be supplied and be a string",
-        fromPathNode || withNode
+        "'fromFile' must be supplied and be a string",
+        fromFileNode || withNode
       )
     }
 
-    if (!toPathNode || toPathNode.type !== "string") {
+    if (!toFileNode || toFileNode.type !== "string") {
       throw new ScriptError(
-        "'to' must be supplied and be a string",
-        toPathNode || withNode
+        "'toFile' must be supplied and be a string",
+        toFileNode || withNode
       )
     }
 
-    this.expandedToPath = this.expandStringNode(toPathNode)
-    this.expandedFromPath = this.expandStringNode(fromPathNode)
+    this.expandedToFile = this.expandStringNode(toFileNode)
+    this.expandedFromFile = this.expandStringNode(fromFileNode)
 
-    if (!(await this.util.fileExists(this.expandedFromPath))) {
+    if (!(await this.util.fileExists(this.expandedFromFile))) {
       throw new ScriptError(
-        `File ${this.expandedFromPath} does not exist`,
-        fromPathNode
+        `File ${this.expandedFromFile} does not exist`,
+        fromFileNode
       )
     }
 
-    if (!(await this.util.fileExists(this.expandedToPath))) {
+    if (!(await this.util.fileExists(this.expandedToFile))) {
       return false
     }
 
-    const fromDigest = await this.util.generateDigestFromFile(
-      this.expandedFromPath
+    const fromFileDigest = await this.util.generateDigestFromFile(
+      this.expandedFromFile
     )
-    const toDigest = await this.util.generateDigestFromFile(this.expandedToPath)
+    const toFileDigest = await this.util.generateDigestFromFile(
+      this.expandedToFile
+    )
 
-    return fromDigest === toDigest
+    return fromFileDigest === toFileDigest
   }
 
   async rectify() {
-    await this.fs.copy(this.expandedFromPath, this.expandedToPath)
+    await this.fs.copy(this.expandedFromFile, this.expandedToFile)
   }
 
   result() {
-    return { fromPath: this.expandedFromPath, toPath: this.expandedToPath }
+    return { fromFile: this.expandedFromFile, toFile: this.expandedToFile }
   }
 }

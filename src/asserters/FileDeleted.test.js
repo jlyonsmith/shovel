@@ -33,24 +33,24 @@ test("assert", async () => {
     ScriptError
   )
 
-  // Bad path
+  // Bad file
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: 1 }))
+    asserter.assert(createAssertNode(asserter, { file: 1 }))
   ).rejects.toThrow(ScriptError)
 
   // File absent
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: "/notthere" }))
+    asserter.assert(createAssertNode(asserter, { file: "/notthere" }))
   ).resolves.toBe(true)
 
   // File exists
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: "/somefile" }))
+    asserter.assert(createAssertNode(asserter, { file: "/somefile" }))
   ).resolves.toBe(false)
 
   // Directory existing instead of file
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: "/somedir" }))
+    asserter.assert(createAssertNode(asserter, { file: "/somedir" }))
   ).rejects.toThrow(Error)
 })
 
@@ -58,7 +58,7 @@ test("rectify", async () => {
   const container = { fs: { unlink: jest.fn(async () => null) } }
   const asserter = new FileDeleted(container)
 
-  asserter.expandedPath = "foo.txt"
+  asserter.expandedFile = "foo.txt"
 
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
@@ -66,7 +66,7 @@ test("rectify", async () => {
 test("result", () => {
   const asserter = new FileDeleted({})
 
-  asserter.expandedPath = "foo.txt"
+  asserter.expandedFile = "foo.txt"
 
-  expect(asserter.result()).toEqual({ path: asserter.expandedPath })
+  expect(asserter.result()).toEqual({ file: asserter.expandedFile })
 })

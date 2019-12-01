@@ -3,19 +3,6 @@ import childProcess from "child-process-promise"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
 
-/*
-Asserts and ensures that a user is absent.
-
-Example:
-
-{
-  assert: "UserDeleted",
-  with: {
-    name: "string",
-  }
-}
-*/
-
 export class UserDeleted {
   constructor(container) {
     this.fs = container.fs || fs
@@ -26,20 +13,20 @@ export class UserDeleted {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { name: nameNode } = withNode.value
+    const { user: userNode } = withNode.value
 
-    if (!nameNode || nameNode.type !== "string") {
+    if (!userNode || userNode.type !== "string") {
       throw new ScriptError(
-        "'name' must be supplied and be a string",
-        nameNode || withNode
+        "'user' must be supplied and be a string",
+        userNode || withNode
       )
     }
 
-    this.expandedName = this.expandStringNode(nameNode)
+    this.expandedName = this.expandStringNode(userNode)
 
     const ok =
       (await this.util.getUsers()).find(
-        (user) => user.name === this.expandedName
+        (user) => user.user === this.expandedName
       ) === undefined
 
     if (!ok && !this.util.runningAsRoot()) {
@@ -54,6 +41,6 @@ export class UserDeleted {
   }
 
   result() {
-    return { name: this.expandedName }
+    return { user: this.expandedName }
   }
 }

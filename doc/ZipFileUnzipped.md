@@ -6,7 +6,7 @@ Asserts that a `.gz` or `.zip` file has been unzipped by comparing the sizes of 
 
 ## Arguments
 
-### `zipFile: string`
+### `file: string`
 
 The file to unzip.
 
@@ -20,7 +20,7 @@ The directory in which to place the unzipped files.
 {
   assert: "ZipFileUnzipped",
   with: {
-    zipFile: "zipfile.gz",
+    file: "zipfile.gz",
     toDirectory: "/some/dir",
   }
 }

@@ -31,22 +31,22 @@ test("assert", async () => {
     ScriptError
   )
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: 1 }))
+    asserter.assert(createAssertNode(asserter, { directory: 1 }))
   ).rejects.toThrow(ScriptError)
 
   // DirectoryDeleted with no dir or file existing
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: "/notthere" }))
+    asserter.assert(createAssertNode(asserter, { directory: "/notthere" }))
   ).resolves.toBe(true)
 
   // DirectoryDeleted with dir existing
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: "/somedir" }))
+    asserter.assert(createAssertNode(asserter, { directory: "/somedir" }))
   ).resolves.toBe(false)
 
   // DirectoryDeleted with file instead of dir existing
   await expect(
-    asserter.assert(createAssertNode(asserter, { path: "/somefile" }))
+    asserter.assert(createAssertNode(asserter, { directory: "/somefile" }))
   ).rejects.toThrow(ScriptError)
 })
 
@@ -58,7 +58,7 @@ test("rectify", async () => {
   }
   const asserter = new DirectoryDeleted(container)
 
-  asserter.expandedPath = "blah"
+  asserter.expandedDirectory = "blah"
 
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
@@ -66,7 +66,7 @@ test("rectify", async () => {
 test("result", () => {
   const asserter = new DirectoryDeleted({})
 
-  asserter.expandedPath = "blah"
+  asserter.expandedDirectory = "blah"
 
-  expect(asserter.result()).toEqual({ path: asserter.expandedPath })
+  expect(asserter.result()).toEqual({ directory: asserter.expandedDirectory })
 })

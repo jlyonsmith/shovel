@@ -4,20 +4,6 @@ import path from "path"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
 
-/*
-Checks and ensures that a file exists.
-
-Example:
-
-{
-  assert: "FileExists",
-  with: {
-    path: "/path/to/file"
-
-  }
-}
-*/
-
 export class FileExists {
   constructor(container) {
     this.fs = container.fs || fs
@@ -29,12 +15,12 @@ export class FileExists {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { path: pathNode, owner: ownerNode, mode: modeNode } = withNode.value
+    const { file: fileNode, owner: ownerNode, mode: modeNode } = withNode.value
 
-    if (!pathNode || pathNode.type !== "string") {
+    if (!fileNode || fileNode.type !== "string") {
       throw new ScriptError(
-        "'path' must be supplied and be a string",
-        pathNode || withNode
+        "'file' must be supplied and be a string",
+        fileNode || withNode
       )
     }
 
@@ -49,14 +35,14 @@ export class FileExists {
       this.util.parseOwnerNode(users, groups, ownerNode)
     )
     this.mode = this.util.parseModeNode(modeNode)
-    this.expandedPath = this.expandStringNode(pathNode)
+    this.expandedFile = this.expandStringNode(fileNode)
 
     try {
-      stat = await this.fs.lstat(this.expandedPath)
+      stat = await this.fs.lstat(this.expandedFile)
     } catch (e) {
       // Check if the target directory exists and is accessible
-      if (!(await this.util.canAccess(path.dirname(this.expandedPath)))) {
-        throw new ScriptError(e.message, pathNode)
+      if (!(await this.util.canAccess(path.dirname(this.expandedFile)))) {
+        throw new ScriptError(e.message, fileNode)
       }
 
       return false
@@ -64,14 +50,14 @@ export class FileExists {
 
     if (stat && stat.isDirectory()) {
       throw new ScriptError(
-        `A directory exists with the name '${this.expandedPath}'`,
-        pathNode
+        `A directory exists with the name '${this.expandedFile}'`,
+        fileNode
       )
     } else if (stat.uid !== this.owner.uid || stat.gid !== this.owner.gid) {
       if (userInfo.uid !== 0) {
         throw new ScriptError(
           "User does not have permission to modify existing file owner",
-          pathNode
+          fileNode
         )
       }
 
@@ -84,7 +70,7 @@ export class FileExists {
       ) {
         throw new ScriptError(
           "User does not have permission to modify existing file mode",
-          pathNode
+          fileNode
         )
       }
 
@@ -95,14 +81,14 @@ export class FileExists {
   }
 
   async rectify() {
-    const fd = await this.fs.open(this.expandedPath, "a")
+    const fd = await this.fs.open(this.expandedFile, "a")
 
     await this.fs.close(fd)
-    await this.fs.chmod(this.expandedPath, this.mode)
-    await this.fs.chown(this.expandedPath, this.owner.uid, this.owner.gid)
+    await this.fs.chmod(this.expandedFile, this.mode)
+    await this.fs.chown(this.expandedFile, this.owner.uid, this.owner.gid)
   }
 
   result() {
-    return { path: this.expandedPath }
+    return { file: this.expandedFile }
   }
 }

@@ -3,23 +3,6 @@ import childProcess from "child-process-promise"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
 
-/*
-Asserts and ensures that a user exists with UID, GID, shell and/or system priveges.
-
-Example:
-
-{
-  assert: "UserExists",
-  with: {
-    name: <string>,
-    gid: <number>,
-    uid: <number>,
-    system: <bool>,
-    shell: <string>,
-  }
-}
-*/
-
 export class UserExists {
   constructor(container) {
     this.fs = container.fs || fs
@@ -31,7 +14,7 @@ export class UserExists {
   async assert(assertNode) {
     const withNode = assertNode.value.with
     const {
-      name: nameNode,
+      user: userNode,
       uid: uidNode,
       gid: gidNode,
       shell: shellNode,
@@ -39,10 +22,10 @@ export class UserExists {
       comment: commentNode,
     } = withNode.value
 
-    if (!nameNode || nameNode.type !== "string") {
+    if (!userNode || userNode.type !== "string") {
       throw new ScriptError(
-        "'name' must be supplied and be a string",
-        nameNode || withNode
+        "'user' must be supplied and be a string",
+        userNode || withNode
       )
     }
 
@@ -88,7 +71,7 @@ export class UserExists {
       this.user.comment = commentNode.value
     }
 
-    this.expandedName = this.expandStringNode(nameNode)
+    this.expandedName = this.expandStringNode(userNode)
 
     const user = (await this.util.getUsers(this.fs)).find(
       (user) => user.name === this.expandedName

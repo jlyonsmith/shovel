@@ -25,23 +25,23 @@ test("assert", async () => {
     ScriptError
   )
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: 1 }))
+    asserter.assert(createAssertNode(asserter, { group: 1 }))
   ).rejects.toThrow(ScriptError)
 
   // With group absent
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "notthere" }))
+    asserter.assert(createAssertNode(asserter, { group: "notthere" }))
   ).resolves.toBe(true)
 
   // With group present
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "news" }))
+    asserter.assert(createAssertNode(asserter, { group: "news" }))
   ).resolves.toBe(false)
 
   // With group absent and not root
   container.util.runningAsRoot = () => false
   await expect(
-    asserter.assert(createAssertNode(asserter, { name: "news" }))
+    asserter.assert(createAssertNode(asserter, { group: "news" }))
   ).rejects.toThrow(ScriptError)
 })
 
@@ -53,7 +53,7 @@ test("rectify", async () => {
   }
   const asserter = new GroupDeleted(container)
 
-  asserter.expandedName = "blah"
+  asserter.expandedGroupName = "blah"
 
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
@@ -61,7 +61,7 @@ test("rectify", async () => {
 test("result", () => {
   const asserter = new GroupDeleted({})
 
-  asserter.expandedName = "news"
+  asserter.expandedGroupName = "news"
 
-  expect(asserter.result()).toEqual({ name: asserter.expandedName })
+  expect(asserter.result()).toEqual({ group: asserter.expandedGroupName })
 })
