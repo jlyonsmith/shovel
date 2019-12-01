@@ -1,8 +1,8 @@
-# `FileUnzipped`
+# `FileExtracted`
 
 ## Summary
 
-Asserts that a `.gz` or `.zip` file has been unzipped by comparing the sizes of the files in `zipFile` with the files in `toDirectory`.
+Asserts that a `.tar`, `.tar.gz` or `.tgz` file has been extracted by comparing the sizes of the files in `tarFile` with the files in `toDirectory`.
 
 ## Arguments
 
@@ -18,9 +18,9 @@ The directory in which to place the unzipped files.
 
 ```json5
 {
-  assert: "FileUnzipped",
+  assert: "FileExtracted",
   with: {
-    zipFile: "zipfile.gz",
+    tarFile: "archive.tgz",
     toDirectory: "/some/dir",
   }
 }

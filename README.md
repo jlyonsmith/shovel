@@ -151,3 +151,8 @@ Finally, the `result()` method will *always* be called to output the result of t
 
 1. Return an object with information that helps the user understand what the assert checked or modified.
 2. Do not `throw` from this method
+
+Argument naming should generally follow these rules:
+
+- The argument should include a noun for the thing it pertains too, e.g. `user`, `directory`, `file`, `group`, etc..
+- If there are multiple arguments with the same noun, add a pronoun to differentiate, e.g. `fromFile` and `toFile`
