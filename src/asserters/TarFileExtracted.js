@@ -55,6 +55,8 @@ export class TarFileExtracted {
       )
     }
 
+    // TODO: Don't early exit; instead collect all the files that are different into result
+
     const ok = await new Promise((resolve, reject) => {
       const readable = this.fs.createReadStream(this.expandedFile)
       const writeable = new this.tar.Parse()
