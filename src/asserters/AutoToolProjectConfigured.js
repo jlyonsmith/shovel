@@ -1,4 +1,4 @@
-import childProcess from "child-process-promise"
+import childProcess from "child-process-es6-promise"
 import util from "../util"
 import path from "path"
 import { ScriptError } from "../ScriptError"
@@ -47,8 +47,10 @@ export class AutoToolProjectConfigured {
   }
 
   async rectify() {
-    await this.childProcess.exec(`configure ${this.expandedArgs}`, {
-      cwd: this.expandedDirectory,
+    const cwd = path.resolve(this.expandedDirectory)
+
+    await this.childProcess.exec(`./configure ${this.expandedArgs}`, {
+      cwd,
     })
   }
 

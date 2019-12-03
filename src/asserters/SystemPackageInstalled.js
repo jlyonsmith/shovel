@@ -1,4 +1,4 @@
-import childProcess from "child-process-promise"
+import childProcess from "child-process-es6-promise"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
 

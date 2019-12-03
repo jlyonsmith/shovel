@@ -64,7 +64,7 @@
     "autobind-decorator": "^2.4.0",
     "await-timeout": "^0.6.0",
     "chalk": "^2.4.2",
-    "child-process-promise": "^2.2.1",
+    "child-process-es6-promisemise": "^1.2.1",
     "command-exists": "^1.2.8",
     "fs-extra": "^8.1.0",
     "linux-os-info": "^2.0.0",
