@@ -7,6 +7,26 @@ test("assert", async () => {
     expandStringNode: (node) => node.value,
     childProcess: {},
     util: {
+      pathInfo: async (path) => {
+        switch (path) {
+          case "/xyz/configure":
+            return {
+              getAccess: () => ({
+                isReadable: () => true,
+              }),
+            }
+          case "/xyz/config.status":
+            return {
+              isFile: () => true,
+            }
+          case "/abc/configure":
+            return {
+              getAccess: () => ({
+                isReadable: () => false,
+              }),
+            }
+        }
+      },
       runningAsRoot: jest.fn(() => true),
     },
   }
@@ -22,6 +42,16 @@ test("assert", async () => {
   ).rejects.toThrow(ScriptError)
   await expect(
     asserter.assert(createAssertNode(asserter, { directory: "", args: 1 }))
+  ).rejects.toThrow(ScriptError)
+
+  // All configured
+  await expect(
+    asserter.assert(createAssertNode(asserter, { directory: "/xyz", args: "" }))
+  ).resolves.toBe(true)
+
+  // config not found
+  await expect(
+    asserter.assert(createAssertNode(asserter, { directory: "/abc" }))
   ).rejects.toThrow(ScriptError)
 })
 

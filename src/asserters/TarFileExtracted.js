@@ -3,7 +3,6 @@ import tar from "tar"
 import util from "../util"
 import path from "path"
 import { ScriptError } from "../ScriptError"
-import { resolve } from "dns"
 
 export class TarFileExtracted {
   constructor(container) {
@@ -24,28 +23,32 @@ export class TarFileExtracted {
       )
     }
 
-    if (!toDirectoryNode || toDirectoryNode.type !== "string") {
-      throw new ScriptError(
-        "'toDirectory' must be supplied and be a string",
-        toDirectoryNode || withNode
-      )
+    this.expandedFile = this.expandStringNode(fileNode)
+
+    if (toDirectoryNode) {
+      if (toDirectoryNode.type !== "string") {
+        throw new ScriptError("'toDirectory' must be a string", toDirectoryNode)
+      }
+
+      this.expandedDirectory = this.expandStringNode(toDirectoryNode)
+    } else {
+      this.expandedDirectory = path.dirname(this.expandedFile)
     }
 
-    this.expandedArchive = this.expandStringNode(fileNode)
-    this.expandedDirectory = this.expandStringNode(toDirectoryNode)
-
-    const filePathInfo = await this.util.pathInfo(this.expandedArchive)
-
-    if (!filePathInfo.getAccess().isReadable()) {
+    if (
+      !(await this.util.pathInfo(this.expandedFile)).getAccess().isReadable()
+    ) {
       throw new ScriptError(
-        `Archive file '${this.expandedArchive}' does not exist or is not readable`,
+        `Archive file '${this.expandedFile}' does not exist or is not readable`,
         fileNode
       )
     }
 
-    const dirPathInfo = await this.util.pathInfo(this.expandedDirectory)
-
-    if (!dirPathInfo.getAccess().isReadWrite()) {
+    if (
+      !(await this.util.pathInfo(this.expandedDirectory))
+        .getAccess()
+        .isReadWrite()
+    ) {
       throw new ScriptError(
         `Directory '${this.expandedDirectory}' does not exist or is not readable and writable`,
         toDirectoryNode
@@ -53,8 +56,8 @@ export class TarFileExtracted {
     }
 
     const ok = await new Promise((resolve, reject) => {
-      const readable = fs.createReadStream(this.expandedArchive)
-      const writeable = new tar.Parse()
+      const readable = this.fs.createReadStream(this.expandedFile)
+      const writeable = new this.tar.Parse()
 
       writeable.on("entry", (entry) => {
         const fullPath = path.join(this.expandedDirectory, entry.path)
@@ -72,11 +75,14 @@ export class TarFileExtracted {
           .catch((error) => {
             reject(
               new ScriptError(
-                `Error reading file ${this.expandedArchive}. ${e.message}`,
+                `Error reading file ${this.expandedFile}. ${error.message}`,
                 fileNode
               )
             )
           })
+      })
+      readable.on("end", () => {
+        readable.destroy()
       })
       readable.on("close", () => resolve(true))
       readable.pipe(writeable)
@@ -86,10 +92,10 @@ export class TarFileExtracted {
   }
 
   async rectify() {
-    await tar.x({ file: this.expandedArchive, cwd: this.expandedDirectory })
+    await this.tar.x({ file: this.expandedFile, cwd: this.expandedDirectory })
   }
 
   result() {
-    return { file: this.expandedArchive, toDirectory: this.expandedDirectory }
+    return { file: this.expandedFile, toDirectory: this.expandedDirectory }
   }
 }

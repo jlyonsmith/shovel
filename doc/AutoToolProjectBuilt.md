@@ -6,13 +6,13 @@ Asserts that a specified target of an [AutoTool](https://www.gnu.org/software/au
 
 ## Arguments
 
-### `directory: String`
+### `directory: String` (Required)
 
 The path to the project root directory.
 
-### `target: String`
+### `args: String` (Optional)
 
-The target for the `make` command.
+Additional arguments for building the project.
 
 ## Possible Errors
 
@@ -26,7 +26,7 @@ The target for the `make` command.
   assert: "AutoToolProjectMade",
   with: {
     directory: "/path/to/project",
-    target: "install",
+    args: "-D ARG=xyz",
   }
 }
 ```

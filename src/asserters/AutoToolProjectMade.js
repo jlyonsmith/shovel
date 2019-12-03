@@ -3,20 +3,6 @@ import util from "../util"
 import path from "path"
 import { ScriptError } from "../ScriptError"
 
-/*
-Ensures that a make target has been built
-
-Example:
-
-{
-  assert: "AutoToolProjectMade",
-  with: {
-    directory: <string>,
-    target: <string>,
-  }
-}
-*/
-
 export class AutoToolProjectMade {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
@@ -26,7 +12,7 @@ export class AutoToolProjectMade {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { directory: directoryNode, target: targetNode } = withNode.value
+    const { directory: directoryNode, args: argsNode } = withNode.value
 
     this.assertNode = assertNode
 
@@ -39,11 +25,11 @@ export class AutoToolProjectMade {
 
     this.expandedDirectory = this.expandStringNode(directoryNode)
 
-    if (targetNode) {
-      if (targetNode.type !== "string") {
-        throw new ScriptError("'target' must be a string", targetNode)
+    if (argsNode) {
+      if (argsNode.type !== "string") {
+        throw new ScriptError("'args' must be a string", argsNode)
       }
-      this.expandedTarget = this.expandStringNode(targetNode)
+      this.expandedTarget = this.expandStringNode(argsNode)
     } else {
       this.expandedTarget = ""
     }
@@ -85,6 +71,6 @@ export class AutoToolProjectMade {
   }
 
   result() {
-    return { directory: this.expandedDirectory, target: this.expandedTarget }
+    return { directory: this.expandedDirectory, args: this.expandedTarget }
   }
 }

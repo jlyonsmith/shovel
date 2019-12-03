@@ -3,20 +3,6 @@ import util from "../util"
 import path from "path"
 import { ScriptError } from "../ScriptError"
 
-/*
-Ensures that an AutoTools based package configure command has been run
-
-Example:
-
-{
-  assert: "AutoToolProjectConfigured",
-  with: {
-    directory: <string>,
-    args: <string>,
-  }
-}
-*/
-
 export class AutoToolProjectConfigured {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess

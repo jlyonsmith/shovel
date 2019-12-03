@@ -46,20 +46,20 @@ test("assert", async () => {
     asserter.assert(createAssertNode(asserter, { directory: 1 }))
   ).rejects.toThrow(ScriptError)
   await expect(
-    asserter.assert(createAssertNode(asserter, { directory: "", target: 1 }))
+    asserter.assert(createAssertNode(asserter, { directory: "", args: 1 }))
   ).rejects.toThrow(ScriptError)
 
   // All made
   await expect(
     asserter.assert(
-      createAssertNode(asserter, { directory: "/xyz", target: "foo" })
+      createAssertNode(asserter, { directory: "/xyz", args: "foo" })
     )
   ).resolves.toBe(true)
 
   // All not made
   await expect(
     asserter.assert(
-      createAssertNode(asserter, { directory: "/xyz", target: "bar" })
+      createAssertNode(asserter, { directory: "/xyz", args: "bar" })
     )
   ).resolves.toBe(false)
 })
@@ -88,6 +88,6 @@ test("result", () => {
 
   expect(asserter.result()).toEqual({
     directory: asserter.expandedDirectory,
-    target: asserter.expandedTarget,
+    args: asserter.expandedTarget,
   })
 })
