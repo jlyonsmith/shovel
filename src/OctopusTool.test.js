@@ -480,6 +480,10 @@ test("runScriptLocally", async () => {
         SUDO_GID: "1",
       },
     },
+    ora: () => ({
+      start: () => undefined,
+      stop: () => undefined,
+    }),
   })
 
   const tool = new OctopusTool(container)
@@ -530,7 +534,11 @@ test("runScriptLocally", async () => {
   }))
 
   // Has becomes
-  await expect(tool.runScriptLocally("test.json5")).resolves.toBeUndefined()
+  await expect(
+    tool.runScriptLocally("test.json5", {
+      spinner: true,
+    })
+  ).resolves.toBeUndefined()
 
   // Has becomes and not running as root
   container.util.runningAsRoot = () => false

@@ -39,16 +39,16 @@ export class ServiceRunning {
   }
 
   async rectify() {
-    // TODO: Do not run sudo directly here
     await this.childProcess.exec(
-      `sudo systemctl restart ${this.expandedServiceName}`
+      `systemctl restart ${this.expandedServiceName}`
     )
 
     let output = null
 
+    // TODO: Add a timer here
     do {
       output = await this.childProcess.exec(
-        `sudo systemctl is-active ${this.expandedServiceName}`
+        `systemctl is-active ${this.expandedServiceName}`
       )
 
       if (output.stdout === "failed" || output.stdout === "inactive") {

@@ -1,10 +1,119 @@
 import stream from "stream"
 import { createNode } from "./testUtil"
 import { ScriptError } from "./ScriptError"
-import { Utility, PathInfo } from "./util"
+import { Utility, PathInfo, PathAccess } from "./util"
 import fs from "fs-extra"
 
 const testString = "the quick brown fox jumps over the lazy dog"
+
+test("PathAccess", () => {
+  let access = new PathAccess(7)
+
+  expect(access.isReadable()).toBe(true)
+  expect(access.isReadWrite()).toBe(true)
+  expect(access.isExecutable()).toBe(true)
+  expect(access.isTraversable()).toBe(true)
+
+  access = new PathAccess(0)
+
+  expect(access.isReadable()).toBe(false)
+  expect(access.isReadWrite()).toBe(false)
+  expect(access.isExecutable()).toBe(false)
+  expect(access.isTraversable()).toBe(false)
+})
+
+test("PathInfo", async () => {
+  const container = {
+    process: {
+      geteuid: () => 1,
+      getgroups: () => [1, 2],
+    },
+  }
+  const util = new Utility(container)
+
+  // File
+  let info = new PathInfo(
+    {
+      isFile: () => true,
+      gid: 1,
+      uid: 1,
+      size: 100,
+      mode: 0o777,
+    },
+    container
+  )
+
+  expect(info).toMatchObject({
+    uid: 1,
+    gid: 1,
+    mode: 0o777,
+    size: 100,
+    type: 1,
+  })
+  expect(info.isFile()).toBe(true)
+  expect(info.toString()).toBe(
+    '{"type":1,"size":100,"uid":1,"gid":1,"mode":511}'
+  )
+  expect(info.modeString()).toBe("rwxrwxrwx")
+
+  let access = info.getAccess()
+
+  expect(access.isReadable()).toBe(true)
+
+  // Inaccessible directory
+  info = new PathInfo(
+    {
+      isFile: () => false,
+      isDirectory: () => true,
+      uid: 0,
+      gid: 2,
+      size: 0,
+      mode: 0,
+    },
+    container
+  )
+  expect(info).toMatchObject({
+    uid: 0,
+    gid: 2,
+    size: 0,
+    mode: 0,
+    type: 2,
+  })
+  expect(info.isDirectory()).toBe(true)
+  expect(info.modeString()).toBe("---------")
+  access = info.getAccess()
+  expect(access.isWritable()).toBe(false)
+
+  // Other
+  info = new PathInfo(
+    {
+      isFile: () => false,
+      isDirectory: () => false,
+      uid: 0,
+      gid: 0,
+      size: 0,
+      mode: 0o666,
+    },
+    container
+  )
+  expect(info).toMatchObject({
+    type: 3,
+    mode: 0o666,
+    uid: 0,
+    gid: 0,
+    size: 0,
+  })
+  expect(info.isOther()).toBe(true)
+  access = info.getAccess(1, [1, 2])
+  expect(access.isReadWrite()).toBe(true)
+
+  // Bad file
+  info = await util.pathInfo("/noexist")
+  expect(info).toMatchObject({
+    type: 0,
+  })
+  expect(info.isMissing()).toBe(true)
+})
 
 test("generateDigestFromFile", async () => {
   const util = new Utility({
@@ -35,100 +144,19 @@ test("generateDigest", () => {
 
 test("pathInfo", async () => {
   const container = {
-    process: {
-      geteuid: () => 1,
-      getgroups: () => [1, 2],
-    },
     fs: {
-      lstat: async (pathName) => {
-        if (pathName === "/noexist") {
-          throw new Error()
-        } else if (pathName === "/other") {
-          return new PathInfo(
-            {
-              isFile: () => false,
-              isDirectory: () => false,
-              uid: 0,
-              gid: 0,
-              size: 0,
-              mode: 0o444,
-            },
-            container
-          )
-        } else if (pathName === "/file") {
-          return new PathInfo(
-            {
-              isFile: () => true,
-              gid: 1,
-              uid: 1,
-              size: 100,
-              mode: 0o777,
-            },
-            container
-          )
-        } else if (pathName === "/") {
-          return new PathInfo(
-            {
-              isFile: () => false,
-              isDirectory: () => true,
-              uid: 0,
-              gid: 2,
-              size: 0,
-              mode: 0o050,
-            },
-            container
-          )
-        }
-      },
+      lstat: async (pathName) => null,
     },
   }
   const util = new Utility(container)
 
-  // File
-  let info = await util.pathInfo("/file")
-
-  expect(info).toMatchObject({
-    uid: 1,
-    gid: 1,
-    mode: 0o777,
-    size: 100,
-    type: 1,
+  // Good(ish) file
+  await expect(util.pathInfo("/file")).resolves.toMatchObject({
+    type: 0,
   })
-  expect(info.isFile()).toBe(true)
-
-  let access = info.getAccess()
-
-  expect(access.isReadable())
-
-  // Directory
-  info = await util.pathInfo("/")
-  expect(info).toMatchObject({
-    uid: 0,
-    gid: 2,
-    size: 0,
-    mode: 0o050,
-    type: 2,
-  })
-  expect(info.isDirectory()).toBe(true)
-  access = info.getAccess()
-  expect(access.isWritable())
-
-  // Other
-  info = await util.pathInfo("/other")
-
-  expect(info).toMatchObject({
-    type: 3,
-    mode: 0o444,
-    uid: 0,
-    gid: 0,
-    size: 0,
-  })
-  access = info.getAccess()
-  expect(access.isReadWrite())
 
   // Bad file
-  info = await util.pathInfo("/noexist")
-  expect(info).toMatchObject({
+  await expect(util.pathInfo("/noexist")).resolves.toMatchObject({
     type: 0,
   })
 })

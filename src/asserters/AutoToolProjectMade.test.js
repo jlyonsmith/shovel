@@ -12,7 +12,7 @@ test("assert", async () => {
     expandStringNode: (node) => node.value,
     childProcess: {
       exec: async (command) => {
-        if (command.endsWith("foo")) {
+        if (command === "make") {
           return {}
         } else if (command.endsWith("bar")) {
           const error = new Error()
@@ -23,16 +23,22 @@ test("assert", async () => {
       },
     },
     util: {
-      pathInfo: async () =>
-        new PathInfo(
-          {
-            isFile: () => true,
-            uid: 1,
-            gid: 1,
-            mode: 0o777,
-          },
-          container
-        ),
+      pathInfo: async (path) => {
+        switch (path) {
+          case "/xyz/Makefile":
+            return new PathInfo(
+              {
+                isFile: () => true,
+                uid: 1,
+                gid: 1,
+                mode: 0o777,
+              },
+              container
+            )
+          case "/notthere/Makefile":
+            return new PathInfo(null, container)
+        }
+      },
     },
   }
 
@@ -51,9 +57,7 @@ test("assert", async () => {
 
   // All made
   await expect(
-    asserter.assert(
-      createAssertNode(asserter, { directory: "/xyz", args: "foo" })
-    )
+    asserter.assert(createAssertNode(asserter, { directory: "/xyz" }))
   ).resolves.toBe(true)
 
   // All not made
@@ -62,6 +66,11 @@ test("assert", async () => {
       createAssertNode(asserter, { directory: "/xyz", args: "bar" })
     )
   ).resolves.toBe(false)
+
+  // No Makefile found
+  await expect(
+    asserter.assert(createAssertNode(asserter, { directory: "/notthere" }))
+  ).rejects.toThrow(ScriptError)
 })
 
 test("rectify", async () => {
@@ -70,10 +79,12 @@ test("rectify", async () => {
 
   // Good config
   container.childProcess.exec = async () => ({})
+  asserter.expandedArgs = "bar"
   await expect(asserter.rectify()).resolves.toBeUndefined()
 
   // Bad config
   asserter.assertNode = createAssertNode(asserter, {})
+  asserter.expandedArgs = ""
   container.childProcess.exec = async () => {
     throw new Error("unknown")
   }
@@ -84,10 +95,10 @@ test("result", () => {
   const asserter = new AutoToolProjectMade({})
 
   asserter.expandedDirectory = "blah"
-  asserter.expandedTarget = "blah"
+  asserter.expandedArgs = "blah"
 
   expect(asserter.result()).toEqual({
     directory: asserter.expandedDirectory,
-    args: asserter.expandedTarget,
+    args: asserter.expandedArgs,
   })
 })

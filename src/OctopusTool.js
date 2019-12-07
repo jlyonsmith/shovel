@@ -23,6 +23,7 @@ export class OctopusTool {
     this.util = container.util || util
     this.asserters = container.asserters || asserters
     this.process = container.process || process
+    this.ora = container.ora || ora
     this.createSsh = container.createSsh || ((options) => new SSH(options))
     this.createSftp = container.createSftp || ((options) => new SFTP(options))
     this.debug = container.debug
@@ -522,11 +523,12 @@ export class OctopusTool {
       }
 
       if (options.spinner) {
-        spinner = ora({
+        spinner = this.ora({
           text: assertion.assert,
           spinner: "dots",
           color: "green",
-        }).start()
+        })
+        spinner.start()
       }
 
       if (!(await asserter.assert(assertion._assertNode))) {
@@ -634,6 +636,7 @@ export class OctopusTool {
         `Running Octopus script on remote${scriptHasBecomes ? " as root" : ""}`
       )
 
+      // TODO: Add spinner in here that updates for each asserter
       await ssh.run(`octopus ${remoteTempFile}`, {
         sudo: scriptHasBecomes,
         logOutput: this.log.output,

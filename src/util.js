@@ -22,7 +22,7 @@ export class PathAccess {
     return !!(this.flags & 2)
   }
   isReadWrite() {
-    return !!(this.flags & 6)
+    return this.isReadable() && this.isWritable()
   }
   isExecutable() {
     return !!(this.flags & 1)

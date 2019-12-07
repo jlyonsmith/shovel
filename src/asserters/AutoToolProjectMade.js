@@ -29,9 +29,9 @@ export class AutoToolProjectMade {
       if (argsNode.type !== "string") {
         throw new ScriptError("'args' must be a string", argsNode)
       }
-      this.expandedTarget = this.expandStringNode(argsNode)
+      this.expandedArgs = this.expandStringNode(argsNode)
     } else {
-      this.expandedTarget = ""
+      this.expandedArgs = ""
     }
 
     const makeFile = path.join(this.expandedDirectory, "Makefile")
@@ -42,21 +42,19 @@ export class AutoToolProjectMade {
     }
 
     try {
-      await this.childProcess.exec(`make -q ${this.expandedTarget}`, {
+      await this.childProcess.exec(`make -q ${this.expandedArgs}`, {
         cwd: this.expandedDirectory,
       })
     } catch (e) {
       // TODO: Research if all autotools packages return exit code > 1 for the out-of-date state
-      if (e.code > 1) {
-        return false
-      }
+      return !(e.code > 1)
     }
 
     return true
   }
 
   async rectify() {
-    const command = `make ${this.expandedTarget}`
+    const command = `make${this.expandedArgs ? " " : ""}${this.expandedArgs}`
 
     try {
       await this.childProcess.exec(command, {
@@ -71,6 +69,6 @@ export class AutoToolProjectMade {
   }
 
   result() {
-    return { directory: this.expandedDirectory, args: this.expandedTarget }
+    return { directory: this.expandedDirectory, args: this.expandedArgs }
   }
 }
