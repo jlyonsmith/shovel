@@ -10,7 +10,9 @@ import autobind from "autobind-decorator"
 import merge from "merge"
 import * as asserters from "./asserters"
 import util from "./util"
+import ora from "ora"
 import { ScriptError } from "./ScriptError"
+import semver from "semver"
 
 @autobind
 export class OctopusTool {
@@ -26,7 +28,7 @@ export class OctopusTool {
     this.debug = container.debug
   }
 
-  static minNodeVersion = "v10"
+  static minNodeVersion = "v10.17.0"
 
   async assertHasNode(ssh) {
     let result = await ssh.run("node --version", {
@@ -36,24 +38,25 @@ export class OctopusTool {
     return (
       result.exitCode === 0 &&
       result.output.length > 0 &&
-      result.output[0].startsWith(OctopusTool.minNodeVersion)
+      semver.gte(semver.clean(result.output[0]), OctopusTool.minNodeVersion)
     )
   }
 
   async rectifyHasNode(ssh, sftp) {
     let result = null
+    const nodeMajorVersion = semver.major(OctopusTool.minNodeVersion)
     const installNodeScript = `#!/bin/bash
     VERSION=$(grep -Eo "\\(Red Hat|\\(Ubuntu" /proc/version)
     case $VERSION in
       "(Red Hat")
-        curl -sL https://rpm.nodesource.com/setup_10.x | bash -
+        curl -sL https://rpm.nodesource.com/setup_${nodeMajorVersion}.x | bash -
         yum clean all
         yum makecache fast
         yum install -y -q make
         yum install -y -q nodejs node-gyp
         ;;
       "(Ubuntu")
-        curl -sL https://deb.nodesource.com/setup_10.x | bash -
+        curl -sL https://deb.nodesource.com/setup_${nodeMajorVersion}.x | bash -
         apt update
         apt install -y -q g++ make
         apt install -y -q nodejs node-gyp
@@ -112,7 +115,7 @@ export class OctopusTool {
 
       if (
         result.exitCode === 0 &&
-        result.output[0].startsWith(OctopusTool.minNodeVersion)
+        semver.gte(semver.clean(result.output[0]), OctopusTool.minNodeVersion)
       ) {
         return
       }
@@ -437,7 +440,7 @@ export class OctopusTool {
     }
   }
 
-  async runScriptLocally(scriptPath) {
+  async runScriptLocally(scriptPath, options = {}) {
     const scriptNode = await this.readScriptFile(scriptPath)
     const state = await this.flattenScript(scriptNode)
     const scriptHasBecomes = !!state.assertions.find((assertion) =>
@@ -461,8 +464,9 @@ export class OctopusTool {
       this.process.seteuid(sudo.uid)
     }
 
-    // TODO: Warn if Node version is not correct
-    // TODO: Check settings for disk space requirements and fail if there is insufficient
+    // TODO: Document 'settings'
+    // TODO: Document 'vars'
+    // TODO: Check 'settings' for disk space requirements and fail if there is insufficient
 
     Object.assign(
       state,
@@ -478,6 +482,8 @@ export class OctopusTool {
         JSON5.stringify({ description: state.settings.description })
       )
     }
+
+    let spinner = null
 
     for (const assertion of state.assertions) {
       const asserterConstructor = this.asserters[assertion.assert]
@@ -515,6 +521,14 @@ export class OctopusTool {
         this.process.seteuid(sudo.uid)
       }
 
+      if (options.spinner) {
+        spinner = ora({
+          text: assertion.assert,
+          spinner: "dots",
+          color: "green",
+        }).start()
+      }
+
       if (!(await asserter.assert(assertion._assertNode))) {
         await asserter.rectify()
         rectified = true
@@ -525,6 +539,10 @@ export class OctopusTool {
 
       if (assertion.description) {
         output.description = assertion.description
+      }
+
+      if (spinner) {
+        spinner.stop()
       }
 
       output.result = asserter.result(rectified)
@@ -742,7 +760,7 @@ Arguments:
         throw new Error(`${failures} hosts were not updated`)
       }
     } else {
-      await this.runScriptLocally(scriptPath)
+      await this.runScriptLocally(scriptPath, { spinner: true })
     }
   }
 }

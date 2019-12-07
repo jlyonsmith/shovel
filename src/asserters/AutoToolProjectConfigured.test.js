@@ -65,6 +65,8 @@ test("rectify", async () => {
   }
   const asserter = new AutoToolProjectConfigured(container)
 
+  asserter.expandedDirectory = "/xyz"
+
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
 
