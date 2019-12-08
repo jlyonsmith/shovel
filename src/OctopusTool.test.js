@@ -509,13 +509,16 @@ test("runScriptLocally", async () => {
     assert: "TestAssert",
     with: {},
   }
+  const assert5 = {
+    assert: "UnknownAssert",
+    with: {},
+  }
 
   tool.readScriptFile = jest.fn(async () => {})
   tool.flattenScript = jest.fn(async () => ({
     settings: {
       description: "Blah",
     },
-    vars: {},
     assertions: [
       Object.assign({}, assert1, {
         _assertNode: testUtil.createNode("test.json5", assert1),
@@ -529,7 +532,7 @@ test("runScriptLocally", async () => {
     ],
   }))
   tool.createRunContext = jest.fn(async () => ({
-    runContext: { vars: {} },
+    runContext: { vars: { a: 1 } },
     expandStringNode: jest.fn((s) => s),
   }))
 
@@ -558,6 +561,16 @@ test("runScriptLocally", async () => {
     ],
   }))
   await expect(tool.runScriptLocally("test.json5")).resolves.toBeUndefined()
+
+  // Bad asserter
+  tool.flattenScript = jest.fn(async () => ({
+    assertions: [
+      Object.assign({}, assert5, {
+        _assertNode: testUtil.createNode("test.json5", assert5),
+      }),
+    ],
+  }))
+  await expect(tool.runScriptLocally("test.json5")).rejects.toThrow(ScriptError)
 })
 
 test("runScriptRemotely", async () => {
