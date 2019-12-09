@@ -227,6 +227,7 @@ export class SSH {
           jsonLines,
           errorLines,
           outputLines,
+          startLine,
           sudoPasswordPrompt,
         }) => {
           if (outputLines) {
