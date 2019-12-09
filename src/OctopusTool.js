@@ -485,7 +485,11 @@ export class OctopusTool {
       )
     }
 
-    let spinner = null
+    let spinner = (spinner = this.ora({
+      text: "",
+      spinner: options.noAnimation ? { frames: [">"] } : "dots",
+      color: "green",
+    }))
 
     for (const assertion of state.assertions) {
       const asserterConstructor = this.asserters[assertion.assert]
@@ -522,19 +526,7 @@ export class OctopusTool {
         this.process.seteuid(sudo.uid)
       }
 
-      if (options.spinner) {
-        spinner = this.ora({
-          text: assertion.assert,
-          spinner: options.noAnimation ? { frames: [">"] } : "dots",
-          color: "green",
-        })
-
-        if (options.noAnimation) {
-          spinner.render()
-        } else {
-          spinner.start()
-        }
-      }
+      spinner.start(assertion.assert)
 
       if (!(await asserter.assert(assertion._assertNode))) {
         await asserter.rectify()
@@ -548,10 +540,7 @@ export class OctopusTool {
         output.description = assertion.description
       }
 
-      if (spinner) {
-        spinner.stop()
-        spinner = null
-      }
+      spinner.stop()
 
       output.result = asserter.result(rectified)
       // TODO: Add result into array of results in context
@@ -642,38 +631,24 @@ export class OctopusTool {
         `Running Octopus script on remote${scriptHasBecomes ? " as root" : ""}`
       )
 
-      let spinner = null
+      let spinner = this.ora({
+        text: line.substring(2),
+        spinner: options.noAnimation ? { frames: [">"] } : "dots",
+        color: "green",
+      })
 
       await ssh.run(`octopus --noAnimation ${remoteTempFile}`, {
         sudo: scriptHasBecomes,
         logOutput: (line) => {
-          if (spinner) {
-            spinner.stop()
-            spinner = null
-          }
+          spinner.stop()
           this.log.output(line)
         },
         logError: (line) => {
-          if (spinner) {
-            spinner.stop()
-            spinner = null
-          }
+          spinner.stop()
           this.log.outputError(line)
         },
         logStart: (line) => {
-          if (options.spinner) {
-            spinner = this.ora({
-              text: line.substring(2),
-              spinner: options.noAnimation ? { frames: [">"] } : "dots",
-              color: "green",
-            })
-
-            if (options.noAnimation) {
-              spinner.render()
-            } else {
-              spinner.start()
-            }
-          }
+          spinner.start(line.substring(2))
         },
         noThrow: true,
       })
