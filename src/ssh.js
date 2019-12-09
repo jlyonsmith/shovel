@@ -24,6 +24,7 @@ export class SSH {
     const outputLines = []
     const errorLines = []
     const jsonLines = []
+    let startLine = undefined
     let exitCode = undefined
     let ready = false
     let permissionDenied = false
@@ -52,6 +53,8 @@ export class SSH {
       } else if (line.startsWith("/")) {
         // Paths
         outputLines.push(line)
+      } else if (line.startsWith(">")) {
+        startLine = line
       } else if (line.startsWith("{")) {
         jsonLines.push(line)
       } else if (line.startsWith("[sudo] password for")) {
@@ -75,6 +78,7 @@ export class SSH {
       outputLines,
       errorLines,
       jsonLines,
+      startLine,
       exitCode,
       ready,
       permissionDenied,
@@ -248,7 +252,9 @@ export class SSH {
             jsonLines.forEach((line) => options.logOutput(line))
           }
 
-          // TODO: Add output for starting an asserter
+          if (options.logStart && startLine) {
+            options.logStart(startLine)
+          }
 
           if (exitCode !== undefined) {
             savedExitCode = exitCode

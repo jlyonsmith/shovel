@@ -550,6 +550,7 @@ export class OctopusTool {
 
       if (spinner) {
         spinner.stop()
+        spinner = null
       }
 
       output.result = asserter.result(rectified)
@@ -641,12 +642,39 @@ export class OctopusTool {
         `Running Octopus script on remote${scriptHasBecomes ? " as root" : ""}`
       )
 
-      await ssh.run(`octopus ${remoteTempFile}`, {
+      let spinner = null
+
+      await ssh.run(`octopus --noAnimation ${remoteTempFile}`, {
         sudo: scriptHasBecomes,
-        // TODO: Add code to stop spinner
-        logOutput: this.log.output,
-        logError: this.log.outputError,
-        // TODO: Add a logStart and start spinner
+        logOutput: (line) => {
+          if (spinner) {
+            spinner.stop()
+            spinner = null
+          }
+          this.log.output(line)
+        },
+        logError: (line) => {
+          if (spinner) {
+            spinner.stop()
+            spinner = null
+          }
+          this.log.outputError(line)
+        },
+        logStart: (line) => {
+          if (options.spinner) {
+            spinner = this.ora({
+              text: line.substring(2),
+              spinner: options.noAnimation ? { frames: [">"] } : "dots",
+              color: "green",
+            })
+
+            if (options.noAnimation) {
+              spinner.render()
+            } else {
+              spinner.start()
+            }
+          }
+        },
         noThrow: true,
       })
     } finally {
