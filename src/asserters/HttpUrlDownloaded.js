@@ -1,5 +1,4 @@
 import fs from "fs-extra"
-import path from "path"
 import fetch from "node-fetch"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
@@ -39,13 +38,13 @@ export class HttpUrlDownloaded {
 
     this.expandedUrl = this.expandStringNode(urlNode)
     this.expandedFile = this.expandStringNode(fileNode)
+
+    // TODO: Ensure we can access the download directory
     this.toFileExists = await this.util.fileExists(this.expandedFile)
 
     if (!this.toFileExists) {
       return false
     }
-
-    // TODO: Ensure we can access the download directory
 
     const toFileDigest = await this.util.generateDigestFromFile(
       this.expandedFile

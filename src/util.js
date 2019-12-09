@@ -137,6 +137,7 @@ export class Utility {
     return new PathInfo(stat)
   }
 
+  // TODO: Remove in favor of pathInfo
   async fileExists(filePath) {
     try {
       return (await this.fs.lstat(filePath)).isFile()
@@ -145,6 +146,7 @@ export class Utility {
     }
   }
 
+  // TODO: Remove in favor of pathInfo
   async dirExists(pathName) {
     try {
       return (await this.fs.lstat(pathName)).isDirectory()
@@ -153,6 +155,7 @@ export class Utility {
     }
   }
 
+  // TODO: Remove in favor of pathInfo
   async canAccess(pathName) {
     try {
       await this.fs.access(pathName, fs.constants.W_OK | fs.constants.R_OK)

@@ -3,8 +3,8 @@
     {
       assert: "FileCopiedFromLocal",
       with: {
-        from: "scratch/some-file", // On local file system
-        to: "scratch/copied-file", // On remote file system
+        fromFile: "scratch/some-file", // On local file system
+        toFile: "scratch/copied-file", // On remote file system
       },
     },
   ],

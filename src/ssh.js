@@ -37,7 +37,7 @@ export class SSH {
     // NOTE: Keep for debugging
     //console.log(lines)
 
-    // TODO: Support 'Enter passphrase for key...' for ssh-add
+    // TODO: Support 'Enter passphrase for key...' for ssh-add (throw error)
 
     for (const line of lines) {
       if (!line) {
@@ -247,6 +247,8 @@ export class SSH {
           if (options.logOutput && jsonLines) {
             jsonLines.forEach((line) => options.logOutput(line))
           }
+
+          // TODO: Add output for starting an asserter
 
           if (exitCode !== undefined) {
             savedExitCode = exitCode

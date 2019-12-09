@@ -467,6 +467,7 @@ export class OctopusTool {
 
     // TODO: Document 'settings'
     // TODO: Document 'vars'
+    // TODO: Document Javascript modules
     // TODO: Check 'settings' for disk space requirements and fail if there is insufficient
 
     Object.assign(
@@ -514,7 +515,6 @@ export class OctopusTool {
       let rectified = false
 
       if (assertion.become) {
-        // TODO: Support becoming users other than root
         this.process.setegid(0)
         this.process.seteuid(0)
       } else if (sudo !== null) {
@@ -525,10 +525,15 @@ export class OctopusTool {
       if (options.spinner) {
         spinner = this.ora({
           text: assertion.assert,
-          spinner: "dots",
+          spinner: options.noAnimation ? { frames: [">"] } : "dots",
           color: "green",
         })
-        spinner.start()
+
+        if (options.noAnimation) {
+          spinner.render()
+        } else {
+          spinner.start()
+        }
       }
 
       if (!(await asserter.assert(assertion._assertNode))) {
@@ -636,11 +641,12 @@ export class OctopusTool {
         `Running Octopus script on remote${scriptHasBecomes ? " as root" : ""}`
       )
 
-      // TODO: Add spinner in here that updates for each asserter
       await ssh.run(`octopus ${remoteTempFile}`, {
         sudo: scriptHasBecomes,
+        // TODO: Add code to stop spinner
         logOutput: this.log.output,
         logError: this.log.outputError,
+        // TODO: Add a logStart and start spinner
         noThrow: true,
       })
     } finally {
@@ -660,10 +666,10 @@ export class OctopusTool {
 
   async run(argv) {
     const options = {
-      boolean: ["help", "version", "debug"],
-      string: ["host", "host-file", "user", "port", "identity"],
+      boolean: ["help", "version", "debug", "noAnimation"],
+      string: ["host", "hostFile", "user", "port", "identity"],
       alias: {
-        f: "host-file",
+        f: "hostFile",
         h: "host",
         i: "identity",
         p: "port",
@@ -673,7 +679,7 @@ export class OctopusTool {
     }
     const args = parseArgs(argv, options)
 
-    this.debug = args["debug"]
+    this.debug = args.debug
 
     if (args.version) {
       this.log.info(`${version.fullVersion}`)
@@ -686,11 +692,12 @@ Usage: ${this.toolName} [options] <script-file>
 
 Description:
 
-Runs an Octopus configuration script. If a host or host-file file is
+Runs an Octopus configuration script. If a host or hostFile file is
 given then the script will be run on those hosts using SSH. Node.js
 and Octopus will be installed on the remote hosts if not already
-present. For remote installation to work the '--root' argument must be
-specified and the user must have sudo permissions on the remote host.
+present. For installation to work the SSH user must have sudo
+permissions on the host. If passwords are required for login or
+sudo the tool will prompt.
 
 Arguments:
   --help                    Shows this help
@@ -700,7 +707,9 @@ Arguments:
   --port, -p <port>         Remote port number; default is 22
   --user, -u <user>         Remote user name; defaults to current user
   --identity, -i <key>      User identity file
-  --host-file, -f <file>    JSON5 file containing multiple host names
+  --hostFile, -f <file>     JSON5 file containing multiple host names
+  --noAnimation             Disable spinner animation for long running
+                            assertions
 `)
       return
     }
@@ -714,22 +723,20 @@ Arguments:
     if (
       (args.port || args.user || args.identity) &&
       !args.host &&
-      !args["host-file"]
+      !args.hostFile
     ) {
       throw new Error(
-        "'host' or 'host-file' must be specified with 'port', 'user', 'identity' and arguments"
+        "'host' or 'hostFile' must be specified with 'port', 'user', 'identity' and arguments"
       )
     }
 
     let hosts = null
 
-    if (args.host || args["host-file"]) {
+    if (args.host || args.hostFile) {
       hosts = []
 
-      if (args["host-file"]) {
-        hosts = hosts.concat(
-          JSON5.parse(await this.fs.readFile(args["host-file"]))
-        )
+      if (args.hostFile) {
+        hosts = hosts.concat(JSON5.parse(await this.fs.readFile(args.hostFile)))
       }
 
       if (args.host) {
@@ -763,7 +770,10 @@ Arguments:
         throw new Error(`${failures} hosts were not updated`)
       }
     } else {
-      await this.runScriptLocally(scriptPath, { spinner: true })
+      await this.runScriptLocally(scriptPath, {
+        spinner: true,
+        noAnimation: args.noAnimation,
+      })
     }
   }
 }
