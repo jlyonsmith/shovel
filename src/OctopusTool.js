@@ -485,11 +485,11 @@ export class OctopusTool {
       )
     }
 
-    let spinner = (spinner = this.ora({
+    let spinner = this.ora({
       text: "",
       spinner: options.noAnimation ? { frames: [">"] } : "dots",
       color: "green",
-    }))
+    })
 
     for (const assertion of state.assertions) {
       const asserterConstructor = this.asserters[assertion.assert]
@@ -633,7 +633,7 @@ export class OctopusTool {
       )
 
       let spinner = this.ora({
-        text: line.substring(2),
+        text: "",
         spinner: options.noAnimation ? { frames: [">"] } : "dots",
         color: "green",
       })
@@ -775,7 +775,6 @@ Arguments:
       }
     } else {
       await this.runScriptLocally(scriptPath, {
-        spinner: true,
         noAnimation: args.noAnimation,
       })
     }

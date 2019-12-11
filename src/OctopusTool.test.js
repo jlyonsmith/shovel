@@ -393,69 +393,6 @@ test("createRunContext", async () => {
   ).toBe("foo")
 })
 
-test("mergeIncludeNodes", async () => {
-  Object.assign(container, {
-    fs: {
-      readFile: async (path) => {
-        if (path.endsWith("b.json5")) {
-          return `{
-            settings: { blah: "x"},
-            vars: { blah : "y"},
-            scripts: [],
-            assertions: [{ assert: "something" }],
-          }`
-        } else if (path.endsWith("c.json5")) {
-          return "{}"
-        }
-      },
-    },
-  })
-
-  const tool = new OctopusTool(container)
-  const scriptNode = testUtil.createScriptNode("a.json5")
-  const includesNode = scriptNode.value.includes
-
-  includesNode.value.push(testUtil.createNode(scriptNode.filename, "b.json5"))
-  includesNode.value.push(testUtil.createNode(scriptNode.filename, "c.json5"))
-
-  await expect(
-    tool.mergeIncludeNodes(scriptNode, ".", includesNode)
-  ).resolves.toBeUndefined()
-})
-
-test("flattenScript", async () => {
-  const tool = new OctopusTool(container)
-  const scriptNode = testUtil.createScriptNode("a.json5")
-  const assertionsNode = scriptNode.value.assertions
-
-  assertionsNode.value.push(
-    testUtil.createNode(scriptNode.filename, { assert: "something" })
-  )
-
-  await expect(tool.flattenScript(scriptNode)).resolves.toMatchObject({
-    assertions: [
-      {
-        _assertNode: {
-          column: 0,
-          filename: "a.json5",
-          line: 0,
-          type: "object",
-          value: {
-            assert: {
-              column: 0,
-              filename: "a.json5",
-              line: 0,
-              type: "string",
-              value: "something",
-            },
-          },
-        },
-        assert: "something",
-      },
-    ],
-  })
-})
-
 test("runScriptLocally", async () => {
   Object.assign(container, {
     debug: true,
@@ -603,6 +540,11 @@ test("runScriptRemotely", async () => {
   })
 
   // Happy path
+  await tool.runScriptRemotely("test.json5", {
+    user: "test",
+    password: "test",
+    host: "somehost",
+  })
   await expect(
     tool.runScriptRemotely("test.json5", {
       user: "test",
