@@ -5,7 +5,7 @@
     {
       assert: "FileDeleted",
       with: {
-        path: "/var/lib/ubuntu-release-upgrader/release-upgrade-available",
+        file: "/var/lib/ubuntu-release-upgrader/release-upgrade-available",
       },
       when: "{sys.id === 'ubuntu'}",
       become: "root",

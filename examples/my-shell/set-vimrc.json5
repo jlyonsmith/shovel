@@ -6,14 +6,14 @@
     {
       assert: "FileExists",
       with: {
-        path: "{vars.vimrc}",
+        file: "{vars.vimrc}",
         mode: { user: "rwx", group: "r-x", other: "r-x" },
       },
     },
     {
       assert: "FileContains",
       with: {
-        path: "{vars.vimrc}",
+        file: "{vars.vimrc}",
         contents: "color desert\n\
 set shiftwidth=2 tabstop=2 expandtab\n",
       },

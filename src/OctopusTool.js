@@ -554,6 +554,7 @@ export class OctopusTool {
   }
 
   async runScriptRemotely(scriptPath, options) {
+    // TODO: Remote script errors are not displaying with the original file/line/offset
     const scriptNode = await this.readScriptFile(scriptPath)
     const state = Object.assign(
       await this.flattenScript(scriptNode),

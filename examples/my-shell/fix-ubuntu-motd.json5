@@ -6,7 +6,7 @@
     {
       assert: "FilesDeleted",
       with: {
-        paths: [
+        files: [
           "{vars.motdDir + '/10-help-text'}",
           "{vars.motdDir + '/50-motd-news'}",
           "{vars.motdDir + '/80-esm'}",

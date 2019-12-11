@@ -9,7 +9,7 @@
     {
       assert: "FileContains",
       with: {
-        path: "{vars.bashrc}",
+        file: "{vars.bashrc}",
         contents: "{vars.local.bashrcContent}",
       },
     },

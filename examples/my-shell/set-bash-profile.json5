@@ -9,13 +9,13 @@
     {
       assert: "FileExists",
       with: {
-        path: "{vars.bashProfile}",
+        file: "{vars.bashProfile}",
       },
     },
     {
       assert: "FileContains",
       with: {
-        path: "{vars.bashProfile}",
+        file: "{vars.bashProfile}",
         contents: "{vars.local.bashProfileContent}",
       },
     },

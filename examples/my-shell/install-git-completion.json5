@@ -6,7 +6,7 @@
     {
       assert: "DirectoryExists",
       with: {
-        path: "{vars.bashCompletionDir}",
+        directory: "{vars.bashCompletionDir}",
         mode: {
           user: "rwx",
           group: "rwx",
@@ -20,7 +20,7 @@
       with: {
         url: "https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash",
         digest: "7ae884956ca3400c497d53734fbfc6def4f3fbce8f371d5a4ab4dd213456de51",
-        toPath: "{path.join(vars.bashCompletionDir,'git-completion.bash')}",
+        file: "{path.join(vars.bashCompletionDir,'git-completion.bash')}",
       },
       become: "root",
     },
@@ -29,7 +29,7 @@
       with: {
         url: "https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh",
         digest: "7a0e409206671e3cdf6544641b29cbdd2cd2dab4a07af70339b9b590db16447f",
-        toPath: "{path.join(vars.bashCompletionDir,'git-prompt.sh')}",
+        file: "{path.join(vars.bashCompletionDir,'git-prompt.sh')}",
       },
       become: "root",
     },
