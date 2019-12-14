@@ -304,17 +304,14 @@ export class OctopusTool {
     return scriptNode
   }
 
-  async createRunContext(scriptNode, options = {}) {
+  async createRunContext() {
     const { vars: varsNode } = scriptNode.value
     const osInfo = await this.util.osInfo()
     const runContext = vm.createContext({
       env: process.env,
       os: osInfo,
       user: this.util.userInfo(),
-      sys: {
-        scriptFile: scriptNode.filename,
-        scriptDir: path.dirname(scriptNode.filename),
-      },
+      sys: {},
       fs: {
         readFile: (fileName) =>
           this.fs.readFileSync(fileName, { encoding: "utf8" }),
@@ -341,118 +338,68 @@ export class OctopusTool {
       }
     }
 
-    if (varsNode) {
-      const processNode = (node, expand) => {
-        if (node.value !== null && node.type === "object") {
-          const newValue = {}
-
-          Object.entries(node.value).map(([k, v]) => {
-            newValue[k] = processNode(v, k === "local" ? true : expand)
-          })
-
-          return newValue
-        } else if (node.type === "array") {
-          return node.value.map((i) => processNode(i, expand))
-        } else if (node.type === "string") {
-          if (expand) {
-            const newValue = expandStringNode(node)
-
-            node.value = newValue
-            return newValue
-          } else {
-            return node.value
-          }
-        } else {
-          return node.value
-        }
-      }
-
-      runContext.vars = processNode(varsNode, options.inRunScriptLocally)
-    }
-
     return { runContext, expandStringNode }
   }
 
-  async mergeIncludeNodes(scriptNode, scriptDir, includesNode) {
-    if (!includesNode) {
-      return
-    }
-
-    for (const includeNode of includesNode.value) {
-      const newScriptNode = await this.readScriptFile(
-        path.resolve(scriptDir, includeNode.value)
-      )
-
-      await this.mergeIncludeNodes(
-        scriptNode,
-        newScriptNode.filename,
-        newScriptNode.includesNodes
-      )
-
-      const {
-        settings: settingsNode,
-        vars: varsNode,
-        assertions: assertionsNode,
-      } = scriptNode.value
-      const {
-        settings: newSettingsNode,
-        vars: newVarsNode,
-        assertions: newAssertionsNode,
-      } = newScriptNode.value
-
-      settingsNode.value = merge.recursive(
-        settingsNode.value,
-        newSettingsNode.value
-      )
-      varsNode.value = merge.recursive(varsNode.value, newVarsNode.value)
-      assertionsNode.value = [
-        ...assertionsNode.value,
-        ...newAssertionsNode.value,
-      ]
-    }
+  updateRunContextSys(runContext, scriptNode) {
+    Object.assign(runContext.sys, {
+      scriptFile: scriptNode.filename,
+      scriptDir: path.dirname(scriptNode.filename),
+    })
   }
 
-  async flattenScript(scriptNode) {
-    const {
-      includes: includesNode,
-      settings: settingsNode,
-      vars: varsNode,
-      assertions: assertionsNode,
-    } = scriptNode.value
+  updateRunContextVars(runContext, expandStringNode, varsNode, options) {
+    const flattenNodes = (node, interpolate) => {
+      if (node.value !== null && node.type === "object") {
+        const newValue = {}
 
-    await this.mergeIncludeNodes(
-      scriptNode,
-      path.dirname(scriptNode.filename),
-      includesNode
-    )
+        Object.entries(node.value).map(([k, v]) => {
+          newValue[k] = flattenNodes(v, k === "local" ? true : interpolate)
+        })
 
-    const settings = JSON5.simplify(settingsNode)
-    const vars = JSON5.simplify(varsNode)
-    const assertions = JSON5.simplify(assertionsNode)
+        return newValue
+      } else if (node.type === "array") {
+        return node.value.map((i) => flattenNodes(i, interpolate))
+      } else if (node.type === "string") {
+        if (interpolate) {
+          const newValue = expandStringNode(node)
 
-    for (let i = 0; i < assertions.length; i++) {
-      assertions[i]._assertNode = assertionsNode.value[i]
+          node.value = newValue
+          return newValue
+        } else {
+          return node.value
+        }
+      } else {
+        return node.value
+      }
     }
 
+    Object.assign(
+      runContext.vars,
+      flattenNodes(varsNode, options.interpolateAll)
+    )
+  }
+
+  async loadScripts(rootScriptPath) {
+    // TODO: Do it
+    const scriptNode = await this.readScriptFile(scriptPath)
+
     return {
-      vars,
-      settings,
-      assertions,
+      baseScriptDirPath,
+      scriptFilePaths,
+      scriptNodes,
+      anyScriptHasBecomes,
     }
   }
 
   async runScriptLocally(scriptPath, options = {}) {
-    const scriptNode = await this.readScriptFile(scriptPath)
-    const state = await this.flattenScript(scriptNode)
-    const scriptHasBecomes = !!state.assertions.find((assertion) =>
-      assertion.hasOwnProperty("become")
-    )
+    const scriptContext = await this.createScriptContext(scriptPath)
     let sudo = null
 
-    if (scriptHasBecomes) {
+    if (scriptContext.anyScriptHasBecomes) {
       if (!this.util.runningAsRoot()) {
         throw new Error(
-          "Script requires becoming another user and it is not running as root"
+          "Script or included script requires becoming another user and it is not running as root"
         )
       }
 
@@ -470,13 +417,14 @@ export class OctopusTool {
     // TODO: Document Javascript modules
     // TODO: Check 'settings' for disk space requirements and fail if there is insufficient
 
-    Object.assign(
-      state,
-      await this.createRunContext(scriptNode, { inRunScriptLocally: true })
-    )
+    const runContext = await this.createRunContext(scriptNode, {
+      interpolateAll: true,
+    })
 
-    if (this.debug && Object.keys(state.runContext.vars).length > 0) {
-      this.log.info(JSON5.stringify(state.runContext.vars, null, "  "))
+    // TODO: Add in vars from first script
+
+    if (this.debug && Object.keys(runContext.vars).length > 0) {
+      this.log.info(JSON5.stringify(runContext.vars, null, "  "))
     }
 
     if (state.settings && Object.keys(state.settings).length > 0) {
@@ -558,7 +506,7 @@ export class OctopusTool {
     const scriptNode = await this.readScriptFile(scriptPath)
     const state = Object.assign(
       await this.flattenScript(scriptNode),
-      await this.createRunContext(scriptNode, { inRunScriptLocally: false })
+      await this.createRunContext(scriptNode, { interpolateAll: false })
     )
     const newScript = JSON.stringify(
       {
