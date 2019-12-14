@@ -366,28 +366,28 @@ test("createRunContext", async () => {
     runContext: {},
   })
   expect(
-    result.expandStringNode(testUtil.createNode(scriptNode.filename, "test"))
+    result.interpolateNode(testUtil.createNode(scriptNode.filename, "test"))
   ).toBe("test")
   expect(() =>
-    result.expandStringNode(testUtil.createNode(scriptNode.filename, 1))
+    result.interpolateNode(testUtil.createNode(scriptNode.filename, 1))
   ).toThrow(Error)
   expect(() =>
-    result.expandStringNode(testUtil.createNode(scriptNode.filename, "{x()}"))
+    result.interpolateNode(testUtil.createNode(scriptNode.filename, "{x()}"))
   ).toThrow(ScriptError)
 
   // Context functions
   expect(
-    result.expandStringNode(
+    result.interpolateNode(
       testUtil.createNode(scriptNode.filename, "{fs.readFile('blah')}")
     )
   ).toBe("foobar")
   expect(
-    result.expandStringNode(
+    result.interpolateNode(
       testUtil.createNode(scriptNode.filename, "{path.join('foo', 'bar')}")
     )
   ).toBe("foo/bar")
   expect(
-    result.expandStringNode(
+    result.interpolateNode(
       testUtil.createNode(scriptNode.filename, "{path.dirname('foo/bar')}")
     )
   ).toBe("foo")
@@ -470,7 +470,7 @@ test("runScriptLocally", async () => {
   }))
   tool.createRunContext = jest.fn(async () => ({
     runContext: { vars: { a: 1 } },
-    expandStringNode: jest.fn((s) => s),
+    interpolateNode: jest.fn((s) => s),
   }))
 
   // Has becomes
@@ -536,7 +536,7 @@ test("runScriptRemotely", async () => {
   tool.flattenScript = async () => ({ assertions: [] })
   tool.createRunContext = async () => ({
     runContext: { vars: {} },
-    expandStringNode: (s) => s,
+    interpolateNode: (s) => s,
   })
 
   // Happy path

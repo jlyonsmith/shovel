@@ -5,7 +5,7 @@ import { PathInfo } from "../util"
 
 test("assert", async () => {
   const container = {
-    expandStringNode: (node) => node.value,
+    interpolateNode: (node) => node.value,
     fs: {
       readFile: jest.fn(async (path) => {
         if (path === "/somefile") {

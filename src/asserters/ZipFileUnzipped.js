@@ -9,7 +9,7 @@ export class ZipFileUnzipped {
     this.fs = container.fs || fs
     this.yauzl = container.yauzl || yauzl
     this.util = container.util || util
-    this.expandStringNode = container.expandStringNode
+    this.interpolateNode = container.interpolateNode
   }
 
   async assert(assertNode) {
@@ -30,8 +30,8 @@ export class ZipFileUnzipped {
       )
     }
 
-    this.expandedFilePath = this.expandStringNode(fileNode)
-    this.expandedToPath = this.expandStringNode(toDirectoryNode)
+    this.expandedFilePath = this.interpolateNode(fileNode)
+    this.expandedToPath = this.interpolateNode(toDirectoryNode)
 
     if (!(await this.util.fileExists(this.expandedFilePath))) {
       throw new ScriptError(

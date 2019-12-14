@@ -5,7 +5,7 @@ import { Script } from "vm"
 
 test("assert", async () => {
   const container = {
-    expandStringNode: (node) => node.value,
+    interpolateNode: (node) => node.value,
     util: {
       runningAsRoot: () => true,
       getGroups: async (fs) => [{ name: "news", gid: 10, users: [] }],

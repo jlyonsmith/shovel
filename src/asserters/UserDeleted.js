@@ -8,7 +8,7 @@ export class UserDeleted {
     this.fs = container.fs || fs
     this.util = container.util || util
     this.childProcess = container.childProcess || childProcess
-    this.expandStringNode = container.expandStringNode
+    this.interpolateNode = container.interpolateNode
   }
 
   async assert(assertNode) {
@@ -22,7 +22,7 @@ export class UserDeleted {
       )
     }
 
-    this.expandedName = this.expandStringNode(userNode)
+    this.expandedName = this.interpolateNode(userNode)
 
     const ok =
       (await this.util.getUsers()).find(

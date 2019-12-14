@@ -6,7 +6,7 @@ export class FileCopied {
   constructor(container) {
     this.fs = container.fs || fs
     this.util = container.util || util
-    this.expandStringNode = container.expandStringNode
+    this.interpolateNode = container.interpolateNode
   }
 
   async assert(assertNode) {
@@ -27,8 +27,8 @@ export class FileCopied {
       )
     }
 
-    this.expandedToFile = this.expandStringNode(toFileNode)
-    this.expandedFromFile = this.expandStringNode(fromFileNode)
+    this.expandedToFile = this.interpolateNode(toFileNode)
+    this.expandedFromFile = this.interpolateNode(fromFileNode)
 
     if (!(await this.util.fileExists(this.expandedFromFile))) {
       throw new ScriptError(

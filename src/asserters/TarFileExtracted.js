@@ -9,7 +9,7 @@ export class TarFileExtracted {
     this.fs = container.fs || fs
     this.tar = container.tar || tar
     this.util = container.util || util
-    this.expandStringNode = container.expandStringNode
+    this.interpolateNode = container.interpolateNode
   }
 
   async assert(assertNode) {
@@ -23,14 +23,14 @@ export class TarFileExtracted {
       )
     }
 
-    this.expandedFile = this.expandStringNode(fileNode)
+    this.expandedFile = this.interpolateNode(fileNode)
 
     if (toDirectoryNode) {
       if (toDirectoryNode.type !== "string") {
         throw new ScriptError("'toDirectory' must be a string", toDirectoryNode)
       }
 
-      this.expandedDirectory = this.expandStringNode(toDirectoryNode)
+      this.expandedDirectory = this.interpolateNode(toDirectoryNode)
     } else {
       this.expandedDirectory = path.dirname(this.expandedFile)
     }

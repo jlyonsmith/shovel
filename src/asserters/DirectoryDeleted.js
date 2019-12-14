@@ -4,7 +4,7 @@ import { ScriptError } from "../ScriptError"
 export class DirectoryDeleted {
   constructor(container) {
     this.fs = container.fs || fs
-    this.expandStringNode = container.expandStringNode
+    this.interpolateNode = container.interpolateNode
   }
 
   async assert(assertNode) {
@@ -18,7 +18,7 @@ export class DirectoryDeleted {
       )
     }
 
-    this.expandedDirectory = this.expandStringNode(directoryNode)
+    this.expandedDirectory = this.interpolateNode(directoryNode)
 
     let stat = null
 

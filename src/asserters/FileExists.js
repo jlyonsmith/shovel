@@ -9,7 +9,7 @@ export class FileExists {
     this.fs = container.fs || fs
     this.os = container.os || os
     this.util = container.util || util
-    this.expandStringNode = container.expandStringNode
+    this.interpolateNode = container.interpolateNode
     this.stat = null
   }
 
@@ -35,7 +35,7 @@ export class FileExists {
       this.util.parseOwnerNode(users, groups, ownerNode)
     )
     this.mode = this.util.parseModeNode(modeNode)
-    this.expandedFile = this.expandStringNode(fileNode)
+    this.expandedFile = this.interpolateNode(fileNode)
 
     try {
       stat = await this.fs.lstat(this.expandedFile)

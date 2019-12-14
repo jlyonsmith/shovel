@@ -8,7 +8,7 @@ export class HttpUrlDownloaded {
     this.fs = container.fs || fs
     this.fetch = container.fetch || fetch
     this.util = container.util || util
-    this.expandStringNode = container.expandStringNode
+    this.interpolateNode = container.interpolateNode
   }
 
   async assert(assertNode) {
@@ -36,8 +36,8 @@ export class HttpUrlDownloaded {
       )
     }
 
-    this.expandedUrl = this.expandStringNode(urlNode)
-    this.expandedFile = this.expandStringNode(fileNode)
+    this.expandedUrl = this.interpolateNode(urlNode)
+    this.expandedFile = this.interpolateNode(fileNode)
 
     // TODO: Ensure we can access the download directory
     this.toFileExists = await this.util.fileExists(this.expandedFile)

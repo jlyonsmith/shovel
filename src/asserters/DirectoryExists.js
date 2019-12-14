@@ -9,7 +9,7 @@ export class DirectoryExists {
     this.fs = container.fs || fs
     this.os = container.os || os
     this.util = container.util || util
-    this.expandStringNode = container.expandStringNode
+    this.interpolateNode = container.interpolateNode
   }
 
   async assert(assertNode) {
@@ -37,7 +37,7 @@ export class DirectoryExists {
     )
     // TODO: Default for dirs should be rwx
     this.mode = this.util.parseModeNode(modeNode)
-    this.expandedDirectory = this.expandStringNode(directoryNode)
+    this.expandedDirectory = this.interpolateNode(directoryNode)
 
     let stat = null
 

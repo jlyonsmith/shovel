@@ -14,7 +14,7 @@ export class DirectoryZipped {
     this.yazl = container.yazl || yazl
     this.yauzl = container.yauzl || yauzl
     this.readdirp = container.readdirp || readdirp
-    this.expandStringNode = container.expandStringNode
+    this.interpolateNode = container.interpolateNode
   }
 
   async assert(assertNode) {
@@ -60,8 +60,8 @@ export class DirectoryZipped {
       this.globs.push(".")
     }
 
-    this.expandedZipFile = this.expandStringNode(zipFileNode)
-    this.expandedDirectory = this.expandStringNode(directoryNode)
+    this.expandedZipFile = this.interpolateNode(zipFileNode)
+    this.expandedDirectory = this.interpolateNode(directoryNode)
 
     if (!(await this.util.dirExists(this.expandedDirectory))) {
       throw new ScriptError(

@@ -9,7 +9,7 @@ test("assert", async () => {
       geteuid: () => 1,
       getgroups: () => [1, 2],
     },
-    expandStringNode: (node) => node.value,
+    interpolateNode: (node) => node.value,
     childProcess: {
       exec: async (command) => {
         if (command === "make") {

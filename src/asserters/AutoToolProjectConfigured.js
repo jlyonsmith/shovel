@@ -7,7 +7,7 @@ export class AutoToolProjectConfigured {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
     this.util = container.util || util
-    this.expandStringNode = container.expandStringNode
+    this.interpolateNode = container.interpolateNode
   }
 
   async assert(assertNode) {
@@ -21,13 +21,13 @@ export class AutoToolProjectConfigured {
       )
     }
 
-    this.expandedDirectory = this.expandStringNode(directoryNode)
+    this.expandedDirectory = this.interpolateNode(directoryNode)
 
     if (argsNode) {
       if (argsNode.type !== "string") {
         throw new ScriptError("'args' must be a string", argsNode)
       }
-      this.expandedArgs = this.expandStringNode(argsNode)
+      this.expandedArgs = this.interpolateNode(argsNode)
     } else {
       this.expandedArgs = ""
     }

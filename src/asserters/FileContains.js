@@ -6,7 +6,7 @@ export class FileContains {
   constructor(container) {
     this.fs = container.fs || fs
     this.util = container.util || util
-    this.expandStringNode = container.expandStringNode
+    this.interpolateNode = container.interpolateNode
   }
 
   async assert(assertNode) {
@@ -25,7 +25,7 @@ export class FileContains {
       )
     }
 
-    this.expandedPath = this.expandStringNode(fileNode)
+    this.expandedPath = this.interpolateNode(fileNode)
 
     if (regexNode) {
       if (regexNode.type !== "string") {
@@ -33,7 +33,7 @@ export class FileContains {
       }
 
       try {
-        this.regExp = new RegExp(this.expandStringNode(regexNode), "gm")
+        this.regExp = new RegExp(this.interpolateNode(regexNode), "gm")
       } catch (e) {
         throw new ScriptError(
           `Unable to parse regular expression. ${e.message}`,
@@ -80,7 +80,7 @@ export class FileContains {
       )
     }
 
-    this.expandedContents = this.expandStringNode(contentsNode)
+    this.expandedContents = this.interpolateNode(contentsNode)
 
     const pathInfo = await this.util.pathInfo(this.expandedPath)
 

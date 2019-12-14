@@ -10,7 +10,7 @@ export class GroupExists {
     this.util = container.util || util
     this.childProcess = container.childProcess || childProcess
     this.os = container.os || os
-    this.expandStringNode = container.expandStringNode
+    this.interpolateNode = container.interpolateNode
   }
 
   async assert(assertNode) {
@@ -32,7 +32,7 @@ export class GroupExists {
       this.gid = gidNode.value
     }
 
-    this.expandedGroupName = this.expandStringNode(groupNode)
+    this.expandedGroupName = this.interpolateNode(groupNode)
 
     const group = (await this.util.getGroups()).find(
       (group) => group.name === this.expandedGroupName

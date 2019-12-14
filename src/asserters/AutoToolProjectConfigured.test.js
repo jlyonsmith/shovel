@@ -4,7 +4,7 @@ import { ScriptError } from "../ScriptError"
 
 test("assert", async () => {
   const container = {
-    expandStringNode: (node) => node.value,
+    interpolateNode: (node) => node.value,
     childProcess: {},
     util: {
       pathInfo: async (path) => {

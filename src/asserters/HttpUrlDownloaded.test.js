@@ -5,7 +5,7 @@ import { ScriptError } from "../ScriptError"
 
 test("assert", async () => {
   const container = {
-    expandStringNode: (node) => node.value,
+    interpolateNode: (node) => node.value,
     util: {
       generateDigestFromFile: async (path) => {
         if (path === "badfile") {

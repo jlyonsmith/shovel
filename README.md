@@ -122,7 +122,7 @@ Each script assertions runs with a new instance of the specified asserter. `asse
 ```js
 {
   // Expand a string by treating it as a Javascript template and running it in a VM
-  expandStringNode: (string) => {...},
+  interpolateNode: (string) => {...},
   // The assertion node in the JSON5
   assertNode: {...},
 }
@@ -138,7 +138,7 @@ The goals for the `assert` method are:
 
 1. Ensure the asserter can run on the current platform given by `this.util.osInfo()`. Throw `ScriptError` on the `assertNode` if not.
 2. Validate the passed in `assertNode` in the `assertNode.value.with` node.  Throw a `ScriptError` if the arguments are invalid passing the error message and the node causing the error.
-3. Call `this.expandStringNode()` on any `with` arguments that can be expanded.
+3. Call `this.interpolateNode()` on any `with` arguments that can be expanded.
 4. Cache any values that may be needed by `rectify` in `this`, including the passed in `assertNode`.
 5. Check to see if the asserted condition is already met. If it *cannot be met* for whatever reason, throw a `ScriptError` on the `assertNode`.  If the condition has already been met, return `true`.
 6. Return `false` if the assertion condition can be met but has not been yet.

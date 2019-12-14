@@ -4,7 +4,7 @@ import { ScriptError } from "../ScriptError"
 export class FilesDeleted {
   constructor(container) {
     this.fs = container.fs || fs
-    this.expandStringNode = container.expandStringNode
+    this.interpolateNode = container.interpolateNode
     this.stat = null
   }
 
@@ -29,7 +29,7 @@ export class FilesDeleted {
         throw new ScriptError("All 'files' must be strings", fileNode)
       }
 
-      const expandedPath = this.expandStringNode(fileNode)
+      const expandedPath = this.interpolateNode(fileNode)
       let stat = null
 
       this.expandedFiles.push(expandedPath)

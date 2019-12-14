@@ -6,7 +6,7 @@ let container = null
 
 test("assert", async () => {
   const container = {
-    expandStringNode: (node) => node.value,
+    interpolateNode: (node) => node.value,
     fs: {
       access: jest.fn(async () => undefined),
     },

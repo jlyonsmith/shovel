@@ -5,7 +5,7 @@ import { ScriptError } from "../ScriptError"
 
 test("assert", async () => {
   const container = {
-    expandStringNode: (node) => node.value,
+    interpolateNode: (node) => node.value,
     fs: {
       lstat: jest.fn(async (path) => {
         switch (path) {

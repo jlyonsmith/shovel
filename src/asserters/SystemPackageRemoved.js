@@ -6,7 +6,7 @@ export class SystemPackageRemoved {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
     this.util = container.util || util
-    this.expandStringNode = container.expandStringNode
+    this.interpolateNode = container.interpolateNode
   }
 
   async assert(assertNode) {
@@ -29,7 +29,7 @@ export class SystemPackageRemoved {
       throw new ScriptError("Only supported on Ubuntu and CentOS", assertNode)
     }
 
-    this.expandedPackageName = this.expandStringNode(packageNode)
+    this.expandedPackageName = this.interpolateNode(packageNode)
 
     let command
 

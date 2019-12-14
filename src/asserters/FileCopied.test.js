@@ -6,7 +6,7 @@ let container = null
 
 test("assert", async () => {
   const container = {
-    expandStringNode: (node) => node.value,
+    interpolateNode: (node) => node.value,
     util: {
       fileExists: jest.fn(async (path) => {
         if (path === "/notthere") {

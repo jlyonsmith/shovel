@@ -322,9 +322,9 @@ export class OctopusTool {
       },
       vars: {},
     })
-    const expandStringNode = (node) => {
+    const interpolateNode = (node) => {
       if (!node.type || node.type !== "string") {
-        throw new Error("Must pass in a string node to expand")
+        throw new Error("Can only interpolate string nodes")
       }
 
       if (node.value.startsWith("{") && node.value.endsWith("}")) {
@@ -338,7 +338,7 @@ export class OctopusTool {
       }
     }
 
-    return { runContext, expandStringNode }
+    return { runContext, interpolateNode }
   }
 
   updateRunContextSys(runContext, scriptNode) {
@@ -348,7 +348,7 @@ export class OctopusTool {
     })
   }
 
-  updateRunContextVars(runContext, expandStringNode, varsNode, options) {
+  updateRunContextVars(runContext, interpolateNode, varsNode, options) {
     const flattenNodes = (node, interpolate) => {
       if (node.value !== null && node.type === "object") {
         const newValue = {}
@@ -362,7 +362,7 @@ export class OctopusTool {
         return node.value.map((i) => flattenNodes(i, interpolate))
       } else if (node.type === "string") {
         if (interpolate) {
-          const newValue = expandStringNode(node)
+          const newValue = interpolateNode(node)
 
           node.value = newValue
           return newValue
@@ -450,14 +450,14 @@ export class OctopusTool {
       }
 
       const asserter = new asserterConstructor({
-        expandStringNode: state.expandStringNode,
+        interpolateNode: state.interpolateNode,
       })
       const { when: whenNode } = assertion._assertNode.value
 
       if (whenNode) {
         if (
           (whenNode.type === "boolean" && !whenNode.value) ||
-          (whenNode.type === "string" && !state.expandStringNode(whenNode))
+          (whenNode.type === "string" && !state.interpolateNode(whenNode))
         ) {
           continue
         }
