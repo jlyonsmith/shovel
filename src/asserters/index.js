@@ -16,4 +16,4 @@ export { UserExists } from "./UserExists"
 export { AutoToolProjectConfigured } from "./AutoToolProjectConfigured"
 export { AutoToolProjectMade } from "./AutoToolProjectMade"
 
-// TODO: Add FileCopiedToRemote which copies file from local to remote
+// TODO: Add FileCopiedFromLocal which copies file from local to remote

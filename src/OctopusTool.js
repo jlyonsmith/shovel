@@ -575,8 +575,10 @@ export class OctopusTool {
       this.log.info("Script after local processing:\n" + newScript)
     }
 
+    // Things that need to be accessed in finally
     let ssh = null
     let sftp = null
+    let remoteTempDir = null
 
     try {
       this.log.info(`Connecting to ${options.host}`)
@@ -615,7 +617,7 @@ export class OctopusTool {
         await this.rectifyHasOctopus(ssh)
       }
 
-      const remoteTempDir = (await ssh.run("mktemp -d")).output[0]
+      remoteTempDir = (await ssh.run("mktemp -d")).output[0]
 
       this.log.info(`Created remote script directory '${remoteTempDir}'`)
 
