@@ -8,7 +8,7 @@ export class UserExists {
     this.fs = container.fs || fs
     this.util = container.util || util
     this.childProcess = container.childProcess || childProcess
-    this.interpolateNode = container.interpolateNode
+    this.interpolator = container.interpolator
   }
 
   async assert(assertNode) {
@@ -71,7 +71,7 @@ export class UserExists {
       this.user.comment = commentNode.value
     }
 
-    this.expandedName = this.interpolateNode(userNode)
+    this.expandedName = this.interpolator(userNode)
 
     const user = (await this.util.getUsers(this.fs)).find(
       (user) => user.name === this.expandedName

@@ -4,7 +4,7 @@ import { ScriptError } from "../ScriptError"
 export class FileDeleted {
   constructor(container) {
     this.fs = container.fs || fs
-    this.interpolateNode = container.interpolateNode
+    this.interpolator = container.interpolator
     this.stat = null
   }
 
@@ -19,7 +19,7 @@ export class FileDeleted {
       )
     }
 
-    this.expandedFile = this.interpolateNode(fileNode)
+    this.expandedFile = this.interpolator(fileNode)
 
     let stat = null
 

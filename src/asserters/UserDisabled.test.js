@@ -4,7 +4,7 @@ import { ScriptError } from "../ScriptError"
 
 test("assert", async () => {
   const container = {
-    interpolateNode: (node) => node.value,
+    interpolator: (node) => node.value,
     fs: {
       readFile: jest.fn(async (filePath) => {
         expect(typeof filePath).toBe("string")

@@ -8,7 +8,7 @@ export class UserDisabled {
     this.fs = container.fs || fs
     this.childProcess = container.childProcess || childProcess
     this.util = container.util || util
-    this.interpolateNode = container.interpolateNode
+    this.interpolator = container.interpolator
   }
 
   async assert(assertNode) {
@@ -22,7 +22,7 @@ export class UserDisabled {
       )
     }
 
-    this.expandedName = this.interpolateNode(userNode)
+    this.expandedName = this.interpolator(userNode)
 
     if (!this.util.runningAsRoot()) {
       throw new ScriptError(

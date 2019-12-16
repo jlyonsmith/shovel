@@ -5,7 +5,7 @@ import util from "../util"
 
 test("assert", async () => {
   const container = {
-    interpolateNode: (node) => node.value,
+    interpolator: (node) => node.value,
     fs: {},
     os: {
       userInfo: jest.fn(() => ({

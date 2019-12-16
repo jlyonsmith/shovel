@@ -5,7 +5,7 @@ import { ScriptError } from "../ScriptError"
 
 test("assert", async () => {
   let container = {
-    interpolateNode: (node) => node.value,
+    interpolator: (node) => node.value,
     readdirp: (path, options) => {
       const generateEntries = async function*(entries) {
         for (const entry of entries) {

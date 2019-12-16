@@ -6,7 +6,7 @@ let container = null
 
 test("assert", async () => {
   const container = {
-    interpolateNode: (node) => node.value,
+    interpolator: (node) => node.value,
     childProcess: {},
     util: {
       runningAsRoot: jest.fn(() => true),
@@ -69,7 +69,7 @@ test("assert", async () => {
 
 test("rectify", async () => {
   const container = {
-    interpolateNode: (node) => node.value,
+    interpolator: (node) => node.value,
     childProcess: {
       exec: jest.fn(async (command) => ({
         stdout: "",

@@ -5,7 +5,7 @@ import { Readable, Writable } from "stream"
 
 test("assert", async () => {
   const container = {
-    interpolateNode: (node) => node.value,
+    interpolator: (node) => node.value,
     fs: {
       createReadStream: jest.fn((path) => {
         switch (path) {

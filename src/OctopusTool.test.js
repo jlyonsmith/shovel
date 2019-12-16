@@ -218,17 +218,17 @@ test("rectifyHasOctopus", async () => {
   await expect(tool.rectifyHasOctopus(ssh)).rejects.toThrow(Error)
 })
 
-test("readScriptFile", async () => {
+test("loadScriptFile", async () => {
   Object.assign(container, { fs: { readFile: (path) => "[]" } })
 
   const tool = new OctopusTool(container)
 
   // Bad empty script
-  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+  await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Empty script
   container.fs.readFile = (path) => "{}"
-  await expect(tool.readScriptFile("test.json5")).resolves.not.toBeNull()
+  await expect(tool.loadScriptFile("test.json5")).resolves.not.toBeNull()
 
   // Clean script
   container.fs.readFile = (path) =>
@@ -238,90 +238,90 @@ test("readScriptFile", async () => {
       vars: { a: 1, b: null, c: [1,2,3], d: { x: "x" }},
       assertions: [{assert: "Thing", with: {}}],
     }`
-  await expect(tool.readScriptFile("test.json5")).resolves.not.toBeNull()
+  await expect(tool.loadScriptFile("test.json5")).resolves.not.toBeNull()
 
   // Bad settings
   container.fs.readFile = (path) =>
     `{
       settings: [],
     }`
-  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+  await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad description
   container.fs.readFile = (path) =>
     `{
       settings: {description: 1},
     }`
-  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+  await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad includes
   container.fs.readFile = (path) =>
     `{
       includes: {},
     }`
-  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+  await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad include
   container.fs.readFile = (path) =>
     `{
       includes: [1],
     }`
-  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+  await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad vars
   container.fs.readFile = (path) =>
     `{
       vars: [],
     }`
-  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+  await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad assertions
   container.fs.readFile = (path) =>
     `{
       assertions: {},
     }`
-  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+  await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad assertion
   container.fs.readFile = (path) =>
     `{
       assertions: [1],
     }`
-  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+  await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Missing assertion name
   container.fs.readFile = (path) =>
     `{
       assertions: [{}],
     }`
-  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+  await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad assertion name
   container.fs.readFile = (path) =>
     `{
       assertions: [{ assert: 1 }],
     }`
-  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+  await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad assertion description
   container.fs.readFile = (path) =>
     `{
       assertions: [{ assert: "Thing", description: 1 }],
     }`
-  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+  await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad assertion with
   container.fs.readFile = (path) =>
     `{
       assertions: [{ assert: "Thing", with: 1 }],
     }`
-  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+  await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
   // Bad assertion when
   container.fs.readFile = (path) =>
     `{
       assertions: [{ assert: "Thing", when: 1 }],
     }`
-  await expect(tool.readScriptFile("test.json5")).rejects.toThrow(ScriptError)
+  await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 })
 
 test("createRunContext", async () => {
@@ -366,28 +366,28 @@ test("createRunContext", async () => {
     runContext: {},
   })
   expect(
-    result.interpolateNode(testUtil.createNode(scriptNode.filename, "test"))
+    result.interpolator(testUtil.createNode(scriptNode.filename, "test"))
   ).toBe("test")
   expect(() =>
-    result.interpolateNode(testUtil.createNode(scriptNode.filename, 1))
+    result.interpolator(testUtil.createNode(scriptNode.filename, 1))
   ).toThrow(Error)
   expect(() =>
-    result.interpolateNode(testUtil.createNode(scriptNode.filename, "{x()}"))
+    result.interpolator(testUtil.createNode(scriptNode.filename, "{x()}"))
   ).toThrow(ScriptError)
 
   // Context functions
   expect(
-    result.interpolateNode(
+    result.interpolator(
       testUtil.createNode(scriptNode.filename, "{fs.readFile('blah')}")
     )
   ).toBe("foobar")
   expect(
-    result.interpolateNode(
+    result.interpolator(
       testUtil.createNode(scriptNode.filename, "{path.join('foo', 'bar')}")
     )
   ).toBe("foo/bar")
   expect(
-    result.interpolateNode(
+    result.interpolator(
       testUtil.createNode(scriptNode.filename, "{path.dirname('foo/bar')}")
     )
   ).toBe("foo")
@@ -451,7 +451,7 @@ test("runScriptLocally", async () => {
     with: {},
   }
 
-  tool.readScriptFile = jest.fn(async () => {})
+  tool.loadScriptFile = jest.fn(async () => {})
   tool.flattenScript = jest.fn(async () => ({
     settings: {
       description: "Blah",
@@ -470,7 +470,7 @@ test("runScriptLocally", async () => {
   }))
   tool.createRunContext = jest.fn(async () => ({
     runContext: { vars: { a: 1 } },
-    interpolateNode: jest.fn((s) => s),
+    interpolator: jest.fn((s) => s),
   }))
 
   // Has becomes
@@ -531,12 +531,12 @@ test("runScriptRemotely", async () => {
 
   tool.assertHasNode = () => true
   tool.assertHasOctopus = () => true
-  tool.readScriptFile = async () => ({})
+  tool.loadScriptFile = async () => ({})
   tool.getSshOptions = async () => [{}]
   tool.flattenScript = async () => ({ assertions: [] })
   tool.createRunContext = async () => ({
     runContext: { vars: {} },
-    interpolateNode: (s) => s,
+    interpolator: (s) => s,
   })
 
   // Happy path

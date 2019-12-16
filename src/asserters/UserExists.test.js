@@ -6,7 +6,7 @@ let container = null
 
 test("assert", async () => {
   const container = {
-    interpolateNode: (node) => node.value,
+    interpolator: (node) => node.value,
     util: {
       runningAsRoot: () => true,
       getUsers: async () => [

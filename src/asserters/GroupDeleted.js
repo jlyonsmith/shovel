@@ -8,7 +8,7 @@ export class GroupDeleted {
     this.fs = container.fs || fs
     this.util = container.util || util
     this.childProcess = container.childProcess || childProcess
-    this.interpolateNode = container.interpolateNode
+    this.interpolator = container.interpolator
   }
 
   async assert(assertNode) {
@@ -22,7 +22,7 @@ export class GroupDeleted {
       )
     }
 
-    this.expandedGroupName = this.interpolateNode(groupNode)
+    this.expandedGroupName = this.interpolator(groupNode)
 
     const groups = await this.util.getGroups()
     const ok =

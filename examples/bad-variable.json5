@@ -1,5 +1,0 @@
-{
-  vars: {
-    TEST_DIR_2: ["octo-test-2"],
-  },
-}

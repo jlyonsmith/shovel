@@ -4,7 +4,7 @@ import { ScriptError } from "../ScriptError"
 
 test("assert", async () => {
   const container = {
-    interpolateNode: (node) => node.value,
+    interpolator: (node) => node.value,
     fs: {
       lstat: jest.fn(async (fileName) => {
         if (fileName === "/somedir") {
@@ -85,7 +85,7 @@ test("result", () => {
 
   expect(asserter.result(true)).toEqual({ files: asserter.unlinkedFiles })
 
-  asserter.interpolateNode = ["blah"]
+  asserter.interpolator = ["blah"]
 
   expect(asserter.result(false)).toEqual({ files: asserter.expandedFiles })
 })

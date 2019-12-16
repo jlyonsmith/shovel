@@ -7,7 +7,6 @@ import vm from "vm"
 import path from "path"
 import JSON5 from "@johnls/json5"
 import autobind from "autobind-decorator"
-import merge from "merge"
 import * as asserters from "./asserters"
 import util from "./util"
 import ora from "ora"
@@ -165,7 +164,7 @@ export class OctopusTool {
     )
   }
 
-  async readScriptFile(scriptPath) {
+  async loadScriptFile(scriptPath) {
     const scriptNode = JSON5.parse(await this.fs.readFile(scriptPath), {
       wantNodes: true,
     })
@@ -304,10 +303,72 @@ export class OctopusTool {
     return scriptNode
   }
 
+  async createScriptContext(rootScriptPath) {
+    const rootScriptDirPath = path.dirname(rootScriptPath)
+    const scriptNodes = new Map()
+    const scriptPaths = []
+    let anyScriptHasBecomes = false
+
+    const loadIncludeNode = async (includeNode) => {
+      const scriptPath = includeNode.value
+
+      if (!path.isAbsolute(scriptPath)) {
+        throw new Error("Must provide absolute script path")
+      }
+
+      const relativeScriptPath = path.join(
+        path.relative(rootScriptDirPath, path.dirname(scriptPath)),
+        path.basename(scriptPath)
+      )
+
+      if (relativeScriptPath.startsWith(".")) {
+        throw new ScriptError(
+          "Cannot include script from a directory below root script",
+          includeNode
+        )
+      }
+
+      if (!scriptNodes.has(relativeScriptPath)) {
+        const scriptNode = await this.loadScriptFile(scriptPath)
+
+        scriptNodes.set(relativeScriptPath, scriptNode)
+
+        anyScriptHasBecomes =
+          anyScriptHasBecomes ||
+          !!scriptNode.value.assertions.value.find((assertionNode) =>
+            assertionNode.value.hasOwnProperty("become")
+          )
+
+        for (var includeNode of scriptNode.value.includes.value) {
+          includeNode.value = path.resolve(rootScriptDirPath, includeNode.value)
+
+          await loadIncludeNode(includeNode)
+        }
+      }
+
+      scriptPaths.push(relativeScriptPath)
+    }
+
+    await loadIncludeNode({
+      filename: rootScriptPath,
+      line: 0,
+      column: 0,
+      type: "string",
+      value: rootScriptPath,
+    })
+
+    return {
+      rootScriptDirPath,
+      scriptNodes,
+      scriptPaths,
+      anyScriptHasBecomes,
+    }
+  }
+
   async createRunContext() {
-    const { vars: varsNode } = scriptNode.value
     const osInfo = await this.util.osInfo()
     const runContext = vm.createContext({
+      vars: {},
       env: process.env,
       os: osInfo,
       user: this.util.userInfo(),
@@ -322,9 +383,9 @@ export class OctopusTool {
       },
       vars: {},
     })
-    const interpolateNode = (node) => {
+    const interpolator = (node) => {
       if (!node.type || node.type !== "string") {
-        throw new Error("Can only interpolate string nodes")
+        throw new Error("Can only interpolator string nodes")
       }
 
       if (node.value.startsWith("{") && node.value.endsWith("}")) {
@@ -338,31 +399,32 @@ export class OctopusTool {
       }
     }
 
-    return { runContext, interpolateNode }
+    return { runContext, interpolator }
   }
 
-  updateRunContextSys(runContext, scriptNode) {
-    Object.assign(runContext.sys, {
-      scriptFile: scriptNode.filename,
-      scriptDir: path.dirname(scriptNode.filename),
-    })
-  }
-
-  updateRunContextVars(runContext, interpolateNode, varsNode, options) {
-    const flattenNodes = (node, interpolate) => {
+  updateRunContext(
+    runContext,
+    interpolator,
+    scriptNode,
+    options = { interpolateAllVars: true }
+  ) {
+    const flattenNodes = (node, withInterpolation) => {
       if (node.value !== null && node.type === "object") {
         const newValue = {}
 
         Object.entries(node.value).map(([k, v]) => {
-          newValue[k] = flattenNodes(v, k === "local" ? true : interpolate)
+          newValue[k] = flattenNodes(
+            v,
+            k === "local" ? true : withInterpolation
+          )
         })
 
         return newValue
       } else if (node.type === "array") {
-        return node.value.map((i) => flattenNodes(i, interpolate))
+        return node.value.map((i) => flattenNodes(i, withInterpolation))
       } else if (node.type === "string") {
-        if (interpolate) {
-          const newValue = interpolateNode(node)
+        if (withInterpolation) {
+          const newValue = interpolator(node)
 
           node.value = newValue
           return newValue
@@ -374,26 +436,21 @@ export class OctopusTool {
       }
     }
 
+    Object.assign(runContext.sys, {
+      scriptFile: scriptNode.filename,
+      scriptDir: path.dirname(scriptNode.filename),
+    })
+
+    const { vars: varsNode } = scriptNode.value
+
     Object.assign(
       runContext.vars,
-      flattenNodes(varsNode, options.interpolateAll)
+      flattenNodes(varsNode, options.interpolateAllVars)
     )
   }
 
-  async loadScripts(rootScriptPath) {
-    // TODO: Do it
-    const scriptNode = await this.readScriptFile(scriptPath)
-
-    return {
-      baseScriptDirPath,
-      scriptFilePaths,
-      scriptNodes,
-      anyScriptHasBecomes,
-    }
-  }
-
-  async runScriptLocally(scriptPath, options = {}) {
-    const scriptContext = await this.createScriptContext(scriptPath)
+  async runScriptLocally(rootScriptPath, options = {}) {
+    const scriptContext = await this.createScriptContext(rootScriptPath)
     let sudo = null
 
     if (scriptContext.anyScriptHasBecomes) {
@@ -417,96 +474,113 @@ export class OctopusTool {
     // TODO: Document Javascript modules
     // TODO: Check 'settings' for disk space requirements and fail if there is insufficient
 
-    const runContext = await this.createRunContext(scriptNode, {
-      interpolateAll: true,
-    })
+    let { runContext, interpolator } = await this.createRunContext()
 
-    // TODO: Add in vars from first script
+    for (var scriptPath of scriptContext.scriptPaths) {
+      const scriptNode = scriptContext.scriptNodes.get(scriptPath)
 
-    if (this.debug && Object.keys(runContext.vars).length > 0) {
-      this.log.info(JSON5.stringify(runContext.vars, null, "  "))
-    }
+      this.log.info(`Running '${scriptPath}'`)
 
-    if (state.settings && Object.keys(state.settings).length > 0) {
-      this.log.output(
-        JSON5.stringify({ description: state.settings.description })
-      )
-    }
-
-    let spinner = this.ora({
-      text: "",
-      spinner: options.noAnimation ? { frames: [">"] } : "dots",
-      color: "green",
-    })
-
-    for (const assertion of state.assertions) {
-      const asserterConstructor = this.asserters[assertion.assert]
-
-      if (!asserterConstructor) {
-        throw new ScriptError(
-          `${assertion.assert} is not a valid asserter`,
-          assertion._assertNode
-        )
-      }
-
-      const asserter = new asserterConstructor({
-        interpolateNode: state.interpolateNode,
+      this.updateRunContext(runContext, interpolator, scriptNode, {
+        interpolateAllVars: true,
       })
-      const { when: whenNode } = assertion._assertNode.value
 
-      if (whenNode) {
-        if (
-          (whenNode.type === "boolean" && !whenNode.value) ||
-          (whenNode.type === "string" && !state.interpolateNode(whenNode))
-        ) {
-          continue
-        }
+      if (this.debug && Object.keys(runContext.vars).length > 0) {
+        this.log.info(JSON5.stringify(runContext.vars, null, "  "))
       }
 
-      let output = {}
-      let rectified = false
+      const {
+        assertions: assertionsNode,
+        settings: settingsNode,
+      } = scriptNode.value
 
-      if (assertion.become) {
-        this.process.setegid(0)
-        this.process.seteuid(0)
-      } else if (sudo !== null) {
+      if (Object.keys(settingsNode.value).length > 0) {
+        this.log.output(JSON5.stringify(JSON5.simplify(settingsNode)))
+      }
+
+      let spinner = this.ora({
+        text: "",
+        spinner: options.noAnimation ? { frames: [">"] } : "dots",
+        color: "green",
+      })
+
+      for (const assertionNode of assertionsNode.value) {
+        const {
+          assert: assertNode,
+          when: whenNode,
+          become: becomeNode,
+          description: descriptionNode,
+        } = assertionNode.value
+
+        if (whenNode) {
+          if (
+            (whenNode.type === "boolean" && !whenNode.value) ||
+            (whenNode.type === "string" && !state.interpolator(whenNode))
+          ) {
+            continue
+          }
+        }
+
+        const Asserter = this.asserters[assertNode.value]
+
+        if (!Asserter) {
+          throw new ScriptError(
+            `${assertNode.value} is not a valid asserter`,
+            assertionNode
+          )
+        }
+
+        const asserter = new Asserter({
+          interpolator,
+        })
+
+        let output = {}
+        let rectified = false
+
+        if (becomeNode && becomeNode.value) {
+          this.process.setegid(0)
+          this.process.seteuid(0)
+        } else if (sudo !== null) {
+          this.process.setegid(sudo.gid)
+          this.process.seteuid(sudo.uid)
+        }
+
+        try {
+          spinner.start(assertNode.value)
+
+          if (!(await asserter.assert(assertionNode))) {
+            await asserter.rectify()
+            rectified = true
+            output.rectified = assertNode.value
+          } else {
+            output.asserted = assertNode.value
+          }
+
+          if (descriptionNode) {
+            output.description = descriptionNode.value
+          }
+        } finally {
+          spinner.stop()
+        }
+
+        output.result = asserter.result(rectified)
+        // TODO: Add result into array of results in context
+        this.log.output(JSON5.stringify(output))
+      }
+
+      if (sudo !== null) {
         this.process.setegid(sudo.gid)
         this.process.seteuid(sudo.uid)
       }
-
-      spinner.start(assertion.assert)
-
-      if (!(await asserter.assert(assertion._assertNode))) {
-        await asserter.rectify()
-        rectified = true
-        output.rectified = assertion.assert
-      } else {
-        output.asserted = assertion.assert
-      }
-
-      if (assertion.description) {
-        output.description = assertion.description
-      }
-
-      spinner.stop()
-
-      output.result = asserter.result(rectified)
-      // TODO: Add result into array of results in context
-      this.log.output(JSON5.stringify(output))
-    }
-
-    if (sudo !== null) {
-      this.process.setegid(sudo.gid)
-      this.process.seteuid(sudo.uid)
     }
   }
 
   async runScriptRemotely(scriptPath, options) {
     // TODO: Remote script errors are not displaying with the original file/line/offset
-    const scriptNode = await this.readScriptFile(scriptPath)
+    const scriptNode = await this.loadScriptFile(scriptPath)
     const state = Object.assign(
       await this.flattenScript(scriptNode),
-      await this.createRunContext(scriptNode, { interpolateAll: false })
+      await this.createRunContext(scriptNode, { interpolateAllVars: false })
     )
     const newScript = JSON.stringify(
       {

@@ -6,7 +6,7 @@ export class ServiceStopped {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
     this.util = container.util || util
-    this.interpolateNode = container.interpolateNode
+    this.interpolator = container.interpolator
   }
 
   async assert(assertNode) {
@@ -20,7 +20,7 @@ export class ServiceStopped {
       )
     }
 
-    this.expandedServiceName = this.interpolateNode(serviceNode)
+    this.expandedServiceName = this.interpolator(serviceNode)
 
     const output = await this.childProcess.exec(
       `systemctl is-active ${this.expandedServiceName}`

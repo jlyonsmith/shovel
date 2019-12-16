@@ -2,6 +2,7 @@
   settings: {
     description: "A basic script",
   },
+  includes: ["./empty.json5"],
   vars: {
     testDir1: "octo-dir-1",
     testDir2: "octo-dir-2",
@@ -12,7 +13,7 @@
       description: "Create Scratch Directory",
       assert: "DirectoryExists",
       with: {
-        path: "scratch/",
+        directory: "scratch/",
         mode: {
           user: "rwx",
           group: "rwx",
@@ -24,20 +25,20 @@
       description: "Create Test Directory",
       assert: "DirectoryExists",
       with: {
-        path: "{'scratch/' + vars.testDir1}",
+        directory: "{'scratch/' + vars.testDir1}",
       },
     },
     {
       description: "Create A Second Directory",
       assert: "DirectoryExists",
       with: {
-        path: "{'scratch/' + vars.testDir2}",
+        directory: "{'scratch/' + vars.testDir2}",
       },
     },
     {
       assert: "FileExists",
       with: {
-        path: "{'scratch/' + vars.testFile1}",
+        file: "{'scratch/' + vars.testFile1}",
       },
     },
   ],
