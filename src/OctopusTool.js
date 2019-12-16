@@ -358,7 +358,6 @@ export class OctopusTool {
     })
 
     return {
-      rootScriptDirPath,
       scriptNodes,
       scriptPaths,
       anyScriptHasBecomes,
@@ -402,12 +401,7 @@ export class OctopusTool {
     return { runContext, interpolator }
   }
 
-  updateRunContext(
-    runContext,
-    interpolator,
-    scriptNode,
-    options = { interpolateAllVars: true }
-  ) {
+  updateRunContext(runContext, interpolator, scriptNode, options = {}) {
     const flattenNodes = (node, withInterpolation) => {
       if (node.value !== null && node.type === "object") {
         const newValue = {}
@@ -445,7 +439,7 @@ export class OctopusTool {
 
     Object.assign(
       runContext.vars,
-      flattenNodes(varsNode, options.interpolateAllVars)
+      flattenNodes(varsNode, !!!options.interpolateOnlyLocalVars)
     )
   }
 
@@ -479,11 +473,7 @@ export class OctopusTool {
     for (var scriptPath of scriptContext.scriptPaths) {
       const scriptNode = scriptContext.scriptNodes.get(scriptPath)
 
-      this.log.info(`Running '${scriptPath}'`)
-
-      this.updateRunContext(runContext, interpolator, scriptNode, {
-        interpolateAllVars: true,
-      })
+      this.updateRunContext(runContext, interpolator, scriptNode)
 
       if (this.debug && Object.keys(runContext.vars).length > 0) {
         this.log.info(JSON5.stringify(runContext.vars, null, "  "))
@@ -503,6 +493,8 @@ export class OctopusTool {
         spinner: options.noAnimation ? { frames: [">"] } : "dots",
         color: "green",
       })
+
+      this.log.info(`Running '${scriptPath}'`)
 
       for (const assertionNode of assertionsNode.value) {
         const {
@@ -575,31 +567,14 @@ export class OctopusTool {
     }
   }
 
-  async runScriptRemotely(scriptPath, options) {
+  async runScriptRemotely(rootScriptPath, options) {
     // TODO: Remote script errors are not displaying with the original file/line/offset
-    const scriptNode = await this.loadScriptFile(scriptPath)
-    const state = Object.assign(
-      await this.flattenScript(scriptNode),
-      await this.createRunContext(scriptNode, { interpolateAllVars: false })
-    )
-    const newScript = JSON.stringify(
-      {
-        settings: state.settings,
-        vars: state.runContext.vars,
-        assertions: state.assertions,
-      },
-      (key, value) => (key.startsWith("_") ? undefined : value),
-      this.debug ? "  " : null
-    )
-    const scriptHasBecomes = !!state.assertions.find((assertion) =>
-      assertion.hasOwnProperty("become")
-    )
+    const scriptContext = await this.createScriptContext(rootScriptPath)
 
     if (this.debug) {
       this.log.info("Script after local processing:\n" + newScript)
     }
 
-    let remoteTempFile = null
     let ssh = null
     let sftp = null
 
@@ -640,18 +615,33 @@ export class OctopusTool {
         await this.rectifyHasOctopus(ssh)
       }
 
-      remoteTempFile = (await ssh.run("mktemp")).output[0]
+      const remoteTempDir = (await ssh.run("mktemp -d")).output[0]
 
-      this.log.info(
-        `Uploading remote script file${
-          this.debug ? " (" + remoteTempFile + ")" : ""
-        }`
+      this.log.info(`Created remote script directory '${remoteTempDir}'`)
+
+      let { runContext, interpolator } = await this.createRunContext()
+
+      for (const scriptPath of scriptContext.scriptPaths) {
+        const scriptNode = scriptContext.scriptNodes.get(scriptPath)
+
+        this.updateRunContext(runContext, interpolator, scriptNode, {
+          interpolateOnlyLocalVars: true,
+        })
+
+        const scriptContent = JSON5.stringify(JSON5.simplify(scriptNode))
+
+        await sftp.putContent(remoteTempDir, scriptContent)
+      }
+
+      const remoteRootScriptPath = path.resolve(
+        remoteTempDir,
+        scriptContext.scriptPaths[scriptContext.scriptPaths.length() - 1]
       )
 
-      await sftp.putContent(remoteTempFile, newScript)
-
       this.log.info(
-        `Running Octopus script on remote${scriptHasBecomes ? " as root" : ""}`
+        `Running Octopus remote script '${remoteRootScriptPath}'${
+          scriptContext.anyScriptHasBecomes ? " as root" : ""
+        }`
       )
 
       let spinner = this.ora({
@@ -660,8 +650,8 @@ export class OctopusTool {
         color: "green",
       })
 
-      await ssh.run(`octopus --noAnimation ${remoteTempFile}`, {
-        sudo: scriptHasBecomes,
+      await ssh.run(`octopus --noAnimation ${remoteRootScriptPath}`, {
+        sudo: scriptContext.anyScriptHasBecomes,
         logOutput: (line) => {
           spinner.stop()
           this.log.output(line)
@@ -676,9 +666,9 @@ export class OctopusTool {
         noThrow: true,
       })
     } finally {
-      if (remoteTempFile && !this.debug) {
-        this.log.info("Deleting remote temp file")
-        await ssh.run(`rm ${remoteTempFile}`)
+      if (remoteTempDir && !this.debug) {
+        this.log.info(`Deleting remote script directory '${remoteTempDir}'`)
+        await ssh.run(`rm -rf ${remoteTempDir}`)
       }
 
       if (sftp) {
