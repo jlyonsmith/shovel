@@ -571,10 +571,6 @@ export class OctopusTool {
     // TODO: Remote script errors are not displaying with the original file/line/offset
     const scriptContext = await this.createScriptContext(rootScriptPath)
 
-    if (this.debug) {
-      this.log.info("Script after local processing:\n" + newScript)
-    }
-
     // Things that need to be accessed in finally
     let ssh = null
     let sftp = null
