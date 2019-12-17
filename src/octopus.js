@@ -43,15 +43,21 @@ class Log {
   }
 
   initSpinner(notAnimated) {
-    this.spinner = this.ora({
+    const config = {
       text: "",
       spinner: notAnimated ? { frames: [">"] } : "dots",
       color: "green",
-    })
+    }
+
+    if (notAnimated) {
+      config.interval = Infinity
+    }
+
+    this.spinner = this.ora(config)
   }
 
-  spinnerStart() {
-    this.spinner.start()
+  spinnerStart(line) {
+    this.spinner.start(line)
   }
 
   spinnerStop() {
