@@ -43,17 +43,11 @@ class Log {
   }
 
   initSpinner(notAnimated) {
-    const config = {
+    this.spinner = this.ora({
       text: "",
-      spinner: notAnimated ? { frames: [">"] } : "dots",
+      spinner: notAnimated ? { frames: [">"], interval: 2147483647 } : "dots",
       color: "green",
-    }
-
-    if (notAnimated) {
-      config.interval = Infinity
-    }
-
-    this.spinner = this.ora(config)
+    })
   }
 
   spinnerStart(line) {
@@ -67,9 +61,10 @@ class Log {
   }
 }
 
+const log = new Log()
 const tool = new OctopusTool({
   toolName: path.basename(process.argv[1], ".js"),
-  log: new Log(),
+  log,
 })
 
 tool
