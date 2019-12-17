@@ -628,10 +628,13 @@ export class OctopusTool {
 
         const scriptContent = JSON5.stringify(JSON5.simplify(scriptNode))
 
-        await sftp.putContent(remoteTempDir, scriptContent)
+        await sftp.putContent(
+          path.join(remoteTempDir, scriptPath),
+          scriptContent
+        )
       }
 
-      const remoteRootScriptPath = path.resolve(
+      const remoteRootScriptPath = path.join(
         remoteTempDir,
         scriptContext.scriptPaths[scriptContext.scriptPaths.length - 1]
       )
