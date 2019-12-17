@@ -13,7 +13,7 @@
       description: "Create Scratch Directory",
       assert: "DirectoryExists",
       with: {
-        directory: "scratch/",
+        path: "scratch/",
         mode: {
           user: "rwx",
           group: "rwx",

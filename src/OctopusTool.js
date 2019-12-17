@@ -244,6 +244,8 @@ export class OctopusTool {
           includeNode
         )
       }
+
+      // TODO: Assert the path is relative
     }
 
     if (settingsNode.type !== "object") {
@@ -312,9 +314,7 @@ export class OctopusTool {
     const loadIncludeNode = async (includeNode) => {
       const scriptPath = includeNode.value
 
-      if (!path.isAbsolute(scriptPath)) {
-        throw new Error("Must provide absolute script path")
-      }
+      // assert.ok(path.isAbsolute(scriptPath), "include must have absolute path")
 
       const relativeScriptPath = path.join(
         path.relative(rootScriptDirPath, path.dirname(scriptPath)),
@@ -358,6 +358,7 @@ export class OctopusTool {
     })
 
     return {
+      rootScriptDirPath,
       scriptNodes,
       scriptPaths,
       anyScriptHasBecomes,
@@ -568,7 +569,6 @@ export class OctopusTool {
   }
 
   async runScriptRemotely(rootScriptPath, options) {
-    // TODO: Remote script errors are not displaying with the original file/line/offset
     const scriptContext = await this.createScriptContext(rootScriptPath)
 
     // Things that need to be accessed in finally
@@ -626,12 +626,20 @@ export class OctopusTool {
           interpolateOnlyLocalVars: true,
         })
 
-        const scriptContent = JSON5.stringify(JSON5.simplify(scriptNode))
+        // Put the includes back to being relative paths
+        for (const includeNode of scriptNode.value.includes.value) {
+          includeNode.value = path.relative(
+            includeNode.value,
+            scriptContext.rootScriptDirPath
+          )
+        }
 
-        await sftp.putContent(
-          path.join(remoteTempDir, scriptPath),
-          scriptContent
-        )
+        const scriptContent = JSON5.stringify(JSON5.simplify(scriptNode))
+        const remoteScriptPath = path.join(remoteTempDir, scriptPath)
+
+        this.log.info(`Uploaded ${path.join(remoteTempDir, scriptPath)}`)
+
+        await sftp.putContent(remoteScriptPath, scriptContent)
       }
 
       const remoteRootScriptPath = path.join(
