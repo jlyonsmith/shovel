@@ -633,7 +633,7 @@ export class OctopusTool {
 
       const remoteRootScriptPath = path.resolve(
         remoteTempDir,
-        scriptContext.scriptPaths[scriptContext.scriptPaths.length() - 1]
+        scriptContext.scriptPaths[scriptContext.scriptPaths.length - 1]
       )
 
       this.log.info(
