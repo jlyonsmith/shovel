@@ -9,7 +9,6 @@ import JSON5 from "@johnls/json5"
 import autobind from "autobind-decorator"
 import * as asserters from "./asserters"
 import util from "./util"
-import ora from "ora"
 import { ScriptError } from "./ScriptError"
 import semver from "semver"
 
@@ -22,7 +21,6 @@ export class OctopusTool {
     this.util = container.util || util
     this.asserters = container.asserters || asserters
     this.process = container.process || process
-    this.ora = container.ora || ora
     this.createSsh = container.createSsh || ((options) => new SSH(options))
     this.createSftp = container.createSftp || ((options) => new SFTP(options))
     this.debug = container.debug
@@ -489,13 +487,9 @@ export class OctopusTool {
         this.log.output(JSON5.stringify(JSON5.simplify(settingsNode)))
       }
 
-      let spinner = this.ora({
-        text: "",
-        spinner: options.noAnimation ? { frames: [">"] } : "dots",
-        color: "green",
-      })
-
       this.log.info(`Running '${scriptPath}'`)
+
+      this.log.initSpinner(options.noAnimation)
 
       for (const assertionNode of assertionsNode.value) {
         const {
@@ -538,22 +532,18 @@ export class OctopusTool {
           this.process.seteuid(sudo.uid)
         }
 
-        try {
-          spinner.start(assertNode.value)
+        this.log.spinnerStart(assertNode.value)
 
-          if (!(await asserter.assert(assertionNode))) {
-            await asserter.rectify()
-            rectified = true
-            output.rectified = assertNode.value
-          } else {
-            output.asserted = assertNode.value
-          }
+        if (!(await asserter.assert(assertionNode))) {
+          await asserter.rectify()
+          rectified = true
+          output.rectified = assertNode.value
+        } else {
+          output.asserted = assertNode.value
+        }
 
-          if (descriptionNode) {
-            output.description = descriptionNode.value
-          }
-        } finally {
-          spinner.stop()
+        if (descriptionNode) {
+          output.description = descriptionNode.value
         }
 
         output.result = asserter.result(rectified)
@@ -628,10 +618,9 @@ export class OctopusTool {
 
         // Put the includes back to being relative paths
         for (const includeNode of scriptNode.value.includes.value) {
-          includeNode.value = path.relative(
-            includeNode.value,
-            scriptContext.rootScriptDirPath
-          )
+          includeNode.value =
+            "." +
+            includeNode.value.substring(scriptContext.rootScriptDirPath.length)
         }
 
         const scriptContent = JSON5.stringify(JSON5.simplify(scriptNode))
@@ -653,25 +642,13 @@ export class OctopusTool {
         }`
       )
 
-      let spinner = this.ora({
-        text: "",
-        spinner: options.noAnimation ? { frames: [">"] } : "dots",
-        color: "green",
-      })
+      this.log.initSpinner(options.noAnimation)
 
       await ssh.run(`octopus --noAnimation ${remoteRootScriptPath}`, {
         sudo: scriptContext.anyScriptHasBecomes,
-        logOutput: (line) => {
-          spinner.stop()
-          this.log.output(line)
-        },
-        logError: (line) => {
-          spinner.stop()
-          this.log.outputError(line)
-        },
-        logStart: (line) => {
-          spinner.start(line.substring(2))
-        },
+        logOutput: this.log.output,
+        logError: this.log.outputError,
+        logStart: this.log.startSpinner,
         noThrow: true,
       })
     } finally {

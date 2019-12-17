@@ -2,12 +2,22 @@
 import { OctopusTool } from "./OctopusTool"
 import chalk from "chalk"
 import path from "path"
+import ora from "ora"
+import autobind from "autobind-decorator"
 
-const log = {
-  info: function() {
+@autobind
+class Log {
+  constructor(container = {}) {
+    this.ora = container.ora || ora
+  }
+
+  info() {
+    this.spinnerStop()
     console.error([...arguments].join(" "))
-  },
-  output: function(line) {
+  }
+
+  output(line) {
+    this.spinnerStop()
     if (line.startsWith("{rectified:")) {
       console.log(chalk.yellow(line))
     } else if (line.startsWith("{asserted:")) {
@@ -15,21 +25,45 @@ const log = {
     } else {
       console.log(line)
     }
-  },
-  outputError: function(line) {
+  }
+
+  outputError(line) {
+    this.spinnerStop()
     console.log(chalk.red("remote-" + line))
-  },
-  warning: function() {
+  }
+
+  warning() {
+    this.spinnerStop()
     console.error(chalk.yellow("warning:", [...arguments].join(" ")))
-  },
-  error: function() {
+  }
+
+  error() {
+    this.spinnerStop()
     console.error(chalk.red("error:", [...arguments].join(" ")))
-  },
+  }
+
+  initSpinner(notAnimated) {
+    this.spinner = this.ora({
+      text: "",
+      spinner: notAnimated ? { frames: [">"] } : "dots",
+      color: "green",
+    })
+  }
+
+  spinnerStart() {
+    this.spinner.start()
+  }
+
+  spinnerStop() {
+    if (this.spinner) {
+      this.spinner.stop()
+    }
+  }
 }
 
 const tool = new OctopusTool({
   toolName: path.basename(process.argv[1], ".js"),
-  log,
+  log: new Log(),
 })
 
 tool
