@@ -652,7 +652,7 @@ export class OctopusTool {
         this.log.enableSpinner()
       }
 
-      await ssh.run(`octopus --noAnimation ${remoteRootScriptPath}`, {
+      await ssh.run(`octopus --noSpinner ${remoteRootScriptPath}`, {
         sudo: scriptContext.anyScriptHasBecomes,
         logOutput: this.log.output,
         logError: this.log.outputError,

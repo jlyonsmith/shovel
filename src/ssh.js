@@ -36,7 +36,7 @@ export class SSH {
     lines = lines.map((line) => line.trim())
 
     // NOTE: Keep for debugging
-    console.log(lines)
+    // console.log(lines)
 
     // TODO: Support 'Enter passphrase for key...' for ssh-add (throw error)
 

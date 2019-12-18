@@ -23,7 +23,7 @@ class Log {
     } else if (line.startsWith("{asserted:")) {
       console.log(chalk.green(line))
     } else {
-      console.log(line)
+      console.log(chalk.blueBright(line))
     }
   }
 
