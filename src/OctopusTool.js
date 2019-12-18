@@ -489,7 +489,9 @@ export class OctopusTool {
 
       this.log.info(`Running '${scriptPath}'`)
 
-      this.log.initSpinner(options.noAnimation)
+      if (!options.noSpinner) {
+        this.log.enableSpinner()
+      }
 
       for (const assertionNode of assertionsNode.value) {
         const {
@@ -532,7 +534,11 @@ export class OctopusTool {
           this.process.seteuid(sudo.uid)
         }
 
-        this.log.spinnerStart(assertNode.value)
+        if (options.noSpinner) {
+          this.log.info(`> assertNode.value`)
+        } else {
+          this.log.startSpinner(assertNode.value)
+        }
 
         if (!(await asserter.assert(assertionNode))) {
           await asserter.rectify()
@@ -642,7 +648,9 @@ export class OctopusTool {
         }`
       )
 
-      this.log.initSpinner(options.noAnimation)
+      if (!options.noSpinner) {
+        this.log.enableSpinner()
+      }
 
       await ssh.run(`octopus --noAnimation ${remoteRootScriptPath}`, {
         sudo: scriptContext.anyScriptHasBecomes,
@@ -668,7 +676,7 @@ export class OctopusTool {
 
   async run(argv) {
     const options = {
-      boolean: ["help", "version", "debug", "noAnimation"],
+      boolean: ["help", "version", "debug", "noSpinner"],
       string: ["host", "hostFile", "user", "port", "identity"],
       alias: {
         f: "hostFile",
@@ -710,8 +718,7 @@ Arguments:
   --user, -u <user>         Remote user name; defaults to current user
   --identity, -i <key>      User identity file
   --hostFile, -f <file>     JSON5 file containing multiple host names
-  --noAnimation             Disable spinner animation for long running
-                            assertions
+  --noSpinner               Disable spinner animation
 `)
       return
     }
@@ -773,7 +780,7 @@ Arguments:
       }
     } else {
       await this.runScriptLocally(scriptPath, {
-        noAnimation: args.noAnimation,
+        noSpinner: args.noSpinner,
       })
     }
   }

@@ -12,12 +12,12 @@ class Log {
   }
 
   info() {
-    this.spinnerStop()
+    this.stopSpinner()
     console.error([...arguments].join(" "))
   }
 
   output(line) {
-    this.spinnerStop()
+    this.stopSpinner()
     if (line.startsWith("{rectified:")) {
       console.log(chalk.yellow(line))
     } else if (line.startsWith("{asserted:")) {
@@ -28,33 +28,35 @@ class Log {
   }
 
   outputError(line) {
-    this.spinnerStop()
+    this.stopSpinner()
     console.log(chalk.red("remote-" + line))
   }
 
   warning() {
-    this.spinnerStop()
+    this.stopSpinner()
     console.error(chalk.yellow("warning:", [...arguments].join(" ")))
   }
 
   error() {
-    this.spinnerStop()
+    this.stopSpinner()
     console.error(chalk.red("error:", [...arguments].join(" ")))
   }
 
-  initSpinner(notAnimated) {
+  enableSpinner() {
     this.spinner = this.ora({
       text: "",
-      spinner: notAnimated ? { frames: [">"], interval: 2147483647 } : "dots",
+      spinner: "dots",
       color: "green",
     })
   }
 
-  spinnerStart(line) {
-    this.spinner.start(line)
+  startSpinner(line) {
+    if (this.spinner) {
+      this.spinner.start(line)
+    }
   }
 
-  spinnerStop() {
+  stopSpinner() {
     if (this.spinner) {
       this.spinner.stop()
     }
