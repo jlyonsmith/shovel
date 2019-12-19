@@ -10,11 +10,11 @@
     major: 1,
     minor: 8,
     patch: 0,
-    build: 20191216,
+    build: 20191219,
     revision: 0,
     tz: "America/Los_Angeles",
     startYear: "2017",
-    sequence: 38
+    sequence: 39
   },
   fileTypes: [
     {
