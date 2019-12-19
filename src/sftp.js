@@ -226,9 +226,6 @@ export class SFTP {
     // TODO: If the timer fired, Ctrl+C out of whatever we were doing?
   }
 
-  // TODO: Implement using putContent above
-  async putFile(remoteFile, localFile, options = {}) {}
-
   close() {
     if (!this.pty) {
       throw new Error("No terminal is connected")

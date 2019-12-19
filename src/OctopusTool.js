@@ -379,11 +379,10 @@ export class OctopusTool {
         join: (...paths) => path.join(...paths),
         dirname: (filename) => path.dirname(filename),
       },
-      vars: {},
     })
     const interpolator = (node) => {
       if (!node.type || node.type !== "string") {
-        throw new Error("Can only interpolator string nodes")
+        throw new Error("Can only interpolate string nodes")
       }
 
       if (node.value.startsWith("{") && node.value.endsWith("}")) {
@@ -504,7 +503,7 @@ export class OctopusTool {
         if (whenNode) {
           if (
             (whenNode.type === "boolean" && !whenNode.value) ||
-            (whenNode.type === "string" && !state.interpolator(whenNode))
+            (whenNode.type === "string" && !interpolator(whenNode))
           ) {
             continue
           }

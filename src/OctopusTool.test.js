@@ -14,6 +14,9 @@ beforeEach(() => {
       warning: jest.fn(),
       error: jest.fn(),
       output: jest.fn(),
+      enableSpinner: jest.fn(),
+      startSpinner: jest.fn(),
+      stopSpinner: jest.fn(),
     },
   }
 })
@@ -227,11 +230,11 @@ test("loadScriptFile", async () => {
   await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Empty script
-  container.fs.readFile = (path) => "{}"
+  container.fs.readFile = async (path) => "{}"
   await expect(tool.loadScriptFile("test.json5")).resolves.not.toBeNull()
 
   // Clean script
-  container.fs.readFile = (path) =>
+  container.fs.readFile = async (path) =>
     `{
       settings: {},
       includes: ["something.json5"],
@@ -241,87 +244,138 @@ test("loadScriptFile", async () => {
   await expect(tool.loadScriptFile("test.json5")).resolves.not.toBeNull()
 
   // Bad settings
-  container.fs.readFile = (path) =>
+  container.fs.readFile = async (path) =>
     `{
       settings: [],
     }`
   await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad description
-  container.fs.readFile = (path) =>
+  container.fs.readFile = async (path) =>
     `{
       settings: {description: 1},
     }`
   await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad includes
-  container.fs.readFile = (path) =>
+  container.fs.readFile = async (path) =>
     `{
       includes: {},
     }`
   await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad include
-  container.fs.readFile = (path) =>
+  container.fs.readFile = async (path) =>
     `{
       includes: [1],
     }`
   await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad vars
-  container.fs.readFile = (path) =>
+  container.fs.readFile = async (path) =>
     `{
       vars: [],
     }`
   await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad assertions
-  container.fs.readFile = (path) =>
+  container.fs.readFile = async (path) =>
     `{
       assertions: {},
     }`
   await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad assertion
-  container.fs.readFile = (path) =>
+  container.fs.readFile = async (path) =>
     `{
       assertions: [1],
     }`
   await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Missing assertion name
-  container.fs.readFile = (path) =>
+  container.fs.readFile = async (path) =>
     `{
       assertions: [{}],
     }`
   await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad assertion name
-  container.fs.readFile = (path) =>
+  container.fs.readFile = async (path) =>
     `{
       assertions: [{ assert: 1 }],
     }`
   await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad assertion description
-  container.fs.readFile = (path) =>
+  container.fs.readFile = async (path) =>
     `{
       assertions: [{ assert: "Thing", description: 1 }],
     }`
   await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
   // Bad assertion with
-  container.fs.readFile = (path) =>
+  container.fs.readFile = async (path) =>
     `{
       assertions: [{ assert: "Thing", with: 1 }],
     }`
   await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
   // Bad assertion when
-  container.fs.readFile = (path) =>
+  container.fs.readFile = async (path) =>
     `{
       assertions: [{ assert: "Thing", when: 1 }],
     }`
   await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
+})
+
+test("createScriptContext", async () => {
+  Object.assign(container, {
+    fs: {
+      readFile: (path) => {
+        switch (path) {
+          case "/a/b.json5":
+            // Adding c.json5 twice is not a mistake
+            return `{
+          includes: [
+            "./c.json5",
+            "./c.json5",
+          ],
+          assertions: [
+            {
+              assert: "Something",
+              with: {},
+              become: true,
+            }
+          ]
+        }`
+          case "/a/c.json5":
+            return `{
+          assertions: []
+          }`
+          case "/a/d.json5":
+            return `{
+            includes: [
+              "../e.json5",
+            ]
+          }`
+          default:
+            throw new Error()
+        }
+      },
+    },
+  })
+
+  const tool = new OctopusTool(container)
+
+  await expect(tool.createScriptContext("/a/b.json5")).resolves.toMatchObject({
+    anyScriptHasBecomes: true,
+    rootScriptDirPath: "/a",
+    scriptNodes: expect.any(Map),
+    scriptPaths: expect.any(Array),
+  })
+
+  await expect(tool.createScriptContext("/a/d.json5")).rejects.toThrow(
+    ScriptError
+  )
 })
 
 test("createRunContext", async () => {
@@ -341,46 +395,19 @@ test("createRunContext", async () => {
 
   const tool = new OctopusTool(container)
   const scriptNode = testUtil.createScriptNode("a.json5")
-
-  // No vars
-  scriptNode.value.vars = undefined
-
   let result = await tool.createRunContext(scriptNode)
 
-  expect(result).toMatchObject({
-    runContext: {},
-  })
+  expect(result).not.toBe(null)
+  expect(result.interpolator).not.toBe(null)
 
-  // With vars
-  scriptNode.value.vars = testUtil.createNode(scriptNode.filename, {
-    s: "b",
-    n: 1,
-    x: null,
-    b: true,
-    a: [1, 2, 3],
-    o: { s: "a", n: 2 },
-    local: { s: "c" },
-  })
-  result = await tool.createRunContext(scriptNode)
-  expect(result).toMatchObject({
-    runContext: {},
-  })
-  expect(
-    result.interpolator(testUtil.createNode(scriptNode.filename, "test"))
-  ).toBe("test")
-  expect(() =>
-    result.interpolator(testUtil.createNode(scriptNode.filename, 1))
-  ).toThrow(Error)
-  expect(() =>
-    result.interpolator(testUtil.createNode(scriptNode.filename, "{x()}"))
-  ).toThrow(ScriptError)
-
-  // Context functions
+  // fs functions
   expect(
     result.interpolator(
       testUtil.createNode(scriptNode.filename, "{fs.readFile('blah')}")
     )
   ).toBe("foobar")
+
+  // path functions
   expect(
     result.interpolator(
       testUtil.createNode(scriptNode.filename, "{path.join('foo', 'bar')}")
@@ -391,6 +418,51 @@ test("createRunContext", async () => {
       testUtil.createNode(scriptNode.filename, "{path.dirname('foo/bar')}")
     )
   ).toBe("foo")
+
+  // Interpolation with vars
+  result = await tool.createRunContext(scriptNode)
+
+  expect(result).toMatchObject({
+    runContext: {},
+  })
+  expect(
+    result.interpolator(testUtil.createNode(scriptNode.filename, "test"))
+  ).toBe("test")
+  expect(() =>
+    result.interpolator(testUtil.createNode(scriptNode.filename, 1))
+  ).toThrow(Error)
+  expect(() =>
+    result.interpolator(testUtil.createNode(scriptNode.filename, "{noFunc()}"))
+  ).toThrow(ScriptError)
+})
+
+test("updateRunContext", async () => {
+  const tool = new OctopusTool(container)
+  const interpolator = (s) => s
+  const runContext = {
+    sys: {},
+    vars: {},
+  }
+  const scriptNode = testUtil.createScriptNode("a.json5")
+
+  // Interpolation with vars
+  scriptNode.value.vars = testUtil.createNode(scriptNode.filename, {
+    s: "b",
+    n: 1,
+    x: null,
+    b: true,
+    a: [1, 2, 3],
+    o: { s: "a", n: 2 },
+    local: { s: "c" },
+  })
+  expect(
+    tool.updateRunContext(runContext, interpolator, scriptNode)
+  ).toBeUndefined()
+  expect(
+    tool.updateRunContext(runContext, interpolator, scriptNode, {
+      interpolateOnlyLocalVars: true,
+    })
+  ).toBeUndefined()
 })
 
 test("runScriptLocally", async () => {
@@ -417,97 +489,91 @@ test("runScriptLocally", async () => {
         SUDO_GID: "1",
       },
     },
-    ora: () => ({
-      start: () => undefined,
-      stop: () => undefined,
-    }),
+    fs: {
+      readFile: async (path) => {
+        switch (path) {
+          case "/x/a.json5":
+            return `{
+              settings: {
+                description: "test",
+              },
+              assertions: [
+                {
+                  description: "test",
+                  assert: "TestAssert",
+                  with: {},
+                  become: "root",
+                  when: "",
+                },
+                {
+                  assert: "TestAssert",
+                  with: {},
+                  become: "root",
+                  when: false,
+                },
+                {
+                  assert: "TestAssert",
+                  with: {
+                    assert: true,
+                  },
+                },
+              ],
+            }`
+          case "/x/b.json5":
+            return `{
+              assertions: [
+                {
+                  assert: "TestAssert",
+                  with: {}
+                }
+              ]
+            }`
+          case "/x/c.json5":
+            return `{
+              assertions: [
+                {
+                  assert: "UnknownAsert",
+                  with: {}
+                }
+              ]
+            }`
+          default:
+            throw new Error()
+        }
+      },
+    },
   })
 
   const tool = new OctopusTool(container)
-  const assert1 = {
-    assert: "TestAssert",
-    description: "hmmm",
-    with: {},
-    become: "root",
-    when: "",
-  }
-  const assert2 = {
-    assert: "TestAssert",
-    with: {},
-    when: false,
-  }
-  const assert3 = {
-    assert: "TestAssert",
-    with: {
-      assert: true,
-    },
-  }
-  const assert4 = {
-    assert: "TestAssert",
-    with: {},
-  }
-  const assert5 = {
-    assert: "UnknownAssert",
-    with: {},
-  }
 
-  tool.loadScriptFile = jest.fn(async () => {})
-  tool.flattenScript = jest.fn(async () => ({
-    settings: {
-      description: "Blah",
-    },
-    assertions: [
-      Object.assign({}, assert1, {
-        _assertNode: testUtil.createNode("test.json5", assert1),
-      }),
-      Object.assign({}, assert2, {
-        _assertNode: testUtil.createNode("test.json5", assert2),
-      }),
-      Object.assign({}, assert3, {
-        _assertNode: testUtil.createNode("test.json5", assert3),
-      }),
-    ],
-  }))
   tool.createRunContext = jest.fn(async () => ({
     runContext: { vars: { a: 1 } },
     interpolator: jest.fn((s) => s),
   }))
+  tool.updateRunContext = jest.fn()
 
   // Has becomes
+  await tool.runScriptLocally("/x/a.json5", {
+    noSpinner: true,
+  })
   await expect(
-    tool.runScriptLocally("test.json5", {
-      spinner: true,
+    tool.runScriptLocally("/x/a.json5", {
+      noSpinner: true,
     })
   ).resolves.toBeUndefined()
 
   // Has becomes and not running as root
   container.util.runningAsRoot = () => false
-  await expect(tool.runScriptLocally("test.json5")).rejects.toThrow(
+  await expect(tool.runScriptLocally("/x/a.json5")).rejects.toThrow(
     "not running as root"
   )
 
   // No becomes
   tool.debug = false
-  tool.flattenScript = jest.fn(async () => ({
-    settings: {},
-    vars: {},
-    assertions: [
-      Object.assign({}, assert4, {
-        _assertNode: testUtil.createNode("test.json5", assert4),
-      }),
-    ],
-  }))
-  await expect(tool.runScriptLocally("test.json5")).resolves.toBeUndefined()
+  await expect(tool.runScriptLocally("/x/b.json5")).resolves.toBeUndefined()
 
   // Bad asserter
-  tool.flattenScript = jest.fn(async () => ({
-    assertions: [
-      Object.assign({}, assert5, {
-        _assertNode: testUtil.createNode("test.json5", assert5),
-      }),
-    ],
-  }))
-  await expect(tool.runScriptLocally("test.json5")).rejects.toThrow(ScriptError)
+  await expect(tool.runScriptLocally("/x/c.json5")).rejects.toThrow(ScriptError)
 })
 
 test("runScriptRemotely", async () => {
@@ -526,27 +592,48 @@ test("runScriptRemotely", async () => {
       putContent: async () => undefined,
       close: () => undefined,
     }),
+    fs: {
+      readFile: async (path) => {
+        switch (path) {
+          case "/x/a.json5":
+            return `{
+              includes: [
+                "b.json5",
+              ],
+              assertions: [
+                {
+                  assert: "Something",
+                  become: "root",
+                }
+              ],
+            }`
+          case "/x/b.json5":
+            return `{
+              assertions: [],
+            }`
+          default:
+            throw new Error()
+        }
+      },
+    },
   })
   const tool = new OctopusTool(container)
 
   tool.assertHasNode = () => true
   tool.assertHasOctopus = () => true
-  tool.loadScriptFile = async () => ({})
-  tool.getSshOptions = async () => [{}]
-  tool.flattenScript = async () => ({ assertions: [] })
   tool.createRunContext = async () => ({
-    runContext: { vars: {} },
+    runContext: { sys: {}, vars: {} },
     interpolator: (s) => s,
   })
 
   // Happy path
-  await tool.runScriptRemotely("test.json5", {
+  await tool.runScriptRemotely("/x/a.json5", {
     user: "test",
     password: "test",
     host: "somehost",
   })
   await expect(
-    tool.runScriptRemotely("test.json5", {
+    tool.runScriptRemotely("/x/b.json5", {
       user: "test",
       password: "test",
       host: "somehost",
@@ -559,14 +646,12 @@ test("runScriptRemotely", async () => {
   tool.assertHasOctopus = () => false
   tool.rectifyHasNode = async () => undefined
   tool.rectifyHasOctopus = async () => undefined
-  tool.flattenScript = async () => ({
-    assertions: [{ assert: "Thing", become: true, _assertNode: {} }],
-  })
   await expect(
-    tool.runScriptRemotely("test.json5", {
+    tool.runScriptRemotely("/x/a.json5", {
       user: "test",
       password: "test",
       host: "somehost",
+      noSpinner: true,
     })
   ).resolves.toBeUndefined()
 
@@ -578,7 +663,7 @@ test("runScriptRemotely", async () => {
     close: () => undefined,
   })
   await expect(
-    tool.runScriptRemotely("test.json5", {
+    tool.runScriptRemotely("/x/b.json5", {
       user: "test",
       password: "test",
       host: "somehost",
@@ -637,7 +722,7 @@ test("run", async () => {
   ).resolves.toBeUndefined()
 
   // Hosts file
-  await tool.run(["somescript.json5", "--host-file", "hostfile.json5"])
+  await tool.run(["somescript.json5", "--hostFile", "hostfile.json5"])
   // await expect(
   //   tool.run(["somescript.json5", "--host-file", "hostfile.json5"])
   // ).resolves.toBeUndefined()

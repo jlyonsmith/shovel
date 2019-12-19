@@ -10,13 +10,14 @@ test("constructor", async () => {
 test("parseLines", async () => {
   const ssh = new SSH()
   const result = SSH.parseLines(
-    "error:\nfred@localhost's password:\nfred@localhost: Permission denied\n[sudo] password for\nabc\n/x/y/z\nv1.2.3\n{}\n0\nPS1>\n"
+    "error:\nfred@localhost's password:\nfred@localhost: Permission denied\n[sudo] password for\nabc\n/x/y/z\nv1.2.3\n{}\n> start\n0\nPS1>\n"
   )
 
   expect(result).toEqual({
     outputLines: ["/x/y/z", "v1.2.3"],
     errorLines: ["error:"],
     jsonLines: ["{}"],
+    startLine: "> start",
     exitCode: 0,
     ready: false,
     permissionDenied: true,
@@ -181,7 +182,7 @@ test("run", async () => {
   // Success
   ssh.pty = pty
   setImmediate(() => {
-    pty.emit("data", "error: blah\n{x:1}\n")
+    pty.emit("data", "> start\nerror: blah\n{x:1}\n")
     pty.emit("data", "[sudo] password for x")
     setImmediate(() => {
       pty.emit("data", "/x\n0\nPS1>")
@@ -191,6 +192,7 @@ test("run", async () => {
     ssh.run("something", {
       logError: () => undefined,
       logOutput: () => undefined,
+      logStart: () => undefined,
       cwd: "/x/y",
       sudo: true,
       timeout: 10000,
