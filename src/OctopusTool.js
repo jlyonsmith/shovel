@@ -27,6 +27,7 @@ export class OctopusTool {
   }
 
   static minNodeVersion = "v10.17.0"
+  static ltsNodeVersion = "v12.14.0"
 
   async assertHasNode(ssh) {
     let result = await ssh.run("node --version", {
@@ -42,7 +43,7 @@ export class OctopusTool {
 
   async rectifyHasNode(ssh, sftp) {
     let result = null
-    const nodeMajorVersion = semver.major(OctopusTool.minNodeVersion)
+    const nodeMajorVersion = semver.major(OctopusTool.ltsNodeVersion)
     const installNodeScript = `#!/bin/bash
     VERSION=$(grep -Eo "\\(Red Hat|\\(Ubuntu" /proc/version)
     case $VERSION in
@@ -120,7 +121,7 @@ export class OctopusTool {
     }
 
     throw new Error(
-      `Unable to install Node.js ${OctopusTool.minNodeVersion} on remote host`
+      `Unable to install Node.js ${OctopusTool.ltsNodeVersion} on remote host`
     )
   }
 
