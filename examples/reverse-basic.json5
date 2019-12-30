@@ -3,9 +3,9 @@
     description: "A script to reverse the basic script",
   },
   vars: {
-    TEST_DIR_1: "octo-dir-1",
-    TEST_DIR_2: "octo-dir-2",
-    TEST_FILE_1: "octo-file-1",
+    TEST_DIR_1: "shvl-dir-1",
+    TEST_DIR_2: "shvl-dir-2",
+    TEST_FILE_1: "shvl-file-1",
   },
   assertions: [
     {

@@ -4,9 +4,9 @@
   },
   includes: ["./empty.json5"],
   vars: {
-    testDir1: "octo-dir-1",
-    testDir2: "octo-dir-2",
-    testFile1: "octo-file-1",
+    testDir1: "shvl-dir-1",
+    testDir2: "shvl-dir-2",
+    testFile1: "shvl-file-1",
   },
   assertions: [
     {

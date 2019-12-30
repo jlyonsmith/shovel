@@ -1,4 +1,4 @@
-import { OctopusTool } from "./OctopusTool"
+import { SshovelTool } from "./SshovelTool"
 import * as testUtil from "./testUtil"
 import * as version from "./version"
 import stream from "stream"
@@ -8,7 +8,7 @@ let container = null
 
 beforeEach(() => {
   container = {
-    toolName: "octopus",
+    toolName: "sshovel",
     log: {
       info: jest.fn(),
       warning: jest.fn(),
@@ -22,7 +22,7 @@ beforeEach(() => {
 })
 
 test("constructor", () => {
-  const tool = new OctopusTool()
+  const tool = new SshovelTool()
 
   expect(tool).not.toBe(null)
   expect(tool.createSsh()).not.toBe(null)
@@ -35,7 +35,7 @@ test("assertHasNode", async () => {
       if (command === "node --version") {
         return {
           exitCode: 0,
-          output: [OctopusTool.minNodeVersion],
+          output: [SshovelTool.minNodeVersion],
         }
       } else {
         return {
@@ -45,13 +45,13 @@ test("assertHasNode", async () => {
       }
     },
   }
-  const tool = new OctopusTool(container)
+  const tool = new SshovelTool(container)
 
   await expect(tool.assertHasNode(ssh)).resolves.toBe(true)
 })
 
 test("rectifyHasNode", async () => {
-  const tool = new OctopusTool(container)
+  const tool = new SshovelTool(container)
 
   // Success
   const ssh = {
@@ -64,7 +64,7 @@ test("rectifyHasNode", async () => {
       } else if (command === "node --version") {
         return {
           exitCode: 0,
-          output: [OctopusTool.minNodeVersion],
+          output: [SshovelTool.minNodeVersion],
         }
       } else if (command === "bash -c 'echo /$EUID'") {
         return {
@@ -166,27 +166,27 @@ test("rectifyHasNode", async () => {
   await expect(tool.rectifyHasNode(ssh, sftp)).rejects.toThrow(Error)
 })
 
-test("assertHasOctopus", async () => {
+test("assertHasSshovel", async () => {
   const ssh = {
     run: async (command, options) => ({
       exitCode: 0,
       output: [version.shortVersion],
     }),
   }
-  const tool = new OctopusTool(container)
+  const tool = new SshovelTool(container)
 
-  await expect(tool.assertHasOctopus(ssh)).resolves.toBe(true)
+  await expect(tool.assertHasSshovel(ssh)).resolves.toBe(true)
 })
 
-test("rectifyHasOctopus", async () => {
+test("rectifyHasSshovel", async () => {
   const ssh = {
     run: async (command, options) => {
-      if (command === "npm install -g @johnls/octopus") {
+      if (command === "npm install -g @johnls/sshovel") {
         return {
           exitCode: 0,
           output: [],
         }
-      } else if (command === "octopus --version") {
+      } else if (command === "sshovel --version") {
         return {
           exitCode: 0,
           output: [version.shortVersion],
@@ -199,17 +199,17 @@ test("rectifyHasOctopus", async () => {
       }
     },
   }
-  const tool = new OctopusTool(container)
+  const tool = new SshovelTool(container)
 
   // Success
-  await expect(tool.rectifyHasOctopus(ssh)).resolves.toBeUndefined()
+  await expect(tool.rectifyHasSshovel(ssh)).resolves.toBeUndefined()
 
   // Failed after install
   ssh.run = async (command, options) => ({
     exitCode: 255,
     output: [],
   })
-  await expect(tool.rectifyHasOctopus(ssh)).rejects.toThrow(Error)
+  await expect(tool.rectifyHasSshovel(ssh)).rejects.toThrow(Error)
 
   // Failed install
   ssh.run = async (command, options) => {
@@ -218,13 +218,13 @@ test("rectifyHasOctopus", async () => {
       output: [""],
     }
   }
-  await expect(tool.rectifyHasOctopus(ssh)).rejects.toThrow(Error)
+  await expect(tool.rectifyHasSshovel(ssh)).rejects.toThrow(Error)
 })
 
 test("loadScriptFile", async () => {
   Object.assign(container, { fs: { readFile: (path) => "[]" } })
 
-  const tool = new OctopusTool(container)
+  const tool = new SshovelTool(container)
 
   // Bad empty script
   await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
@@ -364,7 +364,7 @@ test("createScriptContext", async () => {
     },
   })
 
-  const tool = new OctopusTool(container)
+  const tool = new SshovelTool(container)
 
   await expect(tool.createScriptContext("/a/b.json5")).resolves.toMatchObject({
     anyScriptHasBecomes: true,
@@ -393,7 +393,7 @@ test("createRunContext", async () => {
     },
   })
 
-  const tool = new OctopusTool(container)
+  const tool = new SshovelTool(container)
   const scriptNode = testUtil.createScriptNode("a.json5")
   let result = await tool.createRunContext(scriptNode)
 
@@ -437,7 +437,7 @@ test("createRunContext", async () => {
 })
 
 test("updateRunContext", async () => {
-  const tool = new OctopusTool(container)
+  const tool = new SshovelTool(container)
   const interpolator = (s) => s
   const runContext = {
     sys: {},
@@ -544,7 +544,7 @@ test("runScriptLocally", async () => {
     },
   })
 
-  const tool = new OctopusTool(container)
+  const tool = new SshovelTool(container)
 
   tool.createRunContext = jest.fn(async () => ({
     runContext: { vars: { a: 1 } },
@@ -617,10 +617,10 @@ test("runScriptRemotely", async () => {
       },
     },
   })
-  const tool = new OctopusTool(container)
+  const tool = new SshovelTool(container)
 
   tool.assertHasNode = () => true
-  tool.assertHasOctopus = () => true
+  tool.assertHasSshovel = () => true
   tool.createRunContext = async () => ({
     runContext: { sys: {}, vars: {} },
     interpolator: (s) => s,
@@ -640,12 +640,12 @@ test("runScriptRemotely", async () => {
     })
   ).resolves.toBeUndefined()
 
-  // Without Node or Octopus
+  // Without Node or Sshovel
   tool.debug = false
   tool.assertHasNode = () => false
-  tool.assertHasOctopus = () => false
+  tool.assertHasSshovel = () => false
   tool.rectifyHasNode = async () => undefined
-  tool.rectifyHasOctopus = async () => undefined
+  tool.rectifyHasSshovel = async () => undefined
   await expect(
     tool.runScriptRemotely("/x/a.json5", {
       user: "test",
@@ -680,7 +680,7 @@ test("run", async () => {
       '[{ host: "foo", port: 22, user: "fred", identity: "bar" }]',
   }
 
-  const tool = new OctopusTool(container)
+  const tool = new SshovelTool(container)
 
   tool.runScriptLocally = async () => undefined
   tool.runScriptRemotely = async () => undefined

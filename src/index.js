@@ -1,2 +1,1 @@
-export { OctopusTool } from "./OctopusTool"
-export { OctopusProxyTool } from "./OctopusProxyTool"
+export { SshovelTool } from "./SshovelTool"

@@ -13,7 +13,7 @@ import { ScriptError } from "./ScriptError"
 import semver from "semver"
 
 @autobind
-export class OctopusTool {
+export class SshovelTool {
   constructor(container = {}) {
     this.toolName = container.toolName
     this.fs = container.fs || fs
@@ -37,13 +37,13 @@ export class OctopusTool {
     return (
       result.exitCode === 0 &&
       result.output.length > 0 &&
-      semver.gte(semver.clean(result.output[0]), OctopusTool.minNodeVersion)
+      semver.gte(semver.clean(result.output[0]), SshovelTool.minNodeVersion)
     )
   }
 
   async rectifyHasNode(ssh, sftp) {
     let result = null
-    const nodeMajorVersion = semver.major(OctopusTool.ltsNodeVersion)
+    const nodeMajorVersion = semver.major(SshovelTool.ltsNodeVersion)
     const installNodeScript = `#!/bin/bash
     VERSION=$(grep -Eo "\\(Red Hat|\\(Ubuntu" /proc/version)
     case $VERSION in
@@ -114,19 +114,19 @@ export class OctopusTool {
 
       if (
         result.exitCode === 0 &&
-        semver.gte(semver.clean(result.output[0]), OctopusTool.minNodeVersion)
+        semver.gte(semver.clean(result.output[0]), SshovelTool.minNodeVersion)
       ) {
         return
       }
     }
 
     throw new Error(
-      `Unable to install Node.js ${OctopusTool.ltsNodeVersion} on remote host`
+      `Unable to install Node.js ${SshovelTool.ltsNodeVersion} on remote host`
     )
   }
 
-  async assertHasOctopus(ssh) {
-    let result = await ssh.run("octopus --version", {
+  async assertHasSshovel(ssh) {
+    let result = await ssh.run("sshovel --version", {
       noThrow: true,
     })
 
@@ -137,16 +137,16 @@ export class OctopusTool {
     )
   }
 
-  async rectifyHasOctopus(ssh) {
-    this.log.info("Installing Octopus")
+  async rectifyHasSshovel(ssh) {
+    this.log.info("Installing Sshovel")
     // NOTE: See https://github.com/nodejs/node-gyp/issues/454#issuecomment-58792114 for why "--unsafe-perm"
-    let result = await ssh.run("npm install -g --unsafe-perm @johnls/octopus", {
+    let result = await ssh.run("npm install -g --unsafe-perm @johnls/sshovel", {
       sudo: true,
       noThrow: true,
     })
 
     if (result.exitCode === 0) {
-      result = await ssh.run("octopus --version", {
+      result = await ssh.run("sshovel --version", {
         noThrow: true,
       })
 
@@ -159,7 +159,7 @@ export class OctopusTool {
     }
 
     throw new Error(
-      `Unable to install Octopus ${version.shortVersion} on remote host`
+      `Unable to install Sshovel ${version.shortVersion} on remote host`
     )
   }
 
@@ -595,18 +595,18 @@ export class OctopusTool {
       )
 
       const hasNode = await this.assertHasNode(ssh)
-      const hasOctopus = hasNode && (await this.assertHasOctopus(ssh))
+      const hasSshovel = hasNode && (await this.assertHasSshovel(ssh))
 
       if (!hasNode) {
         this.log.warning(`Node not found; attempting to rectify.`)
         await this.rectifyHasNode(ssh, sftp)
       }
 
-      if (!hasOctopus) {
+      if (!hasSshovel) {
         this.log.warning(
-          `Octopus with version ${version.shortVersion} not found; attempting to rectify`
+          `Sshovel with version ${version.shortVersion} not found; attempting to rectify`
         )
-        await this.rectifyHasOctopus(ssh)
+        await this.rectifyHasSshovel(ssh)
       }
 
       remoteTempDir = (await ssh.run("mktemp -d")).output[0]
@@ -643,7 +643,7 @@ export class OctopusTool {
       )
 
       this.log.info(
-        `Running Octopus remote script '${remoteRootScriptPath}'${
+        `Running Sshovel remote script '${remoteRootScriptPath}'${
           scriptContext.anyScriptHasBecomes ? " as root" : ""
         }`
       )
@@ -652,7 +652,7 @@ export class OctopusTool {
         this.log.enableSpinner()
       }
 
-      await ssh.run(`octopus --noSpinner ${remoteRootScriptPath}`, {
+      await ssh.run(`sshovel --noSpinner ${remoteRootScriptPath}`, {
         sudo: scriptContext.anyScriptHasBecomes,
         logOutput: this.log.output,
         logError: this.log.outputError,
@@ -702,9 +702,9 @@ Usage: ${this.toolName} [options] <script-file>
 
 Description:
 
-Runs an Octopus configuration script. If a host or hostFile file is
+Runs an Sshovel configuration script. If a host or hostFile file is
 given then the script will be run on those hosts using SSH. Node.js
-and Octopus will be installed on the remote hosts if not already
+and Sshovel will be installed on the remote hosts if not already
 present. For installation to work the SSH user must have sudo
 permissions on the host. If passwords are required for login or
 sudo the tool will prompt.

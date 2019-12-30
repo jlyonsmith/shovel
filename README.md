@@ -1,25 +1,25 @@
-# Octopus: Simple, agentless IT automation
+# Sshovel: An SSH Based IT Automation Tool
 
-Octopus is a system for performing IT automation.  It's written in Javascript using Node.js.  Script files are created in [JSON5](https://json5.org/) format and consist of a sequence of assertions that ensure the state of target system.  Scripts are idempotent in that after one run of a script to set things into a desired state, subsequent runs of the same script result in no changes to the target.
+Sshovel is a tool for performing IT automation tasks.  It's written in Javascript using [NodeJS](https://nodejs.org).  Script files are created in [JSON5](https://json5.org/) format and consist of a sequence of assertions that ensure the state of target system.  Scripts are *idempotent* because after one successful run of a subsequent runs of the same script result in no changes to the target.
 
 ## Installation
 
 Install the package globally:
 
 ```sh
-npm install -g @johnls/octopus
-octopus --help
+npm install -g @johnls/sshovel
+sshovel --help
 ```
 
 Or use `npx` to run the latest version:
 
 ```sh
-npx @johnls/octopus --help
+npx @johnls/sshovel --help
 ```
 
 ## Example
 
-Here is a valid Octopus script that creates some directories and files on a remote system:
+Here is a Sshovel script that creates some directories and files on a remote system:
 
 ```json5
 {
@@ -29,8 +29,8 @@ Here is a valid Octopus script that creates some directories and files on a remo
   },
   // Global variables go here
   vars: {
-    testDir1: "octo-dir-1",
-    testFile1: "octo-file-1",
+    testDir1: "shvl-dir-1",
+    testFile1: "shvl-file-1",
   },
   // Every script must have a list of assertions
   assertions: [
@@ -56,22 +56,22 @@ Here is a valid Octopus script that creates some directories and files on a remo
 
 ## Overview
 
-Octopus has the following key features:
+Sshovel has the following key features:
 
-- Bootstraps itself on a remote system, installing Node.js and Octopus as needed
-- Cross platform (macOS/Linux) by leveraging Node's inherent cross platform capabilities
+- Bootstraps itself on a remote system, installing Node.js and itself as needed
+- Cross platform (macOS/Linux) by leveraging NodeJS's inherent cross platform capabilities
 - Comes with a wide range of built-in asserters
 - Able to set script wide variables and safely use Javascript for calculated values
 - Uses an easy-to-read JSON5 script format, allowing multi-line strings and comments
 
 ## Design
 
-Not surprisingly, Octopus borrows from the design of [Ansible](https://www.ansible.com/). It uses SSH to avoid having remote agents. Ansible's *plays* are similar to Octopuses *asserters*.
+Not surprisingly, Sshovel borrows from the design of [Ansible](https://www.ansible.com/). It uses SSH to avoid having remote agents. Ansible's *plays* are similar to Sshoveles *asserters*.
 
-The *design goals* of Octopus are:
+The *design goals* of Sshovel are:
 
 - Be written in and use Javascript and Node.js for platform independence
-- Bootstrap the remote system with Node.js and Octopus if not present
+- Bootstrap the remote system with Node.js and Sshovel if not present
 - Leverage SSH as the remote transport and for agentless scripting
 - Use JSON instead of YAML as the script format
 - Use plain old Javascript as the string template language
@@ -84,20 +84,28 @@ The *design goals* of Octopus are:
 
 ## Scripts
 
-Octopus scripts are made up of:
+Sshovel scripts can have either a `.json5` extension, or if you want to be able to identify the scripts from the command line, a `.shvl` extension is recommended. Sshovel scripts are made up of:
 
-1. Settings
-2. Variables
-3. Includes
-4. Assertions
+1. `settings`
+2. `vars`
+3. `includes`
+4. `assertions`
 
 Scripts are a sequence of assertions executed sequentially. The order of the assertions is important. Later assertions can expect the assertions higher up in the script to have either be true or to have been rectified to be true.  Note that it is fine to write a script where all the assertions are not expected to be true each time the script is run.  For example, you might write a script to stop a service so you can set some configuration files, then start the service again.  The stop/start assertions will always be triggered.  The important thing is that assertions ensure that the script doesn't make changes it doesn't have too.  This is really helpful when restarting a script after an unexpected failure, for example.
 
-### Variables
+### `settings`
 
-### Includes
+Settings are just metadata for the script.  The following metadata is supported:
 
-### Assertions
+- `description` used to display a script description
+
+### `includes`
+
+The `includes` section is evaluated second.  Any included script is run before the `vars` and `assertions`.  Include paths are relative to the current script. A script cannot be included more than once.  If you want to do this use a sementic link in the file system so that each include has a unique path.
+
+### `vars`
+
+### `assertions`
 
 Assertions are a collections of assertions about a host state.  Assertions are run one at a time, from the top of the script to bottom.  Each assertion makes a statement about some particular type of the host machine state.  If that state is not true, then the asserter tries to rectify the situation and make that assertion true.  There are asserters for files, directories, users, groups, file downsloads, file contents, and so on.
 
@@ -105,13 +113,13 @@ See the full list of built-in [asserters](doc/Asserters.md) in the documentation
 
 ## SSH
 
-Octopus uses SSH to run scripts on remote hosts. When run against one or more hosts, Octopus uses SSH to run scripts on those hostes. When run without a remote host, Octopus just runs the script directly on your local system.
+Sshovel uses SSH to run scripts on remote hosts. When run against one or more hosts, Sshovel uses SSH to run scripts on those hostes. When run without a remote host, Sshovel just runs the script directly on your local system.
 
 ## Advanced
 
 ### JSON5 Nodes
 
-Octopus uses an enhanced fork of the [JSON5](https://www.npmjs.com/package/@johnls/json5) library that returns `Node` objects instead of simple Javascript values for each value, array or object in the JSON5. A node object has `type` and `value` fields, plus `line` and `column` fields showing where in the JSON5 file the node comes from.  This allows error messages that contain location information to help the Octopus user to find and fix errors in their script.
+Sshovel uses an enhanced fork of the [JSON5](https://www.npmjs.com/package/@johnls/json5) library that returns `Node` objects instead of simple Javascript values for each value, array or object in the JSON5. A node object has `type` and `value` fields, plus `line` and `column` fields showing where in the JSON5 file the node comes from.  This allows error messages that contain location information to help the Sshovel user to find and fix errors in their script.
 
 ### Writing an Asserter
 
