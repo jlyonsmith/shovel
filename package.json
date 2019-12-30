@@ -1,8 +1,8 @@
 {
   "name": "@johnls/sshovel",
   "private": false,
-  "version": "1.8.1",
-  "description": "Simple, agentless IT automation",
+  "version": "2.0.0",
+  "description": "An SSH and Node.js based IT automation tool",
   "bin": {
     "sshovel": "dist/sshovel.js"
   },

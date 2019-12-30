@@ -1,4 +1,4 @@
-# Sshovel: An SSH Based IT Automation Tool
+# Sshovel: An SSH and Node.js based IT automation tool
 
 Sshovel is a tool for performing IT automation tasks.  It's written in Javascript using [NodeJS](https://nodejs.org).  Script files are created in [JSON5](https://json5.org/) format and consist of a sequence of assertions that ensure the state of target system.  Scripts are *idempotent* because after one successful run of a subsequent runs of the same script result in no changes to the target.
 

@@ -702,9 +702,11 @@ Usage: ${this.toolName} [options] <script-file>
 
 Description:
 
-Runs an Sshovel configuration script. If a host or hostFile file is
-given then the script will be run on those hosts using SSH. Node.js
-and Sshovel will be installed on the remote hosts if not already
+Runs a Sshovel configuration script. If 'host' or 'hostFile' argument
+is given then the script will be run on those hosts using SSH. If not
+then the script will be run directly on the machine without SSH.
+
+Node.js and Sshovel will be installed on the remote hosts if not already
 present. For installation to work the SSH user must have sudo
 permissions on the host. If passwords are required for login or
 sudo the tool will prompt.
