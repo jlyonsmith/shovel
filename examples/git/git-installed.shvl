@@ -1,0 +1,10 @@
+{
+  assertions: [
+    {
+      assert: "SystemPackageInstalled",
+      with: {
+        package: "git",
+      },
+    },
+  ],
+}

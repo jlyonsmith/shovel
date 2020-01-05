@@ -462,11 +462,6 @@ export class SshovelTool {
       this.process.seteuid(sudo.uid)
     }
 
-    // TODO: Document 'settings'
-    // TODO: Document 'vars'
-    // TODO: Document Javascript modules
-    // TODO: Check 'settings' for disk space requirements and fail if there is insufficient
-
     let { runContext, interpolator } = await this.createRunContext()
 
     for (var scriptPath of scriptContext.scriptPaths) {
