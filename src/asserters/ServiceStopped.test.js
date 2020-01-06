@@ -22,13 +22,15 @@ test("assert", async () => {
   ).rejects.toThrow(ScriptError)
 
   // With service inactive
-  container.childProcess.exec = async () => ({ stdout: "inactive" })
+  container.childProcess.exec = async () => {
+    throw new Error()
+  }
   await expect(
     asserter.assert(createAssertNode(asserter, { service: "service" }))
   ).resolves.toBe(true)
 
   // With service active
-  container.childProcess.exec = async () => ({ stdout: "active" })
+  container.childProcess.exec = async (command) => ({ stdout: "active\n" })
   await expect(
     asserter.assert(createAssertNode(asserter, { service: "otherService" }))
   ).resolves.toBe(false)
@@ -52,14 +54,15 @@ test("rectify", async () => {
         if (command.includes("is-active")) {
           throw new Error()
         } else {
-          return {}
+          return { stdout: "active" }
         }
       },
     },
   }
   const asserter = new ServiceStopped(container)
 
-  await asserter.rectify()
+  asserter.expandedServiceName = "something"
+
   await expect(asserter.rectify()).resolves.toBeUndefined()
 
   // With service that doesn't stop

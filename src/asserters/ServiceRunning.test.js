@@ -30,7 +30,9 @@ test("assert", async () => {
   ).resolves.toBe(true)
 
   // With service inactive
-  container.childProcess.exec = async () => ({ stdout: "" })
+  container.childProcess.exec = async () => {
+    throw new Error()
+  }
   await expect(
     asserter.assert(createAssertNode(asserter, { service: "otherService" }))
   ).resolves.toBe(false)
@@ -54,7 +56,7 @@ test("rectify", async () => {
         if (command.includes("is-active")) {
           return { stdout: "active" }
         } else {
-          return {}
+          return { stdout: "" }
         }
       },
     },

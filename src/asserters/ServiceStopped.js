@@ -24,11 +24,15 @@ export class ServiceStopped {
 
     this.expandedServiceName = this.interpolator(serviceNode)
 
-    const output = await this.childProcess.exec(
-      `systemctl is-active ${this.expandedServiceName}`
-    )
+    let ok = false
 
-    const ok = output.stdout === "inactive" || output.stdout === "failed"
+    try {
+      await this.childProcess.exec(
+        `systemctl is-active ${this.expandedServiceName}`
+      )
+    } catch {
+      ok = true
+    }
 
     if (!ok && !this.util.runningAsRoot()) {
       throw new ScriptError(
@@ -43,12 +47,11 @@ export class ServiceStopped {
   async rectify() {
     await this.childProcess.exec(`systemctl stop ${this.expandedServiceName}`)
 
-    let output = null
     let numTries = 0
 
     do {
       try {
-        output = await this.childProcess.exec(
+        await this.childProcess.exec(
           `systemctl is-active ${this.expandedServiceName}`
         )
       } catch {

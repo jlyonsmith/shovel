@@ -24,11 +24,15 @@ export class ServiceRunning {
 
     this.expandedServiceName = this.interpolator(serviceNode)
 
-    const output = await this.childProcess.exec(
-      `systemctl is-active ${this.expandedServiceName}`
-    )
+    let ok = true
 
-    const ok = output.stdout === "active"
+    try {
+      await this.childProcess.exec(
+        `systemctl is-active ${this.expandedServiceName}`
+      )
+    } catch {
+      ok = false
+    }
 
     if (!ok && !this.util.runningAsRoot()) {
       throw new ScriptError(
@@ -45,14 +49,15 @@ export class ServiceRunning {
       `systemctl restart ${this.expandedServiceName}`
     )
 
-    let output = null
     let numTries = 0
 
     do {
       try {
-        output = await this.childProcess.exec(
+        await this.childProcess.exec(
           `systemctl is-active ${this.expandedServiceName}`
         )
+
+        return
       } catch {
         // Wait and try again
       }
