@@ -1,4 +1,8 @@
 # Sshovel Scripts
 
-- [Variables, functions and interpolation](./Variables.md)
-- [Asserters](./Asserters.md)
+Sshovel scripts are comprised of four sections; `metadata`, `includes`, `vars`, `assertions`.  Each section is described in the following pages:
+
+- [`metadata`](./Metadata.md)
+- [`includes`](./Includes.md)
+- [`vars`](./Variables.md)
+- [`asseters`](./Asserters.md)

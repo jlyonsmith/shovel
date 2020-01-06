@@ -6,6 +6,18 @@ When a script starts running the first thing that happens after running each of 
 
 If strings are surrounded with `{...}` then they are evaluated as Javascript and the result becomes the value of the string.  The Javascript is run is a VM sandbox so it only has access to the  limited number of globals, as described in the following sections.  All Javascript expression operators are available, such as `+`, `-`, `?:`, etc..
 
+Use single quotes (`'`) in interpolated strings to easily avoid issues with JSON5 strings, or escape double quotes.  For example:
+
+```JSON5
+{
+  assert: "FileContains",
+  with: {
+    file: "{path.join(user.homeDir, '.gitconfig')}",
+    content: "[alias]\n  ada = add -A :/\n\n"
+  }
+}
+```
+
 ## `vars`
 
 Theses are all the variables evaluated in the `vars` section of the script.  `vars` is shared by all `includes` scripts, so as each script runs it can add too or modify existing `vars`.  Variables are evaluated in the order in which they are set in the script.
@@ -19,6 +31,15 @@ For `local` interpolated variables, the `env`, `os`, `sys` and `fs` objects all 
 ## `env`
 
 This are the environment variables that `sshovel` was invoked with.
+
+## `sys`
+
+This contains information about the `sshovel` system, most usefully the currently executing script directory and file:
+
+| Property     | Description                          |
+| ------------ | ------------------------------------ |
+| `scriptDir`  | Currently executing script directory |
+| `scriptFile` | Currently executing script file name |
 
 ## `os`
 

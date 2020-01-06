@@ -1,0 +1,29 @@
+
+[alias]
+  ada = add -A :/
+  st = status -sb
+  sta = status -sb
+  com = commit
+  bra = branch
+  chk = checkout
+  dto = difftool
+  mto = mergetool
+  mrg = merge
+  log = log -p
+  sub = submodule
+  fch = fetch -v
+  rem = remote
+  psh = push
+  pll = pull
+  ash = stash
+  cfg = config
+  chp = cherry-pick
+  lst = ls-tree -r --name-only
+  prq = pull-request
+  brw = browse
+  reb = rebase
+  rst = reset
+  upr = !git fetch upstream && git rebase upstream/master
+  upm = !git fetch upstream && git merge upstream/master
+  brw = !git-extra browse
+  prq = !git-extra pull-request

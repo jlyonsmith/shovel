@@ -124,7 +124,19 @@ test("assert", async () => {
     )
   ).resolves.toBe(false)
 
-  // With explicit 'over'
+  // With 'over' content included
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        file: "/somefile",
+        position: "over",
+        regex: "^content$",
+        contents: "content\n",
+      })
+    )
+  ).resolves.toBe(true)
+
+  // With 'over' and regexp match
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -135,6 +147,8 @@ test("assert", async () => {
       })
     )
   ).resolves.toBe(false)
+
+  // With over an no regex match
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -144,9 +158,9 @@ test("assert", async () => {
         contents: "foobar\n",
       })
     )
-  ).rejects.toThrow(ScriptError)
+  ).resolves.toBe(false)
 
-  // With 'before'
+  // With 'before', regex match and content before
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -157,6 +171,8 @@ test("assert", async () => {
       })
     )
   ).resolves.toBe(true)
+
+  // With 'before', regex match and content not before
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -168,7 +184,19 @@ test("assert", async () => {
     )
   ).resolves.toBe(false)
 
-  // With 'after'
+  // With 'before' and no regex match
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        file: "/somefile",
+        position: "before",
+        regex: "^#foobar",
+        contents: "other\n",
+      })
+    )
+  ).rejects.toThrow(ScriptError)
+
+  // With 'after', regex match and content after
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -179,6 +207,8 @@ test("assert", async () => {
       })
     )
   ).resolves.toBe(true)
+
+  // With 'after', regex match and no content after
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
@@ -189,6 +219,18 @@ test("assert", async () => {
       })
     )
   ).resolves.toBe(false)
+
+  // With 'after' and no regex match
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, {
+        file: "/somefile",
+        position: "after",
+        regex: "^#foobar",
+        contents: "other\n",
+      })
+    )
+  ).rejects.toThrow(ScriptError)
 })
 
 test("rectify", async () => {
@@ -204,29 +246,37 @@ test("rectify", async () => {
   asserter.fileContents = "#start\ncontent\n#end"
 
   // Before
+  asserter.position = "before"
   asserter.firstIndex = asserter.fileContents.indexOf("#end")
   asserter.lastIndex = asserter.fileContents.length
-  asserter.position = "before"
   container.fs.outputFile = async (fileName, data) => {
     expect(data).toBe("#start\ncontent\nxyz\n#end")
   }
   await expect(asserter.rectify()).resolves.toBeUndefined()
 
   // After
+  asserter.position = "after"
   asserter.firstIndex = asserter.fileContents.indexOf("#start")
   asserter.lastIndex = asserter.fileContents.indexOf("content")
-  asserter.position = "after"
   container.fs.outputFile = async (fileName, data) => {
     expect(data).toBe("#start\nxyz\ncontent\n#end")
   }
   await expect(asserter.rectify()).resolves.toBeUndefined()
 
   // Over
+  asserter.position = "over"
   asserter.firstIndex = asserter.fileContents.indexOf("content\n")
   asserter.lastIndex = asserter.fileContents.indexOf("#end")
-  asserter.position = "over"
   container.fs.outputFile = async (fileName, data) => {
     expect(data).toBe("#start\nxyz\n#end")
+  }
+  await asserter.rectify()
+  await expect(asserter.rectify()).resolves.toBeUndefined()
+
+  // All
+  asserter.position = "all"
+  container.fs.outputFile = async (fileName, data) => {
+    expect(data).toBe("xyz\n")
   }
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })

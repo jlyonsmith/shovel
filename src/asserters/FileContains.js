@@ -52,25 +52,28 @@ export class FileContains {
       if (
         this.position !== "over" &&
         this.position !== "before" &&
-        this.position !== "after"
+        this.position !== "after" &&
+        this.position !== "all"
       ) {
         throw new ScriptError(
-          "'position' must be 'before', 'after' or 'over'",
+          "'position' must be 'before', 'after', 'over' or 'all'",
           positionNode
         )
       }
 
       if (
-        (this.position === "before" || this.position === "after") &&
+        (this.position === "before" ||
+          this.position === "after" ||
+          this.position === "over") &&
         !regexNode
       ) {
         throw new ScriptError(
-          "A 'regex' node must be provided with 'before' and 'after'",
+          "A 'regex' node must be provided with 'before', 'after' and 'over'",
           positionNode
         )
       }
     } else {
-      this.position = "over"
+      this.position = "all"
     }
 
     if (!contentsNode || contentsNode.type !== "string") {
@@ -100,8 +103,15 @@ export class FileContains {
     switch (this.position) {
       case "before":
         match = this.regExp.exec(this.fileContents)
+
+        if (!match) {
+          throw new ScriptError(
+            `Match not found for '${regexNode.value}'`,
+            regexNode
+          )
+        }
+
         if (
-          match &&
           this.fileContents.substring(
             match.index - this.expandedContents.length,
             match.index
@@ -110,11 +120,21 @@ export class FileContains {
           // Desired content is after the before regex
           return true
         }
+
+        this.firstIndex = match.index
+        this.lastIndex = this.regExp.lastIndex
         break
       case "after":
         match = this.regExp.exec(this.fileContents)
+
+        if (!match) {
+          throw new ScriptError(
+            `Match not found for '${regexNode.value}'`,
+            regexNode
+          )
+        }
+
         if (
-          match &&
           this.fileContents.substring(
             this.regExp.lastIndex,
             this.regExp.lastIndex + this.expandedContents.length
@@ -123,6 +143,9 @@ export class FileContains {
           // Desired content is before the regex
           return true
         }
+
+        this.firstIndex = match.index
+        this.lastIndex = this.regExp.lastIndex
         break
       case "over":
         if (this.fileContents.includes(this.expandedContents)) {
@@ -130,25 +153,21 @@ export class FileContains {
           return true
         }
 
-        if (this.regExp) {
-          match = this.regExp.exec(this.fileContents)
+        match = this.regExp.exec(this.fileContents)
+
+        if (match) {
+          this.firstIndex = match.index
+          this.lastIndex = this.regExp.lastIndex
+        } else {
+          this.firstIndex = this.lastIndex = this.fileContents.length
+        }
+
+        break
+      case "all":
+        if (this.fileContents === this.expandedContents) {
+          return true
         }
         break
-    }
-
-    if (this.regExp) {
-      if (!match) {
-        throw new ScriptError(
-          `Match not found for '${regexNode.value}'`,
-          regexNode
-        )
-      } else {
-        this.firstIndex = match.index
-        this.lastIndex = this.regExp.lastIndex
-      }
-    } else {
-      this.firstIndex = 0
-      this.lastIndex = this.fileContents.length
     }
 
     return false
@@ -171,11 +190,14 @@ export class FileContains {
           this.fileContents.substring(this.lastIndex)
         break
       case "over":
-      default:
         contents =
           this.fileContents.substring(0, this.firstIndex) +
           this.expandedContents +
           this.fileContents.substring(this.lastIndex)
+        break
+      case "all":
+      default:
+        contents = this.expandedContents
         break
     }
 

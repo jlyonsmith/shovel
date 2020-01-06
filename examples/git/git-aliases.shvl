@@ -1,0 +1,13 @@
+{
+  asserters: [
+    {
+      assert: "FileContains",
+      with: {
+        file: "{path.join(user.homeDir, '.gitconfig')}",
+        content: "{fs.readFile(path.join(sys.scriptDir, 'templates/gitconfig.txt'))}",
+        position: "over",
+        regexp: "^\\[alias\\]\n(?:(?!\\[).*\n)*",
+      },
+    },
+  ],
+}

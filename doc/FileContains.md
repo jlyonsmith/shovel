@@ -23,9 +23,10 @@ The content to place in the file.
 
 The desired position of the `content`, one of:
 
-- `before` to place the `content` before the `regex`.  The assert fails if `regex` is not found in the file, or `content` does not appear before it.
-- `after` to place the `content` after the `regex`. The assert fails if the `regex` is not found in the file, or `content` does not appear after it.
-- `over` to place the `content` over the `regex`.  If no `regex` is specified for this option, then the entire file contents are replaced.  If the `regex` is not found, then the assert succeeds if the `content` is found in the file, otherwise it fails.
+- `before` to place the `content` before the `regex`.  The assert throws if `regex` is not found in the file. If `content` does not appear before it, then the content is inserted.
+- `after` to place the `content` after the `regex`. The assert thrown if the `regex` is not found in the file. If `content` does not appear after it then the content is inserted.
+- `over` to place the `content` over the `regex`.  If the content is found, then the assert succeeds, If the `regex` is found the new content replaces it, otherwise the new content is added at the end of the file.
+- `all` to replace the contents of the file with `content`.  If the file already contains `content` then the assert succeeds, otherwise it fails.
 
 ### `regex: string`
 
