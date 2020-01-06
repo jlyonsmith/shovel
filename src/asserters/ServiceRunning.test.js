@@ -50,9 +50,13 @@ test("rectify", async () => {
       }
     },
     childProcess: {
-      exec: async () => ({
-        stdout: "active",
-      }),
+      exec: async (command) => {
+        if (command.includes("is-active")) {
+          return { stdout: "active" }
+        } else {
+          return {}
+        }
+      },
     },
   }
   const asserter = new ServiceRunning(container)
@@ -62,7 +66,13 @@ test("rectify", async () => {
   await expect(asserter.rectify()).resolves.toBeUndefined()
 
   // With service that doesn't start
-  container.childProcess.exec = async (command) => ({ stdout: "inactive\n" })
+  container.childProcess.exec = async (command) => {
+    if (command.includes("is-active")) {
+      throw new Error()
+    } else {
+      return {}
+    }
+  }
 
   await expect(asserter.rectify()).rejects.toThrow(Error)
 })

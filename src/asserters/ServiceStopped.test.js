@@ -48,19 +48,28 @@ test("rectify", async () => {
       }
     },
     childProcess: {
-      exec: async () => ({
-        stdout: "inactive",
-      }),
+      exec: async (command) => {
+        if (command.includes("is-active")) {
+          throw new Error()
+        } else {
+          return {}
+        }
+      },
     },
   }
   const asserter = new ServiceStopped(container)
 
+  await asserter.rectify()
   await expect(asserter.rectify()).resolves.toBeUndefined()
 
   // With service that doesn't stop
-  let count = 0
-
-  container.childProcess.exec = async (command) => ({ stdout: "active\n" })
+  container.childProcess.exec = async (command) => {
+    if (command.includes("is-active")) {
+      return { stdout: "active\n" }
+    } else {
+      return {}
+    }
+  }
 
   await expect(asserter.rectify()).rejects.toThrow(Error)
 })
