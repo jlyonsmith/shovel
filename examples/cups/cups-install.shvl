@@ -1,0 +1,20 @@
+{
+  assertions: [
+    {
+      assert: "SystemPackageInstalled",
+      with: {
+        update: true,
+        package: "cups",
+      },
+      become: "root",
+    },
+    {
+      assert: "SystemPackageInstalled",
+      with: {
+        package: "cups-bsd",
+      },
+      become: "root",
+      when: "{os.id === 'ubuntu'}",
+    },
+  ],
+}

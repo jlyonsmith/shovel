@@ -11,13 +11,23 @@ export class SystemPackageInstalled {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { package: packageNode } = withNode.value
+    const { package: packageNode, update: updateNode } = withNode.value
 
     if (!packageNode || packageNode.type !== "string") {
       throw new ScriptError(
         "'package' must be supplied and be a string",
         packageNode || withNode
       )
+    }
+
+    let update = false
+
+    if (updateNode) {
+      if (updateNode.type !== "boolean") {
+        throw new ScriptError("'update' must be a boolean", updateNode)
+      }
+
+      update = updateNode.value
     }
 
     const info = await this.util.osInfo()
@@ -35,6 +45,7 @@ export class SystemPackageInstalled {
 
     if (info.id === "ubuntu") {
       command = `dpkg --list ${this.expandedPackageName}`
+      this.updateCommand = "apt update"
       this.installCommand = `apt install -y ${this.expandedPackageName}`
     } else {
       command = `rpm -qa | grep '^${this.expandedPackageName}-[0-9]'`
@@ -58,6 +69,10 @@ export class SystemPackageInstalled {
   }
 
   async rectify() {
+    if (this.updateCommand) {
+      await this.childProcess.exec(this.updateCommand)
+    }
+
     await this.childProcess.exec(this.installCommand)
   }
 

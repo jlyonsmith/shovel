@@ -218,6 +218,7 @@ export class SshovelTool {
       scriptNode.value.includes = includesNode = createArrayNode()
     }
 
+    // TODO: Changes 'settings' to 'metadata'
     if (!settingsNode) {
       scriptNode.value.settings = settingsNode = createObjectNode()
     }

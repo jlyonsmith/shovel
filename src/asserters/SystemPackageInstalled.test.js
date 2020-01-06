@@ -29,6 +29,17 @@ test("assert", async () => {
     ScriptError
   )
 
+  // Bad update type
+  container.util.osInfo = jest.fn(async () => ({
+    platform: "linux",
+    id: "ubuntu",
+  }))
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, { package: "something", update: 1 })
+    )
+  ).rejects.toThrow(ScriptError)
+
   // Bad package
   await expect(
     asserter.assert(createAssertNode(asserter, { package: 1 }))
@@ -43,6 +54,22 @@ test("assert", async () => {
     asserter.assert(createAssertNode(asserter, { package: "package" }))
   ).resolves.toBe(true)
 
+  // Package not present and running as root, with update
+  container.childProcess.exec = jest.fn(async (command) => {
+    throw new Error()
+  })
+  await expect(
+    asserter.assert(
+      createAssertNode(asserter, { package: "notthere", update: true })
+    )
+  ).resolves.toBe(false)
+
+  // Package not present and not running as root
+  container.util.runningAsRoot = jest.fn(() => false)
+  await expect(
+    asserter.assert(createAssertNode(asserter, { package: "notthere" }))
+  ).rejects.toThrow(ScriptError)
+
   // Package present on CentOS
   container.util.osInfo = jest.fn(async () => ({
     platform: "linux",
@@ -55,20 +82,6 @@ test("assert", async () => {
   await expect(
     asserter.assert(createAssertNode(asserter, { package: "package" }))
   ).resolves.toBe(true)
-
-  // Package not present and running as root
-  container.childProcess.exec = jest.fn(async () => {
-    throw new Error()
-  })
-  await expect(
-    asserter.assert(createAssertNode(asserter, { package: "notthere" }))
-  ).resolves.toBe(false)
-
-  // Package not present and not running as root
-  container.util.runningAsRoot = jest.fn(() => false)
-  await expect(
-    asserter.assert(createAssertNode(asserter, { package: "notthere" }))
-  ).rejects.toThrow(ScriptError)
 })
 
 test("rectify", async () => {
@@ -83,7 +96,11 @@ test("rectify", async () => {
 
   const asserter = new SystemPackageInstalled(container)
 
-  asserter.installCommand = ""
+  asserter.installCommand = "something"
+
+  await expect(asserter.rectify()).resolves.toBeUndefined()
+
+  asserter.updateCommand = "something"
 
   await expect(asserter.rectify()).resolves.toBeUndefined()
 })
