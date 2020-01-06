@@ -244,7 +244,12 @@ export class SshovelTool {
         )
       }
 
-      // TODO: Assert the path is relative
+      if (path.isAbsolute(includeNode.value)) {
+        throw new ScriptError(
+          "Absolute path for inclued is not allowed",
+          includeNode
+        )
+      }
     }
 
     if (settingsNode.type !== "object") {
