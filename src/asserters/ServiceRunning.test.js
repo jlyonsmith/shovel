@@ -44,6 +44,11 @@ test("assert", async () => {
 
 test("rectify", async () => {
   const container = {
+    Timeout: class Timeout {
+      set() {
+        return Promise.resolve()
+      }
+    },
     childProcess: {
       exec: async () => ({
         stdout: "active",
@@ -57,13 +62,8 @@ test("rectify", async () => {
   await expect(asserter.rectify()).resolves.toBeUndefined()
 
   // With service that doesn't start
-  container.childProcess.exec = async (command) => {
-    if (command.includes("is-active")) {
-      return { stdout: "failed" }
-    } else {
-      return { stdout: "" }
-    }
-  }
+  container.childProcess.exec = async (command) => ({ stdout: "inactive\n" })
+
   await expect(asserter.rectify()).rejects.toThrow(Error)
 })
 

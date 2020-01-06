@@ -1,11 +1,13 @@
 import childProcess from "child-process-es6-promise"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
+import Timeout from "await-timeout"
 
 export class ServiceRunning {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
     this.util = container.util || util
+    this.Timeout = container.Timeout || Timeout
     this.interpolator = container.interpolator
   }
 
@@ -44,17 +46,24 @@ export class ServiceRunning {
     )
 
     let output = null
+    let numTries = 0
 
-    // TODO: Add a timer here
     do {
       output = await this.childProcess.exec(
         `systemctl is-active ${this.expandedServiceName}`
       )
 
-      if (output.stdout === "failed" || output.stdout === "inactive") {
-        throw new Error(`Service failed to go into the active state`)
+      if (output.stdout.startsWith("active")) {
+        return
       }
-    } while (output.stdout !== "active")
+
+      // Wait to check again
+      await new this.Timeout().set(1000)
+
+      numTries += 1
+    } while (numTries < 10)
+
+    throw new Error("Service failed to start")
   }
 
   result() {

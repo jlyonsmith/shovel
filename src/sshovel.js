@@ -52,7 +52,7 @@ class Log {
 
   startSpinner(line) {
     if (this.spinner) {
-      this.spinner.start(line)
+      this.spinner.start(line.substring(2))
     }
   }
 

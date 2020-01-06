@@ -1,0 +1,11 @@
+{
+  assertions: [
+    {
+      assert: "ServiceRunning",
+      with: {
+        service: "cups",
+      },
+      become: "root",
+    },
+  ],
+}

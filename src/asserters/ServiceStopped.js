@@ -1,11 +1,13 @@
 import childProcess from "child-process-es6-promise"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
+import Timeout from "await-timeout"
 
 export class ServiceStopped {
   constructor(container) {
     this.childProcess = container.childProcess || childProcess
     this.util = container.util || util
+    this.Timeout = container.Timeout || Timeout
     this.interpolator = container.interpolator
   }
 
@@ -42,13 +44,27 @@ export class ServiceStopped {
     await this.childProcess.exec(`systemctl stop ${this.expandedServiceName}`)
 
     let output = null
+    let numTries = 0
 
-    // TODO: Add a timer here
     do {
       output = await this.childProcess.exec(
         `systemctl is-active ${this.expandedServiceName}`
       )
-    } while (output.stdout !== "inactive" && output.stdout !== "failed")
+
+      if (
+        output.stdout.startsWith("failed") ||
+        output.stdout.startsWith("inactive")
+      ) {
+        return
+      }
+
+      // Wait to check again
+      await new this.Timeout().set(1000)
+
+      numTries += 1
+    } while (numTries < 10)
+
+    throw new Error("Service failed to stop")
   }
 
   result() {
