@@ -1,5 +1,5 @@
 {
-  asserters: [
+  assertions: [
     {
       assert: "FileContains",
       with: {
