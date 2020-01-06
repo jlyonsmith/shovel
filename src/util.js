@@ -268,7 +268,7 @@ export class Utility {
       })
   }
 
-  parseOwnerNode(users, groups, ownerNode) {
+  parseOwnerNode(ownerNode, users, groups) {
     let owner = {}
 
     if (ownerNode) {
@@ -330,8 +330,8 @@ export class Utility {
     return owner
   }
 
-  parseModeNode(modeNode) {
-    let mode = 0o644 // Default to -rw-r--r-- mode
+  parseModeNode(modeNode, defaultMode = 0o644) {
+    let mode = defaultMode
 
     const parsePerms = (node) => {
       const s = node.value

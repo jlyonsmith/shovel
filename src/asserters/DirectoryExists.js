@@ -33,7 +33,7 @@ export class DirectoryExists {
 
     this.owner = Object.assign(
       { uid: userInfo.uid, gid: userInfo.gid },
-      this.util.parseOwnerNode(users, groups, ownerNode)
+      this.util.parseOwnerNode(ownerNode, users, groups)
     )
     // TODO: Default for dirs should be rwx
     this.mode = this.util.parseModeNode(modeNode)

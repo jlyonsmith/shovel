@@ -27,7 +27,7 @@ test("assert", async () => {
         { gid: 10, name: "group1" },
         { gid: 20, name: "group2" },
       ]),
-      parseOwnerNode: jest.fn((userInfo, users, groups, ownerNode) => ({
+      parseOwnerNode: jest.fn((ownerNode, users, groups) => ({
         uid: 0,
         gid: 0,
       })),

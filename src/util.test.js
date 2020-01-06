@@ -337,61 +337,61 @@ sudo:x:27:someuser`
 test("parseOwnerNode", async () => {
   const util = new Utility()
 
-  expect(util.parseOwnerNode([], [], null)).toEqual({})
+  expect(util.parseOwnerNode(null, [], [])).toEqual({})
 
-  expect(util.parseOwnerNode([], [], createNode("test.json5", {}))).toEqual({})
+  expect(util.parseOwnerNode(createNode("test.json5", {}), [], [])).toEqual({})
 
   expect(
     util.parseOwnerNode(
-      [{ name: "root", uid: 0 }],
-      [{ name: "wheel", gid: 0 }],
       createNode("test.json5", {
         user: "root",
         group: "wheel",
-      })
+      }),
+      [{ name: "root", uid: 0 }],
+      [{ name: "wheel", gid: 0 }]
     )
   ).toEqual({ uid: 0, gid: 0 })
 
   expect(
     util.parseOwnerNode(
-      [{ name: "root", uid: 0 }],
-      [{ name: "wheel", gid: 0 }],
       createNode("test.json5", {
         user: 0,
         group: 0,
-      })
+      }),
+      [{ name: "root", uid: 0 }],
+      [{ name: "wheel", gid: 0 }]
     )
   ).toEqual({ uid: 0, gid: 0 })
 
-  expect(() => util.parseOwnerNode([], [], createNode("test.json5"))).toThrow(
+  expect(() => util.parseOwnerNode(createNode("test.json5"), [], [])).toThrow(
     ScriptError
   )
 
   expect(() =>
-    util.parseOwnerNode([], [], createNode("test.json5", { user: true }))
+    util.parseOwnerNode(createNode("test.json5", { user: true }), [], [])
   ).toThrow(ScriptError)
 
   expect(() =>
     util.parseOwnerNode(
-      [],
-      [],
       createNode("test.json5", {
         user: 0,
-      })
+      }),
+      [],
+      []
     )
   ).toThrow(Error)
 
   expect(() =>
-    util.parseOwnerNode([], [], createNode("test.json5", { group: true }))
+    util.parseOwnerNode(createNode("test.json5", { group: true }), [], [])
   ).toThrow(ScriptError)
 
   expect(() =>
     util.parseOwnerNode(
-      [],
-      [],
       createNode("test.json5", {
         group: 0,
-      })
+      }),
+      [],
+      []
     )
   ).toThrow(Error)
 })

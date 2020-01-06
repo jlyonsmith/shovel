@@ -32,7 +32,7 @@ export class FileExists {
 
     this.owner = Object.assign(
       owner,
-      this.util.parseOwnerNode(users, groups, ownerNode)
+      this.util.parseOwnerNode(ownerNode, users, groups)
     )
     this.mode = this.util.parseModeNode(modeNode)
     this.expandedFile = this.interpolator(fileNode)
