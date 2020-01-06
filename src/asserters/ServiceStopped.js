@@ -47,14 +47,11 @@ export class ServiceStopped {
     let numTries = 0
 
     do {
-      output = await this.childProcess.exec(
-        `systemctl is-active ${this.expandedServiceName}`
-      )
-
-      if (
-        output.stdout.startsWith("failed") ||
-        output.stdout.startsWith("inactive")
-      ) {
+      try {
+        output = await this.childProcess.exec(
+          `systemctl is-active ${this.expandedServiceName}`
+        )
+      } catch {
         return
       }
 

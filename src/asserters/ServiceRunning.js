@@ -49,17 +49,15 @@ export class ServiceRunning {
     let numTries = 0
 
     do {
-      output = await this.childProcess.exec(
-        `systemctl is-active ${this.expandedServiceName}`
-      )
-
-      if (output.stdout.startsWith("active")) {
-        return
+      try {
+        output = await this.childProcess.exec(
+          `systemctl is-active ${this.expandedServiceName}`
+        )
+      } catch {
+        // Wait and try again
       }
 
-      // Wait to check again
       await new this.Timeout().set(1000)
-
       numTries += 1
     } while (numTries < 10)
 
