@@ -264,10 +264,17 @@ test("loadScriptFile", async () => {
     }`
   await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
-  // Bad include
+  // Bad include type
   container.fs.readFile = async (path) =>
     `{
       includes: [1],
+    }`
+  await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
+
+  // Bad include absolute path
+  container.fs.readFile = async (path) =>
+    `{
+      includes: ["/absolute/path"],
     }`
   await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
 
