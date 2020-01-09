@@ -1,5 +1,6 @@
 export { AutoToolProjectConfigured } from "./AutoToolProjectConfigured"
 export { AutoToolProjectMade } from "./AutoToolProjectMade"
+export { CupsPrintQueueExists } from "./CupsPrintQueueExists"
 export { DirectoryDeleted } from "./DirectoryDeleted"
 export { DirectoryExists } from "./DirectoryExists"
 export { DirectoryZipped } from "./DirectoryZipped"

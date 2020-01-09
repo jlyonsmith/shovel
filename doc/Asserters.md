@@ -4,6 +4,7 @@ Here is an alphabetical list of the built-in asserters:
 
 - [`AutoToolProjectConfigured`](./AutoToolProjectConfigured.md)
 - [`AutoToolProjectMade`](./AutoToolProjectMade.md)
+- [`CupsPrintQueueExists`](./CupsPrintQueueExists.md)
 - [`DirectoryDeleted`](./DirectoryDeleted.md)
 - [`DirectoryExists`](./DirectoryExists.md)
 - [`DirectoryZipped`](./DirectoryZipped.md)

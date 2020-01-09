@@ -36,6 +36,7 @@ export class PathInfo {
   constructor(stat, container) {
     if (!stat) {
       this.type = 0
+      this.mode = 0
     } else {
       this.type = stat.isFile() ? 1 : stat.isDirectory() ? 2 : 3
       this.size = stat.size
@@ -48,13 +49,19 @@ export class PathInfo {
   }
 
   toString() {
-    return JSON.stringify({
-      type: this.type,
-      size: this.size,
-      uid: this.uid,
-      gid: this.gid,
-      mode: this.mode,
-    })
+    if (this.type === 0) {
+      return JSON.stringify({
+        type: 0,
+      })
+    } else {
+      return JSON.stringify({
+        type: this.type,
+        size: this.size,
+        uid: this.uid,
+        gid: this.gid,
+        mode: this.mode,
+      })
+    }
   }
 
   isMissing() {
