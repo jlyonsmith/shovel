@@ -20,7 +20,6 @@ export class CupsPrintQueueExists {
     this.fs = container.fs || fs
     this.util = container.util || util
     this.interpolator = container.interpolator
-    console.log(this.util)
   }
 
   async assert(assertNode) {
@@ -137,7 +136,7 @@ export class CupsPrintQueueExists {
 
       this.ppdFile = this.interpolator(ppdFileNode)
 
-      if ((await this.util.pathInfo(this.ppdFile).getAccess()).isReadable()) {
+      if ((await this.util.pathInfo(this.ppdFile)).getAccess().isReadable()) {
         this.ppdFileContent = await this.fs.readFile(this.ppdFile)
       } else {
         throw new ScriptError(
@@ -151,7 +150,7 @@ export class CupsPrintQueueExists {
         path.join("/etc/cups/ppd", this.queueName) + ".ppd"
 
       if (
-        (await this.util.pathInfo(existingPpdFile).getAccess()).isReadable()
+        (await this.util.pathInfo(existingPpdFile)).getAccess().isReadable()
       ) {
         existingPpdFileContent = await this.fs.readFile(existingPpdFile)
       }
@@ -211,7 +210,7 @@ export class CupsPrintQueueExists {
 
       const lpoptionsFile = "/etc/cups/lpoptions"
 
-      if ((await this.util.pathInfo(lpoptionsFile).getAccess()).isReadable()) {
+      if ((await this.util.pathInfo(lpoptionsFile)).getAccess().isReadable()) {
         const allOptions = parsePrinterOptions(
           await this.fs.readFile(lpoptionsFile)
         )
@@ -343,7 +342,9 @@ export class CupsPrintQueueExists {
     }
 
     if (this.updateFlags & updateLocation) {
-      this.childProcess.exec(`lpadmin -p ${this.queueName} -L "${this.location}"`)
+      this.childProcess.exec(
+        `lpadmin -p ${this.queueName} -L "${this.location}"`
+      )
     }
 
     if (this.updateFlags & updateInfo) {
@@ -351,7 +352,9 @@ export class CupsPrintQueueExists {
     }
 
     if (this.updateFlags & updatePpdFile) {
-      this.childProcess.exec(`lpadmin -p ${this.queueName} -P "${this.ppdFile}"`)
+      this.childProcess.exec(
+        `lpadmin -p ${this.queueName} -P "${this.ppdFile}"`
+      )
     }
 
     if (this.updateFlags & updatePpdOptions) {
