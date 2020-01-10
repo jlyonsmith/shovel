@@ -66,14 +66,14 @@ Shovel has the following key features:
 
 ## Design
 
-Not surprisingly, Shovel borrows from the design of [Ansible](https://www.ansible.com/). It uses SSH to avoid having remote agents. Ansible's *plays* are similar to Shoveles *asserters*.
+Not surprisingly, Shovel borrows from the design of [Ansible](https://www.ansible.com/). It uses SSH to avoid having remote agents. Ansible's *plays* are similar to Shovel's *assertions*.
 
 The *design goals* of Shovel are:
 
 - Be written in and use Javascript and Node.js for platform independence
 - Bootstrap the remote system with Node.js and Shovel if not present
 - Leverage SSH as the remote transport and for agentless scripting
-- Use JSON instead of YAML as the script format
+- Use JSON5 instead of YAML as the script format
 - Use plain old Javascript as the string template language
 - Be fast and very low footprint
 - Use idempotency to avoid unnecessary changes to systems
@@ -84,7 +84,7 @@ The *design goals* of Shovel are:
 
 ## Scripts
 
-Shovel scripts can have either a `.json5` extension, or if you want to be able to identify the scripts from the command line, a `.shvl` extension is recommended. Shovel scripts are made up of:
+Shovel scripts can have either a `.json5` extension, or if you want to be able to identify the scripts from the command line, a `.shovel` extension is recommended. Shovel scripts are made up of:
 
 1. `settings`
 2. `vars`
