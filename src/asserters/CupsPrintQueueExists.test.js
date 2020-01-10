@@ -12,7 +12,11 @@ test("assert", async () => {
     },
     util: {
       runningAsRoot: () => true,
-      pathInfo: (path) => {
+      osInfo: async () => ({
+        platform: "linux",
+        id: "centos"
+      }),
+      pathInfo: async (path) => {
         if (
           path === "/etc/cups/ppd/printer1.ppd" ||
           path === "/usr/local/drivers/printer1.ppd" ||

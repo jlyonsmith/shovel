@@ -20,6 +20,7 @@ export class CupsPrintQueueExists {
     this.fs = container.fs || fs
     this.util = container.util || util
     this.interpolator = container.interpolator
+    console.log(this.util)
   }
 
   async assert(assertNode) {
