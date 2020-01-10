@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { SshovelTool } from "./SshovelTool"
+import { ShovelTool } from "./ShovelTool"
 import chalk from "chalk"
 import path from "path"
 import ora from "ora"
@@ -64,7 +64,7 @@ class Log {
 }
 
 const log = new Log()
-const tool = new SshovelTool({
+const tool = new ShovelTool({
   toolName: path.basename(process.argv[1], ".js"),
   log,
 })

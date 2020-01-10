@@ -13,7 +13,7 @@ import { ScriptError } from "./ScriptError"
 import semver from "semver"
 
 @autobind
-export class SshovelTool {
+export class ShovelTool {
   constructor(container = {}) {
     this.toolName = container.toolName
     this.fs = container.fs || fs
@@ -37,13 +37,13 @@ export class SshovelTool {
     return (
       result.exitCode === 0 &&
       result.output.length > 0 &&
-      semver.gte(semver.clean(result.output[0]), SshovelTool.minNodeVersion)
+      semver.gte(semver.clean(result.output[0]), ShovelTool.minNodeVersion)
     )
   }
 
   async rectifyHasNode(ssh, sftp) {
     let result = null
-    const nodeMajorVersion = semver.major(SshovelTool.ltsNodeVersion)
+    const nodeMajorVersion = semver.major(ShovelTool.ltsNodeVersion)
     const installNodeScript = `#!/bin/bash
     VERSION=$(grep -Eo "\\(Red Hat|\\(Ubuntu" /proc/version)
     case $VERSION in
@@ -114,19 +114,19 @@ export class SshovelTool {
 
       if (
         result.exitCode === 0 &&
-        semver.gte(semver.clean(result.output[0]), SshovelTool.minNodeVersion)
+        semver.gte(semver.clean(result.output[0]), ShovelTool.minNodeVersion)
       ) {
         return
       }
     }
 
     throw new Error(
-      `Unable to install Node.js ${SshovelTool.ltsNodeVersion} on remote host`
+      `Unable to install Node.js ${ShovelTool.ltsNodeVersion} on remote host`
     )
   }
 
-  async assertHasSshovel(ssh) {
-    let result = await ssh.run("sshovel --version", {
+  async assertHasShovel(ssh) {
+    let result = await ssh.run("shovel --version", {
       noThrow: true,
     })
 
@@ -137,16 +137,16 @@ export class SshovelTool {
     )
   }
 
-  async rectifyHasSshovel(ssh) {
-    this.log.info("Installing Sshovel")
+  async rectifyHasShovel(ssh) {
+    this.log.info("Installing Shovel")
     // NOTE: See https://github.com/nodejs/node-gyp/issues/454#issuecomment-58792114 for why "--unsafe-perm"
-    let result = await ssh.run("npm install -g --unsafe-perm @johnls/sshovel", {
+    let result = await ssh.run("npm install -g --unsafe-perm @johnls/shovel", {
       sudo: true,
       noThrow: true,
     })
 
     if (result.exitCode === 0) {
-      result = await ssh.run("sshovel --version", {
+      result = await ssh.run("shovel --version", {
         noThrow: true,
       })
 
@@ -159,7 +159,7 @@ export class SshovelTool {
     }
 
     throw new Error(
-      `Unable to install Sshovel ${version.shortVersion} on remote host`
+      `Unable to install Shovel ${version.shortVersion} on remote host`
     )
   }
 
@@ -596,18 +596,18 @@ export class SshovelTool {
       )
 
       const hasNode = await this.assertHasNode(ssh)
-      const hasSshovel = hasNode && (await this.assertHasSshovel(ssh))
+      const hasShovel = hasNode && (await this.assertHasShovel(ssh))
 
       if (!hasNode) {
         this.log.warning(`Node not found; attempting to rectify.`)
         await this.rectifyHasNode(ssh, sftp)
       }
 
-      if (!hasSshovel) {
+      if (!hasShovel) {
         this.log.warning(
-          `Sshovel with version ${version.shortVersion} not found; attempting to rectify`
+          `Shovel with version ${version.shortVersion} not found; attempting to rectify`
         )
-        await this.rectifyHasSshovel(ssh)
+        await this.rectifyHasShovel(ssh)
       }
 
       remoteTempDir = (await ssh.run("mktemp -d")).output[0]
@@ -644,7 +644,7 @@ export class SshovelTool {
       )
 
       this.log.info(
-        `Running Sshovel remote script '${remoteRootScriptPath}'${
+        `Running Shovel remote script '${remoteRootScriptPath}'${
           scriptContext.anyScriptHasBecomes ? " as root" : ""
         }`
       )
@@ -653,7 +653,7 @@ export class SshovelTool {
         this.log.enableSpinner()
       }
 
-      await ssh.run(`sshovel --noSpinner ${remoteRootScriptPath}`, {
+      await ssh.run(`shovel --noSpinner ${remoteRootScriptPath}`, {
         sudo: scriptContext.anyScriptHasBecomes,
         logOutput: this.log.output,
         logError: this.log.outputError,
@@ -703,11 +703,11 @@ Usage: ${this.toolName} [options] <script-file>
 
 Description:
 
-Runs a Sshovel configuration script. If 'host' or 'hostFile' argument
+Runs a Shovel configuration script. If 'host' or 'hostFile' argument
 is given then the script will be run on those hosts using SSH. If not
 then the script will be run directly on the machine without SSH.
 
-Node.js and Sshovel will be installed on the remote hosts if not already
+Node.js and Shovel will be installed on the remote hosts if not already
 present. For installation to work the SSH user must have sudo
 permissions on the host. If passwords are required for login or
 sudo the tool will prompt.

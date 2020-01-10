@@ -30,11 +30,11 @@ For `local` interpolated variables, the `env`, `os`, `sys` and `fs` objects all 
 
 ## `env`
 
-This are the environment variables that `sshovel` was invoked with.
+This are the environment variables that `shovel` was invoked with.
 
 ## `sys`
 
-This contains information about the `sshovel` system, most usefully the currently executing script directory and file:
+This contains information about the `shovel` system, most usefully the currently executing script directory and file:
 
 | Property     | Description                          |
 | ------------ | ------------------------------------ |
@@ -43,7 +43,7 @@ This contains information about the `sshovel` system, most usefully the currentl
 
 ## `os`
 
-This is information about the O/S that `sshovel` is running on. Values are always lowercase and separated with underscores.
+This is information about the O/S that `shovel` is running on. Values are always lowercase and separated with underscores.
 
 | Property    | Description                              |
 | ----------- | ---------------------------------------- |
@@ -53,7 +53,7 @@ This is information about the O/S that `sshovel` is running on. Values are alway
 
 ## `user`
 
-Information about the user that invoked `sshovel`.
+Information about the user that invoked `shovel`.
 
 | Property  | Description                  |
 | --------- | ---------------------------- |
@@ -65,7 +65,7 @@ Information about the user that invoked `sshovel`.
 
 ## `fs`
 
-File system functions.  All functions are synchronous; there is no concept of asynchronous functions in Sshovel.
+File system functions.  All functions are synchronous; there is no concept of asynchronous functions in Shovel.
 
 | Function   | Description                         |
 | ---------- | ----------------------------------- |

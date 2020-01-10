@@ -1,1 +1,1 @@
-export { SshovelTool } from "./SshovelTool"
+export { ShovelTool } from "./ShovelTool"

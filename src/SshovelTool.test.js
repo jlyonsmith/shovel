@@ -1,4 +1,4 @@
-import { SshovelTool } from "./SshovelTool"
+import { ShovelTool } from "./ShovelTool"
 import * as testUtil from "./testUtil"
 import * as version from "./version"
 import stream from "stream"
@@ -8,7 +8,7 @@ let container = null
 
 beforeEach(() => {
   container = {
-    toolName: "sshovel",
+    toolName: "shovel",
     log: {
       info: jest.fn(),
       warning: jest.fn(),
@@ -22,7 +22,7 @@ beforeEach(() => {
 })
 
 test("constructor", () => {
-  const tool = new SshovelTool()
+  const tool = new ShovelTool()
 
   expect(tool).not.toBe(null)
   expect(tool.createSsh()).not.toBe(null)
@@ -35,7 +35,7 @@ test("assertHasNode", async () => {
       if (command === "node --version") {
         return {
           exitCode: 0,
-          output: [SshovelTool.minNodeVersion],
+          output: [ShovelTool.minNodeVersion],
         }
       } else {
         return {
@@ -45,13 +45,13 @@ test("assertHasNode", async () => {
       }
     },
   }
-  const tool = new SshovelTool(container)
+  const tool = new ShovelTool(container)
 
   await expect(tool.assertHasNode(ssh)).resolves.toBe(true)
 })
 
 test("rectifyHasNode", async () => {
-  const tool = new SshovelTool(container)
+  const tool = new ShovelTool(container)
 
   // Success
   const ssh = {
@@ -64,7 +64,7 @@ test("rectifyHasNode", async () => {
       } else if (command === "node --version") {
         return {
           exitCode: 0,
-          output: [SshovelTool.minNodeVersion],
+          output: [ShovelTool.minNodeVersion],
         }
       } else if (command === "bash -c 'echo /$EUID'") {
         return {
@@ -166,27 +166,27 @@ test("rectifyHasNode", async () => {
   await expect(tool.rectifyHasNode(ssh, sftp)).rejects.toThrow(Error)
 })
 
-test("assertHasSshovel", async () => {
+test("assertHasShovel", async () => {
   const ssh = {
     run: async (command, options) => ({
       exitCode: 0,
       output: [version.shortVersion],
     }),
   }
-  const tool = new SshovelTool(container)
+  const tool = new ShovelTool(container)
 
-  await expect(tool.assertHasSshovel(ssh)).resolves.toBe(true)
+  await expect(tool.assertHasShovel(ssh)).resolves.toBe(true)
 })
 
-test("rectifyHasSshovel", async () => {
+test("rectifyHasShovel", async () => {
   const ssh = {
     run: async (command, options) => {
-      if (command === "npm install -g @johnls/sshovel") {
+      if (command === "npm install -g @johnls/shovel") {
         return {
           exitCode: 0,
           output: [],
         }
-      } else if (command === "sshovel --version") {
+      } else if (command === "shovel --version") {
         return {
           exitCode: 0,
           output: [version.shortVersion],
@@ -199,17 +199,17 @@ test("rectifyHasSshovel", async () => {
       }
     },
   }
-  const tool = new SshovelTool(container)
+  const tool = new ShovelTool(container)
 
   // Success
-  await expect(tool.rectifyHasSshovel(ssh)).resolves.toBeUndefined()
+  await expect(tool.rectifyHasShovel(ssh)).resolves.toBeUndefined()
 
   // Failed after install
   ssh.run = async (command, options) => ({
     exitCode: 255,
     output: [],
   })
-  await expect(tool.rectifyHasSshovel(ssh)).rejects.toThrow(Error)
+  await expect(tool.rectifyHasShovel(ssh)).rejects.toThrow(Error)
 
   // Failed install
   ssh.run = async (command, options) => {
@@ -218,13 +218,13 @@ test("rectifyHasSshovel", async () => {
       output: [""],
     }
   }
-  await expect(tool.rectifyHasSshovel(ssh)).rejects.toThrow(Error)
+  await expect(tool.rectifyHasShovel(ssh)).rejects.toThrow(Error)
 })
 
 test("loadScriptFile", async () => {
   Object.assign(container, { fs: { readFile: (path) => "[]" } })
 
-  const tool = new SshovelTool(container)
+  const tool = new ShovelTool(container)
 
   // Bad empty script
   await expect(tool.loadScriptFile("test.json5")).rejects.toThrow(ScriptError)
@@ -371,7 +371,7 @@ test("createScriptContext", async () => {
     },
   })
 
-  const tool = new SshovelTool(container)
+  const tool = new ShovelTool(container)
 
   await expect(tool.createScriptContext("/a/b.json5")).resolves.toMatchObject({
     anyScriptHasBecomes: true,
@@ -400,7 +400,7 @@ test("createRunContext", async () => {
     },
   })
 
-  const tool = new SshovelTool(container)
+  const tool = new ShovelTool(container)
   const scriptNode = testUtil.createScriptNode("a.json5")
   let result = await tool.createRunContext(scriptNode)
 
@@ -444,7 +444,7 @@ test("createRunContext", async () => {
 })
 
 test("updateRunContext", async () => {
-  const tool = new SshovelTool(container)
+  const tool = new ShovelTool(container)
   const interpolator = (s) => s
   const runContext = {
     sys: {},
@@ -551,7 +551,7 @@ test("runScriptLocally", async () => {
     },
   })
 
-  const tool = new SshovelTool(container)
+  const tool = new ShovelTool(container)
 
   tool.createRunContext = jest.fn(async () => ({
     runContext: { vars: { a: 1 } },
@@ -624,10 +624,10 @@ test("runScriptRemotely", async () => {
       },
     },
   })
-  const tool = new SshovelTool(container)
+  const tool = new ShovelTool(container)
 
   tool.assertHasNode = () => true
-  tool.assertHasSshovel = () => true
+  tool.assertHasShovel = () => true
   tool.createRunContext = async () => ({
     runContext: { sys: {}, vars: {} },
     interpolator: (s) => s,
@@ -647,12 +647,12 @@ test("runScriptRemotely", async () => {
     })
   ).resolves.toBeUndefined()
 
-  // Without Node or Sshovel
+  // Without Node or Shovel
   tool.debug = false
   tool.assertHasNode = () => false
-  tool.assertHasSshovel = () => false
+  tool.assertHasShovel = () => false
   tool.rectifyHasNode = async () => undefined
-  tool.rectifyHasSshovel = async () => undefined
+  tool.rectifyHasShovel = async () => undefined
   await expect(
     tool.runScriptRemotely("/x/a.json5", {
       user: "test",
@@ -687,7 +687,7 @@ test("run", async () => {
       '[{ host: "foo", port: 22, user: "fred", identity: "bar" }]',
   }
 
-  const tool = new SshovelTool(container)
+  const tool = new ShovelTool(container)
 
   tool.runScriptLocally = async () => undefined
   tool.runScriptRemotely = async () => undefined
