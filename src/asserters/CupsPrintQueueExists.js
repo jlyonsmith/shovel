@@ -36,6 +36,9 @@ export class CupsPrintQueueExists {
       ppdOptions: ppdOptionsNode,
     } = withNode.value
 
+    // TODO: Check that CUPS is running
+    // TODO: Check that DirtyCleanInterval is set to 0 in /etc/cups/cupsd.conf
+
     if (!queueNode || queueNode.type !== "string") {
       throw new ScriptError(
         "'queue' must be supplied and be a string",
@@ -225,9 +228,9 @@ export class CupsPrintQueueExists {
         while ((match = re.exec(block)) !== null) {
           let value = match[2]
 
-          if (value === "True") {
+          if (value === "True" || value === "Yes") {
             value = true
-          } else if (value === "False") {
+          } else if (value === "False" || value === "No") {
             value = false
           }
 
@@ -264,10 +267,10 @@ export class CupsPrintQueueExists {
       })
     }
 
-    const queueInfo = parsePrintQueues(printersFileContent).get(this.queueName)
+    let queueInfo = parsePrintQueues(printersFileContent).get(this.queueName)
 
     if (!queueInfo) {
-      return false
+      queueInfo = { queueName: this.queueName }
     }
 
     this.updateFlags = 0
@@ -330,29 +333,34 @@ export class CupsPrintQueueExists {
     }
 
     if (this.updateFlags & updateLocation) {
-      this.childProcess.exec(`lpadmin -p ${this.queueName} -L ${this.location}`)
+      this.childProcess.exec(`lpadmin -p ${this.queueName} -L "${this.location}"`)
     }
 
     if (this.updateFlags & updateInfo) {
-      this.childProcess.exec(`lpadmin -p ${this.queueName} -D ${this.info}`)
+      this.childProcess.exec(`lpadmin -p ${this.queueName} -D "${this.info}"`)
     }
 
     if (this.updateFlags & updatePpdFile) {
-      this.childProcess.exec(`lpadmin -p ${this.queueName} -P ${this.ppdFile}`)
+      this.childProcess.exec(`lpadmin -p ${this.queueName} -P "${this.ppdFile}"`)
     }
 
     if (this.updateFlags & updatePpdOptions) {
       let optionList = ""
 
       Object.entries(this.ppdOptions)
-        .map(([key, value]) => `"-o ${key}=${value}"`)
+        .map(([key, value]) => `'-o ${key}="${value}"'`)
         .join(" ")
       this.childProcess.exec(`lpoptions -p ${this.queueName} ${optionList}`)
     }
 
     if (this.updateFlags & updateAccepting) {
-      this.childProcess.exec(`cupsenable ${this.queueName}`)
-      this.childProcess.exec(`cupsaccept ${this.queueName}`)
+      if (this.accepting) {
+        this.childProcess.exec(`cupsenable ${this.queueName}`)
+        this.childProcess.exec(`cupsaccept ${this.queueName}`)
+      } else {
+        this.childProcess.exec(`cupsdisable ${this.queueName}`)
+        this.childProcess.exec(`cupsreject ${this.queueName}`)
+      }
     }
   }
 

@@ -1,0 +1,17 @@
+{
+  assertions: [
+    {
+      assert: "CupsPrintQueueExists",
+      with: {
+        queue: "fake-printer",
+        deviceUri: "serial:/dev/null",
+        shared: true,
+        accepting: false,
+        location: "Main Office",
+        description: "HP LaserJet",
+        errorPolicy: "retry-job",
+      },
+      become: "root"
+    }
+  ]
+}
