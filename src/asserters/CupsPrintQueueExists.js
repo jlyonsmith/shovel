@@ -36,6 +36,15 @@ export class CupsPrintQueueExists {
       ppdOptions: ppdOptionsNode,
     } = withNode.value
 
+    const info = await this.util.osInfo()
+
+    if (
+      info.platform !== "linux" ||
+      (info.id !== "ubuntu" && info.id !== "centos")
+    ) {
+      throw new ScriptError("Only supported on Ubuntu and CentOS", assertNode)
+    }
+
     // TODO: Check that CUPS is running
     // TODO: Check that DirtyCleanInterval is set to 0 in /etc/cups/cupsd.conf
 
