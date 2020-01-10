@@ -254,13 +254,17 @@ export class CupsPrintQueueExists {
 
       return printQueues
     }
-    const printQueues = parsePrintQueues(
-      await this.fs.readFile("/etc/cups/printers.conf", {
+
+    const printersFile = "/etc/cups/printers.conf"
+    let printersFileContent = ""
+
+    if ((await this.util.pathInfo(printersFile)).isFile()) {
+      printersFileContent = await this.fs.readFile(printersFile, {
         encoding: "utf8",
       })
-    )
+    }
 
-    const queueInfo = printQueues.get(this.queueName)
+    const queueInfo = parsePrintQueues(printersFileContent).get(this.queueName)
 
     if (!queueInfo) {
       return false

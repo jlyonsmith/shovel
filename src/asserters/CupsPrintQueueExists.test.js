@@ -1,11 +1,15 @@
 import { CupsPrintQueueExists } from "./CupsPrintQueueExists"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
-import { PathAccess } from "../util"
+import { PathAccess, PathInfo } from "../util"
 
 test("assert", async () => {
   const container = {
     interpolator: (node) => node.value,
+    process: {
+      geteuid: () => 1,
+      getgroups: () => [1, 2],
+    },
     util: {
       runningAsRoot: () => true,
       pathInfo: (path) => {
@@ -13,11 +17,21 @@ test("assert", async () => {
           path === "/etc/cups/ppd/printer1.ppd" ||
           path === "/usr/local/drivers/printer1.ppd" ||
           path === "/etc/cups/lpoptions" ||
+          path === "/etc/cups/printers.conf" ||
           path === "/usr/local/drivers/other.ppd"
         ) {
-          return { getAccess: () => new PathAccess(0o777) }
+          return new PathInfo(
+            {
+              isFile: () => true,
+              size: 100,
+              uid: 1,
+              gid: 1,
+              mode: 0o777,
+            },
+            container
+          )
         } else {
-          return { getAccess: () => new PathAccess(0) }
+          return new PathInfo()
         }
       },
     },
@@ -233,9 +247,18 @@ Default cltx0`
   // lpoptions not accessible
   container.util.pathInfo = (path) => {
     if (path === "/usr/local/drivers/printer1.ppd") {
-      return { getAccess: () => new PathAccess(0o777) }
+      return new PathInfo(
+        {
+          isFile: () => true,
+          size: 100,
+          uid: 1,
+          gid: 1,
+          mode: 0o777,
+        },
+        container
+      )
     } else {
-      return { getAccess: () => new PathAccess(0) }
+      return new PathInfo()
     }
   }
   await expect(
