@@ -1,4 +1,4 @@
-import { HttpUrlDownloaded } from "./HttpUrlDownloaded"
+import { UrlDownloaded } from "./UrlDownloaded"
 import stream from "stream"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
@@ -25,7 +25,7 @@ test("assert", async () => {
   }
   const testUrl = "http://localhost/somefile.txt"
   const testString = "The quick brown fox jumps over the lazy dog\n"
-  const asserter = new HttpUrlDownloaded(container)
+  const asserter = new UrlDownloaded(container)
 
   // Missing/bad url
   await expect(asserter.assert(createAssertNode(asserter, {}))).rejects.toThrow(
@@ -98,7 +98,7 @@ test("rectify", async () => {
       pipeToPromise: jest.fn(async () => undefined),
     },
   }
-  const asserter = new HttpUrlDownloaded(container)
+  const asserter = new UrlDownloaded(container)
 
   asserter.toFileExists = false
   asserter.expandedFile = "/foo/bar.txt"
@@ -112,7 +112,7 @@ test("rectify", async () => {
 })
 
 test("result", () => {
-  const asserter = new HttpUrlDownloaded({})
+  const asserter = new UrlDownloaded({})
 
   asserter.expandedFile = "/somedir/somefile.txt"
 

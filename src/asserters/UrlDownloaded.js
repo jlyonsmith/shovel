@@ -3,7 +3,7 @@ import fetch from "node-fetch"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
 
-export class HttpUrlDownloaded {
+export class UrlDownloaded {
   constructor(container) {
     this.fs = container.fs || fs
     this.fetch = container.fetch || fetch

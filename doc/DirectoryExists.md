@@ -16,7 +16,7 @@ The user and group owners for the directory. Defaults to current user and group.
 
 ### `mode: String`
 
-The permissions flags for the directory.  Defaults to `{ user: "rwx", group: "r--", other: "r--" }`.  See [Permission Flags](PermissionFlags.md)
+The permissions flags for the directory.  For directories to `{ user: "rwx", group: "rwx", other: "rwx" }`.  See [Permission Flags](PermissionFlags.md)
 
 ## Example
 

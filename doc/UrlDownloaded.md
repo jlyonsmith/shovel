@@ -1,4 +1,4 @@
-# `HttpUrlDownloaded`
+# `UrlDownloaded`
 
 ## Summary
 
@@ -22,7 +22,7 @@ The name of the downloaded file.
 
 ```json5
 {
-  assert: "HttpUrlDownloaded",
+  assert: "UrlDownloaded",
   with: {
     url: "https://sourcehost.com/linux_amd64.zip",
     digest: "658f4f3b305cd357a9501728b8a1dc5f...",
