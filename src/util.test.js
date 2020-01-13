@@ -82,7 +82,7 @@ test("PathInfo", async () => {
   expect(info.isDirectory()).toBe(true)
   expect(info.modeString()).toBe("---------")
   access = info.getAccess()
-  expect(access.isWritable()).toBe(false)
+  expect(access.isWriteable()).toBe(false)
 
   // Other
   info = new PathInfo(

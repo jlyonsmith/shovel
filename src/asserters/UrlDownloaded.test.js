@@ -1,30 +1,73 @@
 import { UrlDownloaded } from "./UrlDownloaded"
-import stream from "stream"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
+import util, { PathInfo } from "../util"
 
 test("assert", async () => {
   const container = {
     interpolator: (node) => node.value,
+    process: {
+      geteuid: () => 1,
+      getgroups: () => [1, 2],
+    },
+    os: {
+      userInfo: () => ({
+        uid: 0,
+        gid: 0,
+      }),
+    },
     util: {
+      getUsers: async () => [
+        { uid: 0, gid: 0, name: "root" },
+        { uid: 10, gid: 10, name: "user1" },
+        { uid: 20, gid: 10, name: "user2" },
+      ],
+      getGroups: async () => [
+        { gid: 0, name: "root" },
+        { gid: 10, name: "group1" },
+        { gid: 20, name: "group2" },
+      ],
+      parseOwnerNode: util.parseOwnerNode,
+      parseModeNode: util.parseModeNode,
+      pathInfo: async (path) => {
+        if (path === "/dir/somefile" || path === "/dir/badfile") {
+          return new PathInfo(
+            {
+              isFile: () => true,
+              isDirectory: () => false,
+              size: 100,
+              uid: 1,
+              gid: 1,
+              mode: 0o777,
+            },
+            container
+          )
+        } else if (path === "/dir") {
+          return new PathInfo(
+            {
+              isFile: () => false,
+              isDirectory: () => true,
+              size: 0,
+              uid: 1,
+              gid: 1,
+              mode: 0o777,
+            },
+            container
+          )
+        } else {
+          return new PathInfo()
+        }
+      },
       generateDigestFromFile: async (path) => {
-        if (path === "badfile") {
+        if (path === "/dir/badfile") {
           return "0987654321"
         } else {
           return "1234567890"
         }
       },
-      fileExists: async (path) => {
-        if (path === "missingfile") {
-          return false
-        } else {
-          return true
-        }
-      },
     },
   }
   const testUrl = "http://localhost/somefile.txt"
-  const testString = "The quick brown fox jumps over the lazy dog\n"
   const asserter = new UrlDownloaded(container)
 
   // Missing/bad url
@@ -59,7 +102,7 @@ test("assert", async () => {
       createAssertNode(asserter, {
         url: testUrl,
         digest: "1234567890",
-        file: "somefile",
+        file: "/dir/somefile",
       })
     )
   ).resolves.toBe(true)
@@ -70,18 +113,18 @@ test("assert", async () => {
       createAssertNode(asserter, {
         url: testUrl,
         digest: "1234567890",
-        file: "missingfile",
+        file: "/dir/missingfile",
       })
     )
   ).resolves.toBe(false)
 
-  // With incorrect file already in place
+  // With bad checksum
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
         url: testUrl,
         digest: "1234567890",
-        file: "badfile",
+        file: "/dir/badfile",
       })
     )
   ).resolves.toBe(false)

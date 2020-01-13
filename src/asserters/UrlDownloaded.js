@@ -1,4 +1,6 @@
 import fs from "fs-extra"
+import os from "os"
+import path from "path"
 import fetch from "node-fetch"
 import util from "../util"
 import { ScriptError } from "../ScriptError"
@@ -6,6 +8,7 @@ import { ScriptError } from "../ScriptError"
 export class UrlDownloaded {
   constructor(container) {
     this.fs = container.fs || fs
+    this.os = container.os || os
     this.fetch = container.fetch || fetch
     this.util = container.util || util
     this.interpolator = container.interpolator
@@ -13,7 +16,13 @@ export class UrlDownloaded {
 
   async assert(assertNode) {
     const withNode = assertNode.value.with
-    const { url: urlNode, digest: digestNode, file: fileNode } = withNode.value
+    const {
+      url: urlNode,
+      digest: digestNode,
+      file: fileNode,
+      owner: ownerNode,
+      mode: modeNode,
+    } = withNode.value
 
     if (!urlNode || urlNode.type !== "string") {
       throw new ScriptError(
@@ -36,38 +45,49 @@ export class UrlDownloaded {
       )
     }
 
+    const userInfo = this.os.userInfo()
+    const users = await this.util.getUsers(this.fs)
+    const groups = await this.util.getGroups(this.fs)
+
+    this.owner = Object.assign(
+      { uid: userInfo.uid, gid: userInfo.gid },
+      this.util.parseOwnerNode(ownerNode, users, groups)
+    )
+    this.mode = this.util.parseModeNode(modeNode, 0o777)
     this.expandedUrl = this.interpolator(urlNode)
     this.expandedFile = this.interpolator(fileNode)
 
-    // TODO: Ensure we can access the download directory
-    this.toFileExists = await this.util.fileExists(this.expandedFile)
+    // TODO: Check if user is trying to change owner or group and is not root
 
-    if (!this.toFileExists) {
+    if ((await this.util.pathInfo(this.expandedFile)).isMissing()) {
       return false
     }
 
-    const toFileDigest = await this.util.generateDigestFromFile(
+    const toDir = path.dirname(this.expandedFile)
+
+    if (!(await this.util.pathInfo(toDir)).getAccess().isWriteable()) {
+      throw new ScriptError(`Cannot write to directory '${toDir}'`)
+    }
+
+    this.toFileDigest = await this.util.generateDigestFromFile(
       this.expandedFile
     )
 
-    return toFileDigest === digestNode.value
+    return this.toFileDigest === digestNode.value
   }
 
   async rectify() {
-    if (this.toFileExists) {
-      await this.fs.remove(this.expandedFile)
-    }
-
     const result = await this.fetch(this.expandedUrl)
     const writeable = this.fs.createWriteStream(this.expandedFile)
 
     await this.util.pipeToPromise(result.body, writeable)
-
-    // TODO: Owner and mode if provided
   }
 
   result() {
-    // TODO: Add hash to output of actual file or the asserted hash
-    return { file: this.expandedFile }
+    return {
+      url: this.expandedUrl,
+      digest: this.toFileDigest,
+      file: this.expandedFile,
+    }
   }
 }

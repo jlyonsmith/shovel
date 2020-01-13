@@ -18,11 +18,11 @@ export class PathAccess {
   isReadable() {
     return !!(this.flags & 4)
   }
-  isWritable() {
+  isWriteable() {
     return !!(this.flags & 2)
   }
   isReadWrite() {
-    return this.isReadable() && this.isWritable()
+    return this.isReadable() && this.isWriteable()
   }
   isExecutable() {
     return !!(this.flags & 1)

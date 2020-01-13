@@ -18,6 +18,14 @@ The SHA256 digest of the file in hexadecimal.
 
 The name of the downloaded file.
 
+### `owner: String`
+
+The user and group owners for the downloaded file. Defaults to current user and group.
+
+### `mode: String` (Defaults to `{ user: "rw-", group: "rw-", other: "r--" }`)
+
+The permissions flags for the downloaded file. See [Permission Flags](PermissionFlags.md)
+
 ## Example
 
 ```json5
