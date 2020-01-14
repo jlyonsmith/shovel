@@ -1,9 +1,9 @@
-import fs from "fs-extra"
+import util from "../util"
 import { ScriptError } from "../ScriptError"
 
 export class FileDeleted {
   constructor(container) {
-    this.fs = container.fs || fs
+    this.util = container.util || util
     this.interpolator = container.interpolator
     this.stat = null
   }
@@ -21,22 +21,16 @@ export class FileDeleted {
 
     this.expandedFile = this.interpolator(fileNode)
 
-    let stat = null
+    const pathInfo = await this.util.pathInfo(this.expandedFile)
 
-    try {
-      stat = await this.fs.lstat(this.expandedFile)
-    } catch (e) {
-      return true
-    }
-
-    if (stat && stat.isDirectory()) {
+    if (pathInfo.isDirectory()) {
       throw new ScriptError(
         `Not removing existing directory with the name '${this.expandedFile}'`,
         fileNode
       )
     }
 
-    return false
+    return !pathInfo.isFile()
   }
 
   async rectify() {

@@ -1,28 +1,31 @@
 import { FileDeleted } from "./FileDeleted"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
-
-let container = null
+import { PathInfo } from "../util"
 
 test("assert", async () => {
   const container = {
     interpolator: (node) => node.value,
-    fs: {
-      lstat: jest.fn(async (fileName) => {
+    process: {
+      geteuid: () => 1,
+      getgroups: () => [1, 2],
+    },
+    util: {
+      pathInfo: async (fileName) => {
         if (fileName === "/somedir") {
-          return {
-            isDirectory: jest.fn(() => true),
-            isFile: jest.fn(() => false),
-          }
+          return new PathInfo({
+            isDirectory: () => true,
+            isFile: () => false,
+          })
         } else if (fileName === "/somefile") {
-          return {
-            isDirectory: jest.fn(() => false),
-            isFile: jest.fn(() => true),
-          }
+          return new PathInfo({
+            isDirectory: () => false,
+            isFile: () => true,
+          })
         } else {
           throw new Error("ENOENT")
         }
-      }),
+      },
     },
   }
 
