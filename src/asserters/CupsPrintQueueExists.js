@@ -52,7 +52,7 @@ export class CupsPrintQueueExists {
 
     if (!dirtyCleanRegex.test(cupsdContent)) {
       throw new ScriptError(
-        "DirtyCleanInterval must be set to zero /etc/cups/cupsd.conf for this asserter"
+        "DirtyCleanInterval must be set to zero /etc/cups/cupsd.conf for this asserter", this.assertNode
       )
     }
 

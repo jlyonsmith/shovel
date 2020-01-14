@@ -40,7 +40,7 @@ test("assert", async () => {
       },
     },
     fs: {
-      readFile: (file) => {
+      readFile: async (file) => {
         if (file === "/etc/cups/printers.conf") {
           return `
 <Printer printer1>
@@ -69,6 +69,8 @@ Default cltx0`
           return "something"
         } else if (file === "/usr/local/drivers/other.ppd") {
           return "something else"
+        } else if (file === "/etc/cups/cupsd.conf") {
+          return "DirtyCleanInterval 0\n"
         }
       },
     },
