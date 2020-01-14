@@ -137,7 +137,7 @@ export class CupsPrintQueueExists {
       this.ppdFile = this.interpolator(ppdFileNode)
 
       if ((await this.util.pathInfo(this.ppdFile)).getAccess().isReadable()) {
-        this.ppdFileContent = await this.fs.readFile(this.ppdFile)
+        this.ppdFileContent = await this.fs.readFile(this.ppdFile, { encoding: "utf8" })
       } else {
         throw new ScriptError(
           `Unable to read PPD file '${this.ppdFile}'`,
@@ -149,10 +149,11 @@ export class CupsPrintQueueExists {
       const existingPpdFile =
         path.join("/etc/cups/ppd", this.queueName) + ".ppd"
 
+
       if (
         (await this.util.pathInfo(existingPpdFile)).getAccess().isReadable()
       ) {
-        existingPpdFileContent = await this.fs.readFile(existingPpdFile)
+        existingPpdFileContent = await this.fs.readFile(existingPpdFile, { encoding: 'utf8' })
       }
     }
 
@@ -308,14 +309,15 @@ export class CupsPrintQueueExists {
       this.updateFlags |= updateAccepting
     }
 
-    if (ppdFileNode && existingPpdFileContent !== this.ppdFileContent) {
+    if (this.ppdFile && this.ppdFileContent && existingPpdFileContent !== this.ppdFileContent) {
       this.updateFlags |= updatePpdFile
     }
 
-    if (
-      ppdOptionsNode &&
-      JSON.stringify(existingPpdOptions) !== JSON.stringify(this.ppdOptions)
-    ) {
+    let optionsEqual = this.ppdOptions &&
+      Object.keys(existingPpdOptions).every(key => this.ppdOptions[key] === existingPpdOptions[key]) &&
+      Object.keys(this.ppdOptions).every(key => existingPpdOptions[key] === this.ppdOptions[key])
+
+    if (!optionsEqual) {
       this.updateFlags |= updatePpdOptions
     }
 
@@ -358,11 +360,10 @@ export class CupsPrintQueueExists {
     }
 
     if (this.updateFlags & updatePpdOptions) {
-      let optionList = ""
-
-      Object.entries(this.ppdOptions)
+      let optionList = Object.entries(this.ppdOptions)
         .map(([key, value]) => `'-o ${key}="${value}"'`)
         .join(" ")
+
       this.childProcess.exec(`lpoptions -p ${this.queueName} ${optionList}`)
     }
 
@@ -400,6 +401,10 @@ export class CupsPrintQueueExists {
 
     if (this.ppdOptions) {
       result.ppdOptions = this.ppdOptions
+    }
+
+    if (rectified) {
+      result.updateFlags = this.updateFlags.toString(2)
     }
 
     return result

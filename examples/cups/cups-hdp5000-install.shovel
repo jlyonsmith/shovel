@@ -1,0 +1,21 @@
+{
+  assertions: [
+    {
+      assert: "CupsPrintQueueExists",
+      with: {
+        queue: "sea-ful-bdg1",
+        deviceUri: "serial:/dev/usb/lp1",
+        location: "Seattle Fulfillment",
+        info: "HDP5000 Badge Printer 1",
+        errorPolicy: "retry-current-job",
+        ppdFile: "/usr/share/cups/model/HDP5000.ppd",
+        ppdOptions: {
+          Ribbon: "PremiumResin",
+        },
+        shared: true,
+        accepting: true,
+      },
+      become: "root",
+    },
+  ],
+}
