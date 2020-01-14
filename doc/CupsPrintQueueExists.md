@@ -2,7 +2,7 @@
 
 ## Summary
 
-Asserts that a CUPS printer queue exists on the host. Fails if CUPS is not installed.
+Asserts that a CUPS printer queue exists on the host. Fails if CUPS is not installed.  Requires that `DirtyCleanInterval` is set to zero (`0`) in the `/etc/cups/cupsd.conf` file.
 
 ## Arguments
 
@@ -30,9 +30,9 @@ If the printer queue is shared on the network.
 
 The printer location.
 
-### `description: string` (Defaults to empty)
+### `info: string` (Defaults to empty)
 
-The printer desription
+The printer information, typically the model number and other descriptive notes.
 
 ### `ppdFile: string` (Defaults to empty)
 

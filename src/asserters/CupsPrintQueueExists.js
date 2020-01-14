@@ -45,8 +45,16 @@ export class CupsPrintQueueExists {
       throw new ScriptError("Only supported on Ubuntu and CentOS", assertNode)
     }
 
-    // TODO: Check that CUPS is running
-    // TODO: Check that DirtyCleanInterval is set to 0 in /etc/cups/cupsd.conf
+    const cupsdContent = await this.fs.readFile("/etc/cups/cupsd.conf", {
+      encoding: "utf8",
+    })
+    const dirtyCleanRegex = /DirtyCleanInterval +0/m
+
+    if (!dirtyCleanRegex.test(cupsdContent)) {
+      throw new ScriptError(
+        "CUPS DirtyCleanInterval must be set to zero /etc/cups/cupsd.conf for this asserter"
+      )
+    }
 
     if (!queueNode || queueNode.type !== "string") {
       throw new ScriptError(
