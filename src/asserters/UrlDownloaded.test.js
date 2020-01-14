@@ -134,7 +134,7 @@ test("rectify", async () => {
   const container = {
     fs: {
       createWriteStream: jest.fn(() => ({})),
-      remove: jest.fn(async (path) => null),
+      chown: () => undefined,
     },
     fetch: jest.fn(async (url) => ({})),
     util: {
@@ -146,6 +146,7 @@ test("rectify", async () => {
   asserter.toFileExists = false
   asserter.expandedFile = "/foo/bar.txt"
   asserter.expandedUrl = "http://something.com"
+  asserter.owner = { uid: 1, gid: 1 }
 
   await expect(asserter.rectify()).resolves.toBeUndefined()
 
