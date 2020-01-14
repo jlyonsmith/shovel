@@ -56,7 +56,9 @@ export class DirectoryExists {
         `A file with the name '${this.expandedDirectory}' exists`,
         directoryNode
       )
-    } else if (stat.uid !== this.owner.uid || stat.gid !== this.owner.gid) {
+    }
+
+    if (stat.uid !== this.owner.uid || stat.gid !== this.owner.gid) {
       if (userInfo.uid !== 0) {
         throw new ScriptError(
           "User does not have permission to modify existing directory owner",

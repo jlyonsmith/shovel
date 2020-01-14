@@ -10,7 +10,7 @@
           user: "rwx",
           group: "rwx",
           other: "r--",
-        }
+        },
       }
     }
   ]

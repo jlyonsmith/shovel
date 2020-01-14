@@ -57,7 +57,9 @@ export class UrlDownloaded {
     this.expandedUrl = this.interpolator(urlNode)
     this.expandedFile = this.interpolator(fileNode)
 
-    // TODO: Check if user is trying to change owner or group and is not root
+    if ((this.owner.uid !== userInfo.uid || this.owner.gid !== userInfo.gid) && userInfo.uid !== 0) {
+      throw new ScriptError(`Cannot set owner and group if not running as root`, ownerNode)
+    }
 
     if ((await this.util.pathInfo(this.expandedFile)).isMissing()) {
       return false
@@ -82,6 +84,7 @@ export class UrlDownloaded {
     const writeable = this.fs.createWriteStream(this.expandedFile)
 
     await this.util.pipeToPromise(result.body, writeable)
+    await this.fs.chown(this.expandedFile, this.owner.uid, this.owner.gid)
   }
 
   result() {
