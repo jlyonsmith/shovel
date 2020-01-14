@@ -541,9 +541,13 @@ export class ShovelTool {
         }
 
         if (!(await asserter.assert(assertionNode))) {
-          await asserter.rectify()
-          rectified = true
-          output.rectified = assertNode.value
+          if (options.assertOnly) {
+            output.wouldRectify = assertNode.value
+          } else {
+            await asserter.rectify()
+            rectified = true
+            output.rectified = assertNode.value
+          }
         } else {
           output.asserted = assertNode.value
         }
@@ -652,13 +656,18 @@ export class ShovelTool {
         this.log.enableSpinner()
       }
 
-      await ssh.run(`shovel --noSpinner ${remoteRootScriptPath}`, {
-        sudo: scriptContext.anyScriptHasBecomes,
-        logOutput: this.log.output,
-        logError: this.log.outputError,
-        logStart: this.log.startSpinner,
-        noThrow: true,
-      })
+      await ssh.run(
+        `shovel --noSpinner${
+          options.assertOnly ? " --assertOnly " : " "
+        }${remoteRootScriptPath}`,
+        {
+          sudo: scriptContext.anyScriptHasBecomes,
+          logOutput: this.log.output,
+          logError: this.log.outputError,
+          logStart: this.log.startSpinner,
+          noThrow: true,
+        }
+      )
     } finally {
       if (remoteTempDir && !this.debug) {
         this.log.info(`Deleting remote script directory '${remoteTempDir}'`)
@@ -676,9 +685,10 @@ export class ShovelTool {
 
   async run(argv) {
     const options = {
-      boolean: ["help", "version", "debug", "noSpinner"],
+      boolean: ["help", "version", "debug", "assertOnly", "noSpinner"],
       string: ["host", "hostFile", "user", "port", "identity"],
       alias: {
+        a: "assertOnly",
         f: "hostFile",
         h: "host",
         i: "identity",
@@ -720,6 +730,7 @@ Arguments:
   --user, -u <user>         Remote user name; defaults to current user
   --identity, -i <key>      User identity file
   --hostFile, -f <file>     JSON5 file containing multiple host names
+  --assertOnly, -a          Only run assertions, don't rectify
   --noSpinner               Disable spinner animation
 `)
       return
@@ -770,6 +781,7 @@ Arguments:
             port: this.util.parsePort(host.port),
             user: host.user,
             identity: host.identity,
+            assertOnly: args.assertOnly,
           })
         } catch (error) {
           this.log.error(this.debug ? error : error.message)
@@ -783,6 +795,7 @@ Arguments:
     } else {
       await this.runScriptLocally(scriptPath, {
         noSpinner: args.noSpinner,
+        assertOnly: args.assertOnly,
       })
     }
   }

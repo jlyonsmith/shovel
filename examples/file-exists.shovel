@@ -3,7 +3,7 @@
     {
       assert: "FileExists",
       with: {
-        path: "scratch/some-file",
+        file: "scratch/some-file",
         owner: {
           user: "root",
           group: "wheel",
