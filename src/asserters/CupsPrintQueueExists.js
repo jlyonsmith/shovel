@@ -52,7 +52,7 @@ export class CupsPrintQueueExists {
 
     if (!dirtyCleanRegex.test(cupsdContent)) {
       throw new ScriptError(
-        "CUPS DirtyCleanInterval must be set to zero /etc/cups/cupsd.conf for this asserter"
+        "DirtyCleanInterval must be set to zero /etc/cups/cupsd.conf for this asserter"
       )
     }
 
@@ -145,7 +145,9 @@ export class CupsPrintQueueExists {
       this.ppdFile = this.interpolator(ppdFileNode)
 
       if ((await this.util.pathInfo(this.ppdFile)).getAccess().isReadable()) {
-        this.ppdFileContent = await this.fs.readFile(this.ppdFile, { encoding: "utf8" })
+        this.ppdFileContent = await this.fs.readFile(this.ppdFile, {
+          encoding: "utf8",
+        })
       } else {
         throw new ScriptError(
           `Unable to read PPD file '${this.ppdFile}'`,
@@ -157,11 +159,12 @@ export class CupsPrintQueueExists {
       const existingPpdFile =
         path.join("/etc/cups/ppd", this.queueName) + ".ppd"
 
-
       if (
         (await this.util.pathInfo(existingPpdFile)).getAccess().isReadable()
       ) {
-        existingPpdFileContent = await this.fs.readFile(existingPpdFile, { encoding: 'utf8' })
+        existingPpdFileContent = await this.fs.readFile(existingPpdFile, {
+          encoding: "utf8",
+        })
       }
     }
 
@@ -317,13 +320,22 @@ export class CupsPrintQueueExists {
       this.updateFlags |= updateAccepting
     }
 
-    if (this.ppdFile && this.ppdFileContent && existingPpdFileContent !== this.ppdFileContent) {
+    if (
+      this.ppdFile &&
+      this.ppdFileContent &&
+      existingPpdFileContent !== this.ppdFileContent
+    ) {
       this.updateFlags |= updatePpdFile
     }
 
-    let optionsEqual = this.ppdOptions &&
-      Object.keys(existingPpdOptions).every(key => this.ppdOptions[key] === existingPpdOptions[key]) &&
-      Object.keys(this.ppdOptions).every(key => existingPpdOptions[key] === this.ppdOptions[key])
+    let optionsEqual =
+      this.ppdOptions &&
+      Object.keys(existingPpdOptions).every(
+        (key) => this.ppdOptions[key] === existingPpdOptions[key]
+      ) &&
+      Object.keys(this.ppdOptions).every(
+        (key) => existingPpdOptions[key] === this.ppdOptions[key]
+      )
 
     if (!optionsEqual) {
       this.updateFlags |= updatePpdOptions
