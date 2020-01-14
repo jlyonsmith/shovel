@@ -33,38 +33,58 @@ export class ZipFileUnzipped {
     this.expandedFilePath = this.interpolator(fileNode)
     this.expandedToPath = this.interpolator(toDirectoryNode)
 
-    if (!(await this.util.fileExists(this.expandedFilePath))) {
+    if ((await this.util.pathInfo(this.expandedFilePath)).isMissing()) {
       throw new ScriptError(
         `Zip file ${this.expandedFilePath} does not exist`,
         fileNode
       )
     }
 
-    if (!(await this.util.dirExists(this.expandedToPath))) {
+    if ((await this.util.pathInfo(this.expandedToPath)).isMissing()) {
+      if (
+        !(await this.util.pathInfo(path.dirname(this.expandedFilePath)))
+          .getAccess()
+          .isWriteable()
+      ) {
+        throw new ScriptError(
+          `Parent directory of ${this.expandedFilePath} is not writeable`,
+          fileNode
+        )
+      }
+
       return false
     }
 
-    let zipFile = null
+    let zipFile
 
     try {
       zipFile = await this.yauzl.open(this.expandedFilePath)
       await zipFile.walkEntries(async (entry) => {
         const targetPath = path.join(this.expandedToPath, entry.fileName)
         const entryIsDir = entry.fileName.endsWith("/")
-        // This will throw if the file or directory is not present
-        const stat = await this.fs.lstat(targetPath)
+        const pathInfo = await this.util.pathInfo(targetPath)
 
-        if (!entryIsDir && stat.isDirectory()) {
-          throw new Error(
-            `Existing '${targetPath}' is a directory and zip file entry is a file`
+        if (pathInfo.isMissing()) {
+          throw new Error()
+        } else if (entryIsDir && !pathInfo.isDirectory()) {
+          throw new ScriptError(
+            `'${targetPath}' is a non-directory; does not match zip file`,
+            assertNode
           )
-        } else if (entry.uncompressedSize !== stat.size) {
-          throw new Error(
-            `File size ${stat.size} of '${targetPath} does not match zip file entry of ${entry.uncompressedSize}`
+        } else if (!entryIsDir && !pathInfo.isFile()) {
+          throw new ScriptError(
+            `Existing '${targetPath}' is a directory and zip file entry is a file`,
+            assertNode
           )
+        } else if (!entryIsDir && entry.uncompressedSize !== pathInfo.size) {
+          throw new Error()
         }
       })
-    } catch (e) {
+    } catch (error) {
+      if (error instanceof ScriptError) {
+        throw error
+      }
+
       return false
     } finally {
       if (zipFile) {
@@ -76,31 +96,25 @@ export class ZipFileUnzipped {
   }
 
   async rectify() {
-    let zipFile = null
+    let zipFile = await this.yauzl.open(this.expandedFilePath)
 
-    try {
-      zipFile = await this.yauzl.open(this.expandedFilePath)
-      await zipFile.walkEntries(async (entry) => {
-        const targetPath = path.join(this.expandedToPath, entry.fileName)
-        const entryIsDir = entry.fileName.endsWith("/")
-        const targetDir = entryIsDir ? targetPath : path.dirname(targetPath)
+    await zipFile.walkEntries(async (entry) => {
+      const targetPath = path.join(this.expandedToPath, entry.fileName)
+      const entryIsDir = entry.fileName.endsWith("/")
+      const targetDir = entryIsDir ? targetPath : path.dirname(targetPath)
 
-        if (!(await this.util.dirExists(targetDir))) {
+      if (entryIsDir) {
+        if ((await this.util.pathInfo(targetDir)).isMissing()) {
           await this.fs.ensureDir(targetDir)
         }
+      } else {
+        const readable = await entry.openReadStream()
+        const writeable = await this.fs.createWriteStream(targetPath)
 
-        if (!entryIsDir) {
-          const readable = await entry.openReadStream()
-          const writeable = await this.fs.createWriteStream(targetPath)
-
-          await this.util.pipeToPromise(readable, writeable)
-        }
-      })
-    } finally {
-      if (zipFile) {
-        await zipFile.close()
+        await this.util.pipeToPromise(readable, writeable)
       }
-    }
+    })
+    await zipFile.close()
   }
 
   result() {

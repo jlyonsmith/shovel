@@ -222,8 +222,6 @@ export class SFTP {
         timer.clear()
       }
     }
-
-    // TODO: If the timer fired, Ctrl+C out of whatever we were doing?
   }
 
   close() {

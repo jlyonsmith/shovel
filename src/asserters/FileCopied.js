@@ -1,5 +1,6 @@
 import fs from "fs-extra"
 import util from "../util"
+import path from "path"
 import { ScriptError } from "../ScriptError"
 
 export class FileCopied {
@@ -30,14 +31,25 @@ export class FileCopied {
     this.expandedToFile = this.interpolator(toFileNode)
     this.expandedFromFile = this.interpolator(fromFileNode)
 
-    if (!(await this.util.fileExists(this.expandedFromFile))) {
+    if (!(await this.util.pathInfo(this.expandedFromFile)).isFile()) {
       throw new ScriptError(
         `File ${this.expandedFromFile} does not exist`,
         fromFileNode
       )
     }
 
-    if (!(await this.util.fileExists(this.expandedToFile))) {
+    if (!(await this.util.pathInfo(this.expandedToFile)).isFile()) {
+      if (
+        !(await this.util.pathInfo(path.dirname(this.expandedToFile)))
+          .getAccess()
+          .isWriteable()
+      ) {
+        throw new ScriptError(
+          `Cannot write to parent directory of ${this.expandedToFile}`,
+          toFileNode
+        )
+      }
+
       return false
     }
 

@@ -11,9 +11,7 @@ export const ansiEscapeRegex = new RegExp(
 )
 
 const modeFormat = (flags) =>
-  (flags & 4 ? "r" : "-") +
-  (flags & 2 ? "w" : "-") +
-  (flags & 1 ? "x" : "-")
+  (flags & 4 ? "r" : "-") + (flags & 2 ? "w" : "-") + (flags & 1 ? "x" : "-")
 
 export class PathAccess {
   constructor(mode) {
@@ -110,7 +108,11 @@ export class PathInfo {
   }
 
   modeString() {
-    return modeFormat(this.mode >> 6) + modeFormat(this.mode >> 3) + modeFormat(this.mode)
+    return (
+      modeFormat(this.mode >> 6) +
+      modeFormat(this.mode >> 3) +
+      modeFormat(this.mode)
+    )
   }
 }
 
@@ -151,34 +153,6 @@ export class Utility {
     }
 
     return new PathInfo(stat)
-  }
-
-  // TODO: Remove in favor of pathInfo
-  async fileExists(filePath) {
-    try {
-      return (await this.fs.lstat(filePath)).isFile()
-    } catch (e) {
-      return false
-    }
-  }
-
-  // TODO: Remove in favor of pathInfo
-  async dirExists(pathName) {
-    try {
-      return (await this.fs.lstat(pathName)).isDirectory()
-    } catch (e) {
-      return false
-    }
-  }
-
-  // TODO: Remove in favor of pathInfo
-  async canAccess(pathName) {
-    try {
-      await this.fs.access(pathName, fs.constants.W_OK | fs.constants.R_OK)
-    } catch (e) {
-      return false
-    }
-    return true
   }
 
   pipeToPromise(readable, writeable) {
@@ -224,8 +198,8 @@ export class Utility {
       typeof s === "string"
         ? parseInt(s)
         : typeof s === "number"
-          ? s
-          : undefined
+        ? s
+        : undefined
 
     if (port && (port < 0 || port > 65535)) {
       throw new Error("Port must be a number between 0 and 65535")

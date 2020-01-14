@@ -1,12 +1,15 @@
 import { DirectoryExists } from "./DirectoryExists"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
-import util from "../util"
+import util, { PathInfo } from "../util"
 
 test("assert", async () => {
   const container = {
     interpolator: (node) => node.value,
-    fs: {},
+    process: {
+      geteuid: () => 1,
+      getgroups: () => [1, 2],
+    },
     os: {
       userInfo: jest.fn(() => ({
         uid: 0,
@@ -14,6 +17,32 @@ test("assert", async () => {
       })),
     },
     util: {
+      pathInfo: async (path) => {
+        if (path === "/somedir") {
+          return new PathInfo({
+            isDirectory: () => true,
+            isFile: () => false,
+            mode: 0o754,
+            uid: 10,
+            gid: 10,
+          })
+        } else if (path === "/filethere") {
+          return new PathInfo({
+            isDirectory: jest.fn(() => false),
+            isFile: jest.fn(() => true),
+          })
+        } else if (path === "/") {
+          return new PathInfo({
+            isDirectory: () => true,
+            isFile: () => false,
+            mode: 0o777,
+            uid: 10,
+            gid: 10,
+          })
+        } else {
+          return new PathInfo()
+        }
+      },
       getUsers: jest.fn(async () => [
         { uid: 0, gid: 0, name: "root" },
         { uid: 10, gid: 10, name: "user1" },
@@ -26,7 +55,6 @@ test("assert", async () => {
       ]),
       parseOwnerNode: util.parseOwnerNode,
       parseModeNode: util.parseModeNode,
-      canAccess: jest.fn(async () => true),
     },
   }
 
@@ -39,15 +67,6 @@ test("assert", async () => {
   await expect(
     asserter.assert(createAssertNode(asserter, { directory: 1 }))
   ).rejects.toThrow(ScriptError)
-
-  // Use this file for several tests
-  container.fs.lstat = jest.fn(async () => ({
-    isDirectory: jest.fn(() => true),
-    isFile: jest.fn(() => false),
-    mode: 0o754,
-    uid: 10,
-    gid: 10,
-  }))
 
   // Directory there with good owner and mode
   await expect(
@@ -133,26 +152,13 @@ test("assert", async () => {
     uid: 0,
     gid: 0,
   }))
-  container.fs.lstat = jest.fn(async () => {
-    throw new Error("ENOENT")
-  })
   await expect(
     asserter.assert(createAssertNode(asserter, { directory: "/notthere" }))
   ).resolves.toBe(false)
 
-  // Directory not there and no file with same name
-  container.util.canAccess = jest.fn(async () => false)
-  await expect(
-    asserter.assert(createAssertNode(asserter, { directory: "/notthere" }))
-  ).rejects.toThrow(ScriptError)
-
   // File with same name present
-  container.fs.lstat = jest.fn(async () => ({
-    isDirectory: jest.fn(() => false),
-    isFile: jest.fn(() => true),
-  }))
   await expect(
-    asserter.assert(createAssertNode(asserter, { directory: "/somefile" }))
+    asserter.assert(createAssertNode(asserter, { directory: "/filethere" }))
   ).rejects.toThrow(ScriptError)
 })
 

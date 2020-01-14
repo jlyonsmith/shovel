@@ -1,38 +1,84 @@
 import { FileExists } from "./FileExists"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
+import { PathInfo } from "../util"
 
 let container = null
 
 test("assert", async () => {
   const container = {
     interpolator: (node) => node.value,
-    fs: {
-      access: jest.fn(async () => undefined),
+    process: {
+      geteuid: () => 1,
+      getgroups: () => [1, 2],
     },
     os: {
-      userInfo: jest.fn(() => ({
+      userInfo: () => ({
         uid: 0,
         gid: 0,
-      })),
+      }),
     },
     util: {
-      getUsers: jest.fn(async () => [
+      pathInfo: async (path) => {
+        switch (path) {
+          case "/":
+          case "/bar":
+            return new PathInfo({
+              isFile: () => true,
+              isDirectory: () => true,
+              mode: 0o777,
+            })
+          case "/file1":
+            return new PathInfo({
+              isDirectory: () => false,
+              isFile: () => true,
+              mode: 0o644,
+              uid: 0,
+              gid: 0,
+            })
+          case "/file2":
+            return new PathInfo({
+              isDirectory: () => false,
+              isFile: () => true,
+              mode: 0o644,
+              uid: 0,
+              gid: 10,
+            })
+          case "/file3":
+            return new PathInfo({
+              isDirectory: () => false,
+              isFile: () => true,
+              mode: 0o111,
+              uid: 0,
+              gid: 0,
+            })
+          case "/file4":
+            return new PathInfo({
+              isDirectory: jest.fn(() => false),
+              isFile: jest.fn(() => true),
+              mode: 0o111,
+              uid: 0,
+              gid: 0,
+            })
+          default:
+            return new PathInfo()
+        }
+      },
+      getUsers: async () => [
         { uid: 0, gid: 0, name: "root" },
         { uid: 10, gid: 10, name: "user1" },
         { uid: 20, gid: 10, name: "user2" },
-      ]),
-      getGroups: jest.fn(async () => [
+      ],
+      getGroups: async () => [
         { gid: 0, name: "root" },
         { gid: 10, name: "group1" },
         { gid: 20, name: "group2" },
-      ]),
-      parseOwnerNode: jest.fn((ownerNode, users, groups) => ({
+      ],
+      parseOwnerNode: (ownerNode, users, groups) => ({
         uid: 0,
         gid: 0,
-      })),
-      parseModeNode: jest.fn(() => 0o644),
-      canAccess: jest.fn(() => true),
+      }),
+      parseModeNode: () => 0o644,
     },
   }
 
@@ -49,17 +95,10 @@ test("assert", async () => {
   ).rejects.toThrow(ScriptError)
 
   // File exists
-  container.fs.lstat = jest.fn(async (fileName) => ({
-    isDirectory: jest.fn(() => false),
-    isFile: jest.fn(() => true),
-    mode: 0o644,
-    uid: 0,
-    gid: 0,
-  }))
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        file: "/somefile",
+        file: "/file1",
         owner: { uid: 0, gid: 0 },
         mode: { user: "rw-", group: "r--", other: "r--" },
       })
@@ -67,17 +106,10 @@ test("assert", async () => {
   ).resolves.toBe(true)
 
   // File exists with different group owner
-  container.fs.lstat = jest.fn(async (fileName) => ({
-    isDirectory: jest.fn(() => false),
-    isFile: jest.fn(() => true),
-    mode: 0o644,
-    uid: 0,
-    gid: 10,
-  }))
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        file: "/somefile",
+        file: "/file2",
         owner: { uid: 0, gid: 0 },
         mode: { user: "rw-", group: "r--", other: "r--" },
       })
@@ -92,7 +124,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        file: "/somefile",
+        file: "/file2",
         owner: { uid: 0, gid: 0 },
         mode: { user: "rw-", group: "r--", other: "r--" },
       })
@@ -104,17 +136,10 @@ test("assert", async () => {
     uid: 0,
     gid: 0,
   }))
-  container.fs.lstat = jest.fn(async () => ({
-    isDirectory: jest.fn(() => false),
-    isFile: jest.fn(() => true),
-    mode: 0o111,
-    uid: 0,
-    gid: 0,
-  }))
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        file: "/somefile",
+        file: "/file3",
         owner: { uid: 0, gid: 0 },
         mode: { user: "rw-", group: "r--", other: "r--" },
       })
@@ -122,13 +147,6 @@ test("assert", async () => {
   ).resolves.toBe(false)
 
   // File exists with different mode and not root
-  container.fs.lstat = jest.fn(async () => ({
-    isDirectory: jest.fn(() => false),
-    isFile: jest.fn(() => true),
-    mode: 0o111,
-    uid: 0,
-    gid: 0,
-  }))
   container.os.userInfo = jest.fn(() => ({
     uid: 10,
     gid: 10,
@@ -136,38 +154,23 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        file: "/somefile",
+        file: "/file4",
         owner: { uid: 0, gid: 0 },
         mode: { user: "rw-", group: "r--", other: "r--" },
       })
     )
   ).rejects.toThrow(ScriptError)
-
-  // File does not exist and directory in place
   container.os.userInfo = jest.fn(() => ({
     uid: 0,
     gid: 0,
   }))
-  container.fs.lstat = jest.fn(async (fileName) => ({
-    isDirectory: jest.fn(() => true),
-    isFile: jest.fn(() => false),
-  }))
-  await expect(
-    asserter.assert(createAssertNode(asserter, { file: "/notthere" }))
-  ).rejects.toThrow(ScriptError)
 
   // File does not exist and root directory accessible
-  container.fs.lstat = jest.fn(async (fileName) => {
-    throw new Error()
-  })
   await expect(
     asserter.assert(createAssertNode(asserter, { file: "/bar/notthere" }))
   ).resolves.toBe(false)
 
   // File does not exist and root directory not accessible
-  container.fs.lstat = jest.fn(async () => {
-    throw new Error()
-  })
   container.util.canAccess = jest.fn(async () => false)
   await expect(
     asserter.assert(createAssertNode(asserter, { file: "/foo/notthere" }))

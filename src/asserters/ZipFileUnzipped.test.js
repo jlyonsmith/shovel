@@ -2,54 +2,44 @@ import { ZipFileUnzipped } from "./ZipFileUnzipped"
 import stream from "stream"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
+import { PathInfo } from "../util"
+import { Script } from "vm"
 
 test("assert", async () => {
   const container = {
     interpolator: (node) => node.value,
     fs: {
-      lstat: jest.fn(async (path) => {
-        switch (path) {
-          case "outdir/filedir.txt":
-          case "outdir/dir/":
-          case "./outdir":
-            return {
-              isDirectory: jest.fn(() => true),
-              isFile: jest.fn(() => false),
-              size: 0,
-            }
-          case "outdir/dir/file.txt":
-            return {
-              isDirectory: jest.fn(() => false),
-              isFile: jest.fn(() => true),
-              size: 100,
-            }
-          default:
-            throw new Error("ENOENT")
-        }
-      }),
       ensureDir: jest.fn(async (dirPath) => {
         expect(typeof dirPath).toBe("string")
       }),
     },
     util: {
-      fileExists: async (path) => {
+      pathInfo: async (path) => {
         switch (path) {
+          case "outdir/filedir.txt":
+          case "outdir/dir/":
+          case "./outdir":
+          case ".":
+            return new PathInfo({
+              isDirectory: () => true,
+              isFile: () => false,
+              size: 0,
+              mode: 0o777,
+            })
+          case "outdir/dir/file.txt":
           case "./filesize.zip":
           case "./filedir.zip":
           case "./dirfile.zip":
           case "./somefile.zip":
-          case "./filemissing.zip":
-            return true
+          case "./withfilemissing.zip":
+            return new PathInfo({
+              isDirectory: () => false,
+              isFile: () => true,
+              size: 100,
+              mode: 0o777,
+            })
           default:
-            return false
-        }
-      },
-      dirExists: async (path) => {
-        switch (path) {
-          case "./outdir":
-            return true
-          default:
-            return false
+            return new PathInfo()
         }
       },
     },
@@ -98,7 +88,7 @@ test("assert", async () => {
               },
             ]
             break
-          case "./filemissing.zip":
+          case "./withfilemissing.zip":
             entries = [
               {
                 uncompressedSize: 100,
@@ -174,7 +164,7 @@ test("assert", async () => {
   await expect(
     asserter.assert(
       createAssertNode(asserter, {
-        file: "./filemissing.zip",
+        file: "./withfilemissing.zip",
         toDirectory: "./outdir",
       })
     )
@@ -198,7 +188,7 @@ test("assert", async () => {
         toDirectory: "./outdir",
       })
     )
-  ).resolves.toBe(false)
+  ).rejects.toThrow(ScriptError)
 
   // With bad zip file
   container.yauzl.open = jest.fn(async () => {
@@ -227,12 +217,10 @@ test("rectify", async () => {
       }),
     },
     util: {
-      dirExists: async (path) => {
+      pathInfo: async (path) => {
         switch (path) {
-          case "/a":
-            return false
           default:
-            return true
+            return new PathInfo()
         }
       },
       pipeToPromise: async (readable, writeable) => {},

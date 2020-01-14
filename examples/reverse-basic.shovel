@@ -12,20 +12,20 @@
       assert: "DirectoryDeleted",
       description: "The first directory",
       with: {
-        path: "scratch/${TEST_DIR_1}",
+        directory: "scratch/${TEST_DIR_1}",
       },
     },
     {
       assert: "DirectoryDeleted",
       description: "The second directory",
       with: {
-        path: "scratch/${TEST_DIR_2}",
+        directory: "scratch/${TEST_DIR_2}",
       },
     },
     {
-      assert: "FileDeleted",
+      assert: "FilesDeleted",
       with: {
-        path: "scratch/${TEST_FILE_1}",
+        files: ["scratch/${TEST_FILE_1}"],
       },
     },
   ],

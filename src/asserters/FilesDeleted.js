@@ -1,8 +1,11 @@
+import util from "../util"
 import fs from "fs-extra"
 import { ScriptError } from "../ScriptError"
+import path from "path"
 
 export class FilesDeleted {
   constructor(container) {
+    this.util = container.util || util
     this.fs = container.fs || fs
     this.interpolator = container.interpolator
     this.stat = null
@@ -30,22 +33,35 @@ export class FilesDeleted {
       }
 
       const expandedPath = this.interpolator(fileNode)
-      let stat = null
 
       this.expandedFiles.push(expandedPath)
 
-      try {
-        stat = await this.fs.lstat(expandedPath)
-        this.unlinkedFiles.push(expandedPath)
-        ok = false
-      } catch (e) {}
+      const pathInfo = await this.util.pathInfo(expandedPath)
 
-      if (stat && stat.isDirectory()) {
-        throw new ScriptError(
-          `Not removing existing directory with the name '${expandedPath}'`,
-          fileNode
-        )
+      if (!pathInfo.isMissing()) {
+        if (!pathInfo.isFile()) {
+          throw new ScriptError(
+            `Not removing non-file with the name '${expandedPath}'`,
+            fileNode
+          )
+        }
+
+        if (
+          !(await this.util.pathInfo(path.dirname(expandedPath)))
+            .getAccess()
+            .isWriteable()
+        ) {
+          throw new ScriptError(
+            `Cannot write to directory of file ${expandedPath}`,
+            fileNode
+          )
+        }
+
+        ok = false
+        this.unlinkedFiles.push(expandedPath)
       }
+
+      // Keep going to get all files
     }
 
     return ok

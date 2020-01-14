@@ -2,6 +2,7 @@ import { DirectoryZipped } from "./DirectoryZipped"
 import stream from "stream"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
+import { PathInfo } from "../util"
 
 test("assert", async () => {
   let container = {
@@ -19,7 +20,24 @@ test("assert", async () => {
         { path: "x/y/c.txt", stats: { size: 250 } },
       ])
     },
-    util: {},
+    util: {
+      pathInfo: async (path) => {
+        switch (path) {
+          case "./somefile.zip":
+            return new PathInfo({
+              isFile: () => true,
+              isDirectory: () => false,
+            })
+          case "./fromdir":
+            return new PathInfo({
+              isFile: () => false,
+              isDirectory: () => true,
+            })
+          default:
+            return new PathInfo()
+        }
+      },
+    },
     yauzl: {
       open: jest.fn(async (path) => {
         expect(typeof path).toBe("string")
@@ -102,22 +120,6 @@ test("assert", async () => {
   ).rejects.toThrow(ScriptError)
 
   // With from directory not present or inaccessible
-  container.util.fileExists = async (path) => {
-    switch (path) {
-      case "./somefile.zip":
-        return true
-      default:
-        return false
-    }
-  }
-  container.util.dirExists = async (path) => {
-    switch (path) {
-      case "./fromdir":
-        return true
-      default:
-        return false
-    }
-  }
   await expect(
     asserter.assert(
       createAssertNode(asserter, {

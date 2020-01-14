@@ -63,7 +63,7 @@ export class DirectoryZipped {
     this.expandedZipFile = this.interpolator(zipFileNode)
     this.expandedDirectory = this.interpolator(directoryNode)
 
-    if (!(await this.util.dirExists(this.expandedDirectory))) {
+    if ((await this.util.pathInfo(this.expandedDirectory)).isMissing()) {
       throw new ScriptError(
         `From directory ${this.expandedDirectory} does not exist`,
         directoryNode
@@ -88,7 +88,7 @@ export class DirectoryZipped {
 
     this.digest = hash.digest("hex")
 
-    if (await this.util.fileExists(this.expandedZipFile)) {
+    if (!(await this.util.pathInfo(this.expandedZipFile)).isMissing()) {
       this.zipFileExists = true
 
       let zipFile = null

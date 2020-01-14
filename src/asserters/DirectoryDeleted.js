@@ -1,8 +1,11 @@
+import util from "../util"
 import fs from "fs-extra"
+import path from "path"
 import { ScriptError } from "../ScriptError"
 
 export class DirectoryDeleted {
   constructor(container) {
+    this.util = container.util || util
     this.fs = container.fs || fs
     this.interpolator = container.interpolator
   }
@@ -20,22 +23,31 @@ export class DirectoryDeleted {
 
     this.expandedDirectory = this.interpolator(directoryNode)
 
-    let stat = null
+    const pathInfo = await this.util.pathInfo(this.expandedDirectory)
 
-    try {
-      stat = await this.fs.lstat(this.expandedDirectory)
-    } catch (e) {
-      return true
+    if (!pathInfo.isMissing()) {
+      if (!pathInfo.isDirectory()) {
+        throw new ScriptError(
+          `Non-directory exists with the name '${this.expandedDirectory}'`,
+          directoryNode
+        )
+      }
+
+      if (
+        !(await this.util.pathInfo(path.dirname(this.expandedDirectory)))
+          .getAccess()
+          .isWriteable()
+      ) {
+        throw new ScriptError(
+          `Parent directory of ${this.expandedDirectory} is not writable`,
+          directoryNode
+        )
+      }
+
+      return false
     }
 
-    if (stat && stat.isFile()) {
-      throw new ScriptError(
-        `File exists with the name '${this.expandedDirectory}'`,
-        directoryNode
-      )
-    }
-
-    return false
+    return true
   }
 
   async rectify() {

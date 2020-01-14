@@ -1,26 +1,37 @@
 import { DirectoryDeleted } from "./DirectoryDeleted"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
+import { PathInfo } from "../util"
 
 test("assert", async () => {
   const container = {
     interpolator: (node) => node.value,
-    fs: {
-      lstat: jest.fn(async (dirName) => {
-        if (dirName === "/somedir") {
-          return {
-            isDirectory: jest.fn(() => true),
-            isFile: jest.fn(() => false),
-          }
-        } else if (dirName === "/somefile") {
-          return {
-            isDirectory: jest.fn(() => false),
-            isFile: jest.fn(() => true),
-          }
+    process: {
+      geteuid: () => 1,
+      getgroups: () => [1, 2],
+    },
+    util: {
+      pathInfo: async (path) => {
+        if (path === "/somedir") {
+          return new PathInfo({
+            isDirectory: () => true,
+            isFile: () => false,
+          })
+        } else if (path === "/") {
+          return new PathInfo({
+            isDirectory: () => true,
+            isFile: () => false,
+            mode: 0o777,
+          })
+        } else if (path === "/somefile") {
+          return new PathInfo({
+            isDirectory: () => false,
+            isFile: () => true,
+          })
         } else {
-          throw new Error("ENOENT")
+          return new PathInfo()
         }
-      }),
+      },
     },
   }
 
@@ -53,7 +64,7 @@ test("assert", async () => {
 test("rectify", async () => {
   const container = {
     fs: {
-      remove: jest.fn(async (dirName) => null),
+      remove: jest.fn(async () => null),
     },
   }
   const asserter = new DirectoryDeleted(container)

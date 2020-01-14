@@ -29,7 +29,6 @@ test("assert", async () => {
           return new PathInfo(null, container)
         }
       },
-      canAccess: jest.fn(async () => true),
     },
   }
 

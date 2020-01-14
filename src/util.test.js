@@ -161,59 +161,6 @@ test("pathInfo", async () => {
   })
 })
 
-test("fileExists", async () => {
-  const util = new Utility({
-    fs: {
-      lstat: jest.fn((path) => {
-        if (path === "there") {
-          return {
-            isFile: () => true,
-          }
-        } else {
-          throw new Error()
-        }
-      }),
-    },
-  })
-
-  await expect(util.fileExists("there")).resolves.toBe(true)
-  await expect(util.fileExists("notthere")).resolves.toBe(false)
-})
-
-test("dirExists", async () => {
-  const util = new Utility({
-    fs: {
-      lstat: jest.fn((path) => {
-        if (path === "there") {
-          return {
-            isDirectory: () => true,
-          }
-        } else {
-          throw new Error()
-        }
-      }),
-    },
-  })
-
-  await expect(util.dirExists("there")).resolves.toBe(true)
-  await expect(util.dirExists("notthere")).resolves.toBe(false)
-})
-
-test("canAccess", async () => {
-  const util = new Utility({
-    fs: {
-      access: jest.fn(async (path) => {
-        if (path === "badfile") {
-          throw new Error()
-        }
-      }),
-    },
-  })
-
-  await expect(util.canAccess("goodfile")).resolves.toBe(true)
-  await expect(util.canAccess("badfile")).resolves.toBe(false)
-})
-
 test("pipeToPromise", async () => {
   const util = new Utility()
   let readable = new stream.Readable({

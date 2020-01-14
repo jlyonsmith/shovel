@@ -1,6 +1,7 @@
 import { FileCopied } from "./FileCopied"
 import { createAssertNode } from "../testUtil"
 import { ScriptError } from "../ScriptError"
+import { PathInfo } from "../util"
 
 let container = null
 
@@ -8,13 +9,17 @@ test("assert", async () => {
   const container = {
     interpolator: (node) => node.value,
     util: {
-      fileExists: jest.fn(async (path) => {
+      pathInfo: async (path) => {
         if (path === "/notthere") {
-          return false
+          return new PathInfo()
         } else {
-          return true
+          return new PathInfo({
+            isFile: () => true,
+            isDirectory: () => false,
+            mode: 0o777,
+          })
         }
-      }),
+      },
       generateDigestFromFile: async (path) => {
         if (path === "/badfile") {
           return "0987654321"

@@ -27,7 +27,6 @@ export class FileExists {
     const userInfo = this.os.userInfo()
     const users = await this.util.getUsers()
     const groups = await this.util.getGroups()
-    let stat = null
     let owner = { uid: userInfo.uid, gid: userInfo.gid }
 
     this.owner = Object.assign(
@@ -37,23 +36,31 @@ export class FileExists {
     this.mode = this.util.parseModeNode(modeNode)
     this.expandedFile = this.interpolator(fileNode)
 
-    try {
-      stat = await this.fs.lstat(this.expandedFile)
-    } catch (e) {
-      // Check if the target directory exists and is accessible
-      if (!(await this.util.canAccess(path.dirname(this.expandedFile)))) {
-        throw new ScriptError(e.message, fileNode)
+    let pathInfo = await this.util.pathInfo(this.expandedFile)
+
+    if (pathInfo.isMissing()) {
+      if (
+        !(await this.util.pathInfo(path.dirname(this.expandedFile)))
+          .getAccess()
+          .isWriteable()
+      ) {
+        throw new ScriptError(
+          `Cannot write to parent directory of ${this.expandedFile}`,
+          fileNode
+        )
       }
 
       return false
     }
 
-    if (stat && stat.isDirectory()) {
+    if (!pathInfo.isFile()) {
       throw new ScriptError(
-        `A directory exists with the name '${this.expandedFile}'`,
+        `A non-file exists with the name '${this.expandedFile}'`,
         fileNode
       )
-    } else if (stat.uid !== this.owner.uid || stat.gid !== this.owner.gid) {
+    }
+
+    if (pathInfo.uid !== this.owner.uid || pathInfo.gid !== this.owner.gid) {
       if (userInfo.uid !== 0) {
         throw new ScriptError(
           "User does not have permission to modify existing file owner",
@@ -62,11 +69,11 @@ export class FileExists {
       }
 
       return false
-    } else if ((stat.mode & 0o777) !== this.mode) {
+    } else if ((pathInfo.mode & 0o777) !== this.mode) {
       if (
         userInfo.uid !== 0 &&
-        userInfo.uid !== stat.uid &&
-        userInfo.gid !== stat.gid
+        userInfo.uid !== pathInfo.uid &&
+        userInfo.gid !== pathInfo.gid
       ) {
         throw new ScriptError(
           "User does not have permission to modify existing file mode",

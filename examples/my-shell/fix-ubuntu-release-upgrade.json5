@@ -3,9 +3,9 @@
   // See https://askubuntu.com/questions/919441/failed-to-connect-to-http-changelogs-ubuntu-com-meta-release
   assertions: [
     {
-      assert: "FileDeleted",
+      assert: "FilesDeleted",
       with: {
-        file: "/var/lib/ubuntu-release-upgrader/release-upgrade-available",
+        files: ["/var/lib/ubuntu-release-upgrader/release-upgrade-available"],
       },
       when: "{sys.id === 'ubuntu'}",
       become: "root",

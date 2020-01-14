@@ -6,6 +6,7 @@ import path from "path"
 
 export class DirectoryExists {
   constructor(container) {
+    this.util = container.util || util
     this.fs = container.fs || fs
     this.os = container.os || os
     this.util = container.util || util
@@ -38,27 +39,31 @@ export class DirectoryExists {
     this.mode = this.util.parseModeNode(modeNode, 0o777)
     this.expandedDirectory = this.interpolator(directoryNode)
 
-    let stat = null
+    let pathInfo = await this.util.pathInfo(this.expandedDirectory)
 
-    try {
-      stat = await this.fs.lstat(this.expandedDirectory)
-    } catch (e) {
-      // Ensure the root of the directory is accessible
-      if (!(await this.util.canAccess(path.dirname(this.expandedDirectory)))) {
-        throw new ScriptError(e.message, directoryNode)
+    if (pathInfo.isMissing()) {
+      if (
+        !(await this.util.pathInfo(path.dirname(this.expandedDirectory)))
+          .getAccess()
+          .isWriteable()
+      ) {
+        throw new ScriptError(
+          `Cannot write to parent directory of ${this.expandedDirectory}`,
+          directoryNode
+        )
       }
 
       return false
     }
 
-    if (stat.isFile()) {
+    if (!pathInfo.isDirectory()) {
       throw new ScriptError(
-        `A file with the name '${this.expandedDirectory}' exists`,
+        `A non-directory with the name '${this.expandedDirectory}' exists`,
         directoryNode
       )
     }
 
-    if (stat.uid !== this.owner.uid || stat.gid !== this.owner.gid) {
+    if (pathInfo.uid !== this.owner.uid || pathInfo.gid !== this.owner.gid) {
       if (userInfo.uid !== 0) {
         throw new ScriptError(
           "User does not have permission to modify existing directory owner",
@@ -67,11 +72,11 @@ export class DirectoryExists {
       }
 
       return false
-    } else if ((stat.mode & 0o777) !== this.mode) {
+    } else if ((pathInfo.mode & 0o777) !== this.mode) {
       if (
         userInfo.uid !== 0 &&
-        userInfo.uid !== stat.uid &&
-        userInfo.gid !== stat.gid
+        userInfo.uid !== pathInfo.uid &&
+        userInfo.gid !== pathInfo.gid
       ) {
         throw new ScriptError(
           "User does not have permission to modify existing directory mode",

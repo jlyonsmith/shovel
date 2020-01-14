@@ -292,8 +292,6 @@ export class SSH {
       }
     }
 
-    // TODO: If the timer fired, Ctrl+C out of whatever we were doing?
-
     if (!options.noThrow && savedExitCode !== 0) {
       throw new Error(`Command '${command}' returned exit code ${exitCode}`)
     }
