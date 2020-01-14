@@ -10,22 +10,31 @@ export const ansiEscapeRegex = new RegExp(
   /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g
 )
 
+const modeFormat = (flags) =>
+  (flags & 4 ? "r" : "-") +
+  (flags & 2 ? "w" : "-") +
+  (flags & 1 ? "x" : "-")
+
 export class PathAccess {
-  constructor(flags) {
-    this.flags = flags & 7
+  constructor(mode) {
+    this.mode = mode & 7
+  }
+
+  toString() {
+    return modeFormat(this.mode)
   }
 
   isReadable() {
-    return !!(this.flags & 4)
+    return !!(this.mode & 4)
   }
   isWriteable() {
-    return !!(this.flags & 2)
+    return !!(this.mode & 2)
   }
   isReadWrite() {
     return this.isReadable() && this.isWriteable()
   }
   isExecutable() {
-    return !!(this.flags & 1)
+    return !!(this.mode & 1)
   }
   isTraversable() {
     return this.isExecutable()
@@ -83,6 +92,10 @@ export class PathInfo {
   getAccess(uid, groups) {
     uid = uid === undefined ? this.process.geteuid() : uid
 
+    if (uid === 0) {
+      return new PathAccess(7)
+    }
+
     if (uid === this.uid) {
       return new PathAccess(this.mode >> 6)
     }
@@ -97,11 +110,7 @@ export class PathInfo {
   }
 
   modeString() {
-    const format = (flags) =>
-      (flags & 4 ? "r" : "-") +
-      (flags & 2 ? "w" : "-") +
-      (flags & 1 ? "x" : "-")
-    return format(this.mode >> 6) + format(this.mode >> 3) + format(this.mode)
+    return modeFormat(this.mode >> 6) + modeFormat(this.mode >> 3) + modeFormat(this.mode)
   }
 }
 
@@ -215,8 +224,8 @@ export class Utility {
       typeof s === "string"
         ? parseInt(s)
         : typeof s === "number"
-        ? s
-        : undefined
+          ? s
+          : undefined
 
     if (port && (port < 0 || port > 65535)) {
       throw new Error("Port must be a number between 0 and 65535")

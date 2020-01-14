@@ -64,9 +64,10 @@ export class UrlDownloaded {
     }
 
     const toDir = path.dirname(this.expandedFile)
+    const access = (await this.util.pathInfo(toDir)).getAccess()
 
-    if (!(await this.util.pathInfo(toDir)).getAccess().isWriteable()) {
-      throw new ScriptError(`Cannot write to directory '${toDir}'`)
+    if (!access.isWriteable()) {
+      throw new ScriptError(`Cannot write to directory '${toDir}'`, fileNode)
     }
 
     this.toFileDigest = await this.util.generateDigestFromFile(
