@@ -19,7 +19,7 @@
       assert: "UrlDownloaded",
       with: {
         url: "https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash",
-        digest: "7ae884956ca3400c497d53734fbfc6def4f3fbce8f371d5a4ab4dd213456de51",
+        digest: "173d6cde9f524daf5ed071e4be2bcbd8a7df1fdcfb831b78725e28b3c4c8b938",
         file: "{path.join(vars.bashCompletionDir,'git-completion.bash')}",
       },
       become: "root",

@@ -1,0 +1,10 @@
+{
+  includes: [
+    "./fix-ubuntu-motd.shovel",
+    "./fix-ubuntu-release-upgrade.shovel",
+    "./install-git-completion.shovel",
+    "./set-vimrc.shovel",
+    "./set-bash-rc.shovel",
+    "./set-bash-profile.shovel",
+  ],
+}
