@@ -1,8 +1,8 @@
 # Shovel Scripts
 
-Shovel scripts are comprised of four sections; `metadata`, `includes`, `vars`, `assertions`.  Each section is described in the following pages:
+Shovel scripts are comprised of four sections; `settings`, `includes`, `vars`, `assertions`.  Each section is described in the following pages:
 
-- [`metadata`](./Metadata.md)
+- [`settings`](./Settings.md)
 - [`includes`](./Includes.md)
 - [`vars`](./Variables.md)
-- [`asseters`](./Asserters.md)
+- [`assertions`](./Assertions.md)
