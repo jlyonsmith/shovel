@@ -560,9 +560,6 @@ test("runScriptLocally", async () => {
   tool.updateRunContext = jest.fn()
 
   // Has becomes
-  await tool.runScriptLocally("/x/a.json5", {
-    noSpinner: true,
-  })
   await expect(
     tool.runScriptLocally("/x/a.json5", {
       noSpinner: true,

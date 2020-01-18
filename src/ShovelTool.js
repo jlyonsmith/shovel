@@ -114,6 +114,7 @@ export class ShovelTool {
 
       if (
         result.exitCode === 0 &&
+        result.output[0] &&
         semver.gte(semver.clean(result.output[0]), ShovelTool.minNodeVersion)
       ) {
         return
@@ -522,9 +523,18 @@ export class ShovelTool {
         const asserter = new Asserter({
           interpolator,
         })
-
         let output = {}
         let rectified = false
+
+        if (
+          !assertionNode.value.with ||
+          assertionNode.value.with.type !== "object"
+        ) {
+          throw new ScriptError(
+            `Assertion must have a 'with' property of type object`,
+            assertionNode
+          )
+        }
 
         if (becomeNode && becomeNode.value) {
           this.process.setegid(0)
