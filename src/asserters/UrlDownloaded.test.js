@@ -141,15 +141,6 @@ test("rectify", async () => {
       pipeToPromise: jest.fn(async () => undefined),
     },
     runContext: {},
-    vm: {
-      runInContext: (code, context) => {
-        switch (code) {
-          case "env.http_proxy":
-          case "env.https_proxy":
-            return undefined
-        }
-      },
-    },
   }
   const asserter = new UrlDownloaded(container)
 

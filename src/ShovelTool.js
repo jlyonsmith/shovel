@@ -95,7 +95,7 @@ export class ShovelTool {
 
     this.log.info(
       `Created remote Node.js install script${
-        this.debug ? " (" + remoteTempFilePath + ")" : ""
+      this.debug ? " (" + remoteTempFilePath + ")" : ""
       }`
     )
 
@@ -383,7 +383,7 @@ export class ShovelTool {
     const osInfo = await this.util.osInfo()
     const runContext = vm.createContext({
       vars: {},
-      env: process.env,
+      env: Object.assign({}, this.process.env),
       os: osInfo,
       user: this.util.userInfo(),
       sys: {},
@@ -674,7 +674,7 @@ export class ShovelTool {
 
       this.log.info(
         `Running Shovel remote script '${remoteRootScriptPath}'${
-          scriptContext.anyScriptHasBecomes ? " as root" : ""
+        scriptContext.anyScriptHasBecomes ? " as root" : ""
         }`
       )
 
@@ -684,7 +684,7 @@ export class ShovelTool {
 
       await ssh.run(
         `shovel --noSpinner${
-          options.assertOnly ? " --assertOnly " : " "
+        options.assertOnly ? " --assertOnly " : " "
         }${remoteRootScriptPath}`,
         {
           sudo: scriptContext.anyScriptHasBecomes,
