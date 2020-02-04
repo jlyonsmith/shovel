@@ -37,6 +37,11 @@ class Log {
     console.error(chalk.yellow("warning:", [...arguments].join(" ")))
   }
 
+  debug(line) {
+    this.stopSpinner()
+    console.log(chalk.gray(line))
+  }
+
   error() {
     this.stopSpinner()
     console.error(chalk.red("error:", [...arguments].join(" ")))

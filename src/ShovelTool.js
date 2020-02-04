@@ -465,6 +465,10 @@ export class ShovelTool {
     const scriptContext = await this.createScriptContext(rootScriptPath)
     let sudo = null
 
+    if (!options.noSpinner) {
+      this.log.enableSpinner()
+    }
+
     if (scriptContext.anyScriptHasBecomes) {
       if (!this.util.runningAsRoot()) {
         throw new Error(
@@ -520,10 +524,6 @@ export class ShovelTool {
       }
 
       this.log.info(`Running '${scriptPath}'`)
-
-      if (!options.noSpinner) {
-        this.log.enableSpinner()
-      }
 
       for (const assertionNode of assertionsNode.value) {
         const {
@@ -615,6 +615,10 @@ export class ShovelTool {
   async runScriptRemotely(rootScriptPath, options) {
     const scriptContext = await this.createScriptContext(rootScriptPath)
 
+    if (!options.noSpinner) {
+      this.log.enableSpinner()
+    }
+
     // Things that need to be accessed in finally
     let ssh = null
     let sftp = null
@@ -659,8 +663,9 @@ export class ShovelTool {
 
       remoteTempDir = (await ssh.run("mktemp -d")).output[0]
 
-      // TODO: Make a debug message
-      this.log.info(`Created remote script directory '${remoteTempDir}'`)
+      if (this.debug) {
+        this.log.debug(`Created remote script directory '${remoteTempDir}'`)
+      }
 
       let { runContext, interpolator } = await this.createRunContext()
 
@@ -678,15 +683,23 @@ export class ShovelTool {
             includeNode.value.substring(scriptContext.rootScriptDirPath.length)
         }
 
-        // TODO: If debugging, insert whitespace when stringifying
-        const scriptContent = JSON5.stringify(JSON5.simplify(scriptNode))
+        const scriptContent = JSON5.stringify(
+          JSON5.simplify(scriptNode),
+          null,
+          this.debug ? "  " : undefined
+        )
         const remoteScriptPath = path.join(remoteTempDir, scriptPath)
 
-        // TODO: This should be a debug message
-        this.log.info(`Uploaded ${path.join(remoteTempDir, scriptPath)}`)
-
         await sftp.putContent(remoteScriptPath, scriptContent)
-        // TODO: If debugging, output content of file with line numbers
+
+        if (this.debug) {
+          this.log.debug(`Uploaded ${path.join(remoteTempDir, scriptPath)}:`)
+          scriptContent.split(/\n/g).forEach((line, i) => {
+            this.log.debug(
+              i.toString().padStart(3, " ") + ": " + line.trimEnd()
+            )
+          })
+        }
       }
 
       const remoteRootScriptPath = path.join(
@@ -695,14 +708,10 @@ export class ShovelTool {
       )
 
       this.log.info(
-        `Running Shovel remote script '${remoteRootScriptPath}'${
+        `Running script on host${
           scriptContext.anyScriptHasBecomes ? " as root" : ""
         }`
       )
-
-      if (!options.noSpinner) {
-        this.log.enableSpinner()
-      }
 
       await ssh.run(
         `shovel --noSpinner${
@@ -717,9 +726,11 @@ export class ShovelTool {
         }
       )
     } finally {
-      // TODO: Always delete temporary files
-      if (remoteTempDir && !this.debug) {
-        this.log.info(`Deleting remote script directory '${remoteTempDir}'`)
+      if (remoteTempDir) {
+        if (this.debug) {
+          this.log.info(`Deleting remote script directory '${remoteTempDir}'`)
+        }
+
         await ssh.run(`rm -rf ${remoteTempDir}`)
       }
 

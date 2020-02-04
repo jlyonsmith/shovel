@@ -13,6 +13,7 @@ beforeEach(() => {
       info: jest.fn(),
       warning: jest.fn(),
       error: jest.fn(),
+      debug: jest.fn(),
       output: jest.fn(),
       enableSpinner: jest.fn(),
       startSpinner: jest.fn(),
