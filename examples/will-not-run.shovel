@@ -1,0 +1,6 @@
+{
+  settings: {
+    description: "This script will not run",
+    when: "{false}",
+  },
+}

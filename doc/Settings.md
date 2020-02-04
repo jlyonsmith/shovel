@@ -1,3 +1,11 @@
 # Settings
 
-Settings is simply a place to put data about the script.  The only standardized setting currently is `description` which if present will be displayed before the script runs.
+Settings is simply a place to put data about the script.
+
+## `description`
+
+If present will be displayed before the script runs.
+
+## `when`
+
+Will be interpolated before the script runs and if `false` the script will not run

@@ -493,10 +493,25 @@ export class ShovelTool {
       } = scriptNode.value
 
       if (Object.keys(settingsNode.value).length > 0) {
-        this.log.output(JSON5.stringify(JSON5.simplify(settingsNode)))
-      }
+        const {
+          when: whenNode,
+          description: descriptionNode,
+        } = settingsNode.value
 
-      // TODO: Interpolate 'settings.when' to see if script should run at all
+        if (descriptionNode) {
+          this.log.output(`\{ description: "${descriptionNode.value}" \}`)
+        }
+
+        if (
+          (whenNode.type === "boolean" && !whenNode.value) ||
+          (whenNode.type === "string" && !interpolator(whenNode))
+        ) {
+          this.log.info(
+            `Not running '${scriptPath}' because settings.when is false`
+          )
+          return
+        }
+      }
 
       this.log.info(`Running '${scriptPath}'`)
 
