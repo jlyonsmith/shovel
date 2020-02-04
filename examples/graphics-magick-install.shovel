@@ -37,7 +37,6 @@
         directory: "scratch/GraphicsMagick-1.3.33",
       },
     },
-    // TODO: Only do this when on Linux
     {
       assert: "AutoToolProjectMade",
       become: "root",
@@ -45,6 +44,7 @@
         directory: "scratch/GraphicsMagick-1.3.33",
         args: "install",
       },
+      when: "{os.platform === 'linux'}",
     },
   ],
 }
