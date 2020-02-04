@@ -2,7 +2,10 @@ import fs from "fs-extra"
 import os from "os"
 import path from "path"
 import fetch from "node-fetch"
+import vm from "vm"
 import util from "../util"
+import HttpsProxyAgent from "https-proxy-agent"
+import HttpProxyAgent from "http-proxy-agent"
 import { ScriptError } from "../ScriptError"
 
 export class UrlDownloaded {
@@ -11,7 +14,11 @@ export class UrlDownloaded {
     this.os = container.os || os
     this.fetch = container.fetch || fetch
     this.util = container.util || util
+    this.vm = container.vm || vm
+    this.HttpProxyAgent = container.util || HttpProxyAgent
+    this.HttpsProxyAgent = container.util || HttpsProxyAgent
     this.interpolator = container.interpolator
+    this.runContext = container.runContext
   }
 
   async assert(assertNode) {
@@ -57,8 +64,14 @@ export class UrlDownloaded {
     this.expandedUrl = this.interpolator(urlNode)
     this.expandedFile = this.interpolator(fileNode)
 
-    if ((this.owner.uid !== userInfo.uid || this.owner.gid !== userInfo.gid) && userInfo.uid !== 0) {
-      throw new ScriptError(`Cannot set owner and group if not running as root`, ownerNode)
+    if (
+      (this.owner.uid !== userInfo.uid || this.owner.gid !== userInfo.gid) &&
+      userInfo.uid !== 0
+    ) {
+      throw new ScriptError(
+        `Cannot set owner and group if not running as root`,
+        ownerNode
+      )
     }
 
     if ((await this.util.pathInfo(this.expandedFile)).isMissing()) {
@@ -80,7 +93,23 @@ export class UrlDownloaded {
   }
 
   async rectify() {
-    const result = await this.fetch(this.expandedUrl)
+    // TODO: Support http_proxy/https_proxy environment variables set in vars. https://github.com/node-fetch/node-fetch/issues/79#issuecomment-184594701
+    const httpProxyUrl = this.vm.runInContext("env.http_proxy", this.runContext)
+    const httpsProxyUrl = this.vm.runInContext(
+      "env.https_proxy",
+      this.runContext
+    )
+    let agent = null
+
+    if (this.expandedUrl.startsWith("http:") && httpProxyUrl) {
+      agent = new this.HttpProxyAgent(httpProxyUrl)
+      this.proxy = httpProxyUrl
+    } else if (this.expandedUrl.startsWith("https:") && httpsProxyUrl) {
+      agent = new this.HttpsProxyAgent(httpsProxyUrl)
+      this.proxy = httpsProxyUrl
+    }
+
+    const result = await this.fetch(this.expandedUrl, agent)
     const writeable = this.fs.createWriteStream(this.expandedFile)
 
     await this.util.pipeToPromise(result.body, writeable)
@@ -88,10 +117,16 @@ export class UrlDownloaded {
   }
 
   result() {
-    return {
+    const obj = {
       url: this.expandedUrl,
       digest: this.toFileDigest,
       file: this.expandedFile,
     }
+
+    if (this.proxy) {
+      obj.proxy = this.proxy
+    }
+
+    return obj
   }
 }

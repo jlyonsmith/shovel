@@ -68,6 +68,8 @@
     "child-process-es6-promise": "^1.2.1",
     "command-exists": "^1.2.8",
     "fs-extra": "^8.1.0",
+    "http-proxy-agent": "^4.0.0",
+    "https-proxy-agent": "^4.0.0",
     "linux-os-info": "^2.0.0",
     "minimist": "^1.2.0",
     "node-fetch": "^2.6.0",

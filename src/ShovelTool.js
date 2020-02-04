@@ -101,11 +101,15 @@ export class ShovelTool {
 
     await sftp.putContent(remoteTempFilePath, installNodeScript)
 
+    // TODO: Start spinner when installing node
+
     this.log.info(`Running Node.js install script; this could take a while`)
     result = await ssh.run(`bash ${remoteTempFilePath}`, {
       sudo: true,
       noThrow: true,
     })
+
+    // TODO: Stop spinner
 
     if (result.exitCode === 0) {
       result = await ssh.run("node --version", {
@@ -140,11 +144,16 @@ export class ShovelTool {
 
   async rectifyHasShovel(ssh) {
     this.log.info("Installing Shovel")
+
+    // TODO: Start spinner
+
     // NOTE: See https://github.com/nodejs/node-gyp/issues/454#issuecomment-58792114 for why "--unsafe-perm"
     let result = await ssh.run("npm install -g --unsafe-perm @johnls/shovel", {
       sudo: true,
       noThrow: true,
     })
+
+    // TODO: Stop spinner
 
     if (result.exitCode === 0) {
       result = await ssh.run("shovel --version", {
@@ -488,6 +497,8 @@ export class ShovelTool {
         this.log.output(JSON5.stringify(JSON5.simplify(settingsNode)))
       }
 
+      // TODO: Interpolate 'settings.when' to see if script should run at all
+
       this.log.info(`Running '${scriptPath}'`)
 
       if (!options.noSpinner) {
@@ -522,6 +533,7 @@ export class ShovelTool {
 
         const asserter = new Asserter({
           interpolator,
+          runContext,
         })
         let output = {}
         let rectified = false
@@ -625,6 +637,7 @@ export class ShovelTool {
 
       remoteTempDir = (await ssh.run("mktemp -d")).output[0]
 
+      // TODO: Make a debug message
       this.log.info(`Created remote script directory '${remoteTempDir}'`)
 
       let { runContext, interpolator } = await this.createRunContext()
@@ -643,12 +656,15 @@ export class ShovelTool {
             includeNode.value.substring(scriptContext.rootScriptDirPath.length)
         }
 
+        // TODO: If debugging, insert whitespace when stringifying
         const scriptContent = JSON5.stringify(JSON5.simplify(scriptNode))
         const remoteScriptPath = path.join(remoteTempDir, scriptPath)
 
+        // TODO: This should be a debug message
         this.log.info(`Uploaded ${path.join(remoteTempDir, scriptPath)}`)
 
         await sftp.putContent(remoteScriptPath, scriptContent)
+        // TODO: If debugging, output content of file with line numbers
       }
 
       const remoteRootScriptPath = path.join(
@@ -679,6 +695,7 @@ export class ShovelTool {
         }
       )
     } finally {
+      // TODO: Always delete temporary files
       if (remoteTempDir && !this.debug) {
         this.log.info(`Deleting remote script directory '${remoteTempDir}'`)
         await ssh.run(`rm -rf ${remoteTempDir}`)

@@ -30,7 +30,7 @@ For `local` interpolated variables, the `env`, `os`, `sys` and `fs` objects all 
 
 ## `env`
 
-This are the environment variables that `shovel` was invoked with.
+This are the environment variables that `shovel` was invoked with copied from `process.env`.
 
 ## `sys`
 
