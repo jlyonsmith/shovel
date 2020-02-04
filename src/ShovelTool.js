@@ -394,6 +394,7 @@ export class ShovelTool {
         join: (...paths) => path.join(...paths),
         dirname: (filename) => path.dirname(filename),
       },
+      results: [],
     })
     const interpolator = (node) => {
       if (!node.type || node.type !== "string") {
@@ -409,6 +410,10 @@ export class ShovelTool {
       } else {
         return node.value
       }
+    }
+
+    runContext.results.last = function() {
+      return this[this.length - 1]
     }
 
     return { runContext, interpolator }
@@ -503,8 +508,9 @@ export class ShovelTool {
         }
 
         if (
-          (whenNode.type === "boolean" && !whenNode.value) ||
-          (whenNode.type === "string" && !interpolator(whenNode))
+          whenNode &&
+          ((whenNode.type === "boolean" && !whenNode.value) ||
+            (whenNode.type === "string" && !interpolator(whenNode)))
         ) {
           this.log.info(
             `Not running '${scriptPath}' because settings.when is false`
@@ -593,7 +599,9 @@ export class ShovelTool {
         }
 
         output.result = asserter.result(rectified)
-        // TODO: Add result into array of results in context
+
+        runContext.results.push(output.result)
+
         this.log.output(JSON5.stringify(output))
       }
 

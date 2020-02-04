@@ -554,7 +554,7 @@ test("runScriptLocally", async () => {
   const tool = new ShovelTool(container)
 
   tool.createRunContext = jest.fn(async () => ({
-    runContext: { vars: { a: 1 } },
+    runContext: { vars: { a: 1 }, results: [] },
     interpolator: jest.fn((s) => s),
   }))
   tool.updateRunContext = jest.fn()

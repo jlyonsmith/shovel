@@ -79,3 +79,11 @@ File system path functions.
 | --------- | ----------------------------------------- |
 | `join`    | Joins to path sections together correctly |
 | `dirname` | Extracts the directory part of a path     |
+
+## `results`
+
+An array of all the result objects from all the assertions that run.  Can be used to conditionally run assertions based on the result of a previous assertion.
+
+| Function | Description                                   |
+| -------- | --------------------------------------------- |
+| `last`   | Returns the last element of the results array |
