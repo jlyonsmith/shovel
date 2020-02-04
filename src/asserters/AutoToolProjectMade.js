@@ -46,7 +46,7 @@ export class AutoToolProjectMade {
         cwd: this.expandedDirectory,
       })
     } catch (e) {
-      // TODO: Research if all autotools packages return exit code > 1 for the out-of-date state
+      // Q: Do all autotools packages return exit code > 1 for the out-of-date state?
       return !(e.code > 1)
     }
 

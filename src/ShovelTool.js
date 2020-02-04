@@ -95,13 +95,13 @@ export class ShovelTool {
 
     this.log.info(
       `Created remote Node.js install script${
-      this.debug ? " (" + remoteTempFilePath + ")" : ""
+        this.debug ? " (" + remoteTempFilePath + ")" : ""
       }`
     )
 
     await sftp.putContent(remoteTempFilePath, installNodeScript)
 
-    // TODO: Start spinner when installing node
+    this.log.startSpinner("Installing")
 
     this.log.info(`Running Node.js install script; this could take a while`)
     result = await ssh.run(`bash ${remoteTempFilePath}`, {
@@ -109,7 +109,7 @@ export class ShovelTool {
       noThrow: true,
     })
 
-    // TODO: Stop spinner
+    this.log.stopSpinner()
 
     if (result.exitCode === 0) {
       result = await ssh.run("node --version", {
@@ -144,8 +144,7 @@ export class ShovelTool {
 
   async rectifyHasShovel(ssh) {
     this.log.info("Installing Shovel")
-
-    // TODO: Start spinner
+    this.log.startSpinner("Installing")
 
     // NOTE: See https://github.com/nodejs/node-gyp/issues/454#issuecomment-58792114 for why "--unsafe-perm"
     let result = await ssh.run("npm install -g --unsafe-perm @johnls/shovel", {
@@ -153,7 +152,7 @@ export class ShovelTool {
       noThrow: true,
     })
 
-    // TODO: Stop spinner
+    this.log.stopSpinner()
 
     if (result.exitCode === 0) {
       result = await ssh.run("shovel --version", {
@@ -674,7 +673,7 @@ export class ShovelTool {
 
       this.log.info(
         `Running Shovel remote script '${remoteRootScriptPath}'${
-        scriptContext.anyScriptHasBecomes ? " as root" : ""
+          scriptContext.anyScriptHasBecomes ? " as root" : ""
         }`
       )
 
@@ -684,7 +683,7 @@ export class ShovelTool {
 
       await ssh.run(
         `shovel --noSpinner${
-        options.assertOnly ? " --assertOnly " : " "
+          options.assertOnly ? " --assertOnly " : " "
         }${remoteRootScriptPath}`,
         {
           sudo: scriptContext.anyScriptHasBecomes,
