@@ -140,7 +140,9 @@ test("rectify", async () => {
     util: {
       pipeToPromise: jest.fn(async () => undefined),
     },
-    runContext: {},
+    runContext: {
+      env: {}
+    },
   }
   const asserter = new UrlDownloaded(container)
 
