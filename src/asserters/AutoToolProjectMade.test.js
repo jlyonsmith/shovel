@@ -1,7 +1,8 @@
-import { AutoToolProjectMade } from "./AutoToolProjectMade"
-import { createAssertNode } from "../testUtil"
+import { jest } from "@jest/globals"
+import { AutoToolProjectMade } from "./AutoToolProjectMade.js"
+import { createAssertNode } from "../testUtil.js"
 import { ScriptError } from "../ScriptError.js"
-import { PathInfo } from "../util"
+import { PathInfo } from "../util.js"
 
 test("assert", async () => {
   const container = {

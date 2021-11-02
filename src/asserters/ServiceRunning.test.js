@@ -1,5 +1,6 @@
-import { ServiceRunning } from "./ServiceRunning"
-import { createAssertNode } from "../testUtil"
+import { jest } from "@jest/globals"
+import { ServiceRunning } from "./ServiceRunning.js"
+import { createAssertNode } from "../testUtil.js"
 import { ScriptError } from "../ScriptError.js"
 
 let container = null

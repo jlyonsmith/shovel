@@ -1,8 +1,8 @@
-import { ShovelTool } from "./ShovelTool"
-import * as testUtil from "./testUtil"
-import * as version from "./version"
-import stream from "stream"
-import { ScriptError } from "./ScriptError"
+import { jest } from "@jest/globals"
+import { ShovelTool } from "./ShovelTool.js"
+import * as testUtil from "./testUtil.js"
+import * as version from "./version.js"
+import { ScriptError } from "./ScriptError.js"
 
 let container = null
 

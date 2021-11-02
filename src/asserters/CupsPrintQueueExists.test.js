@@ -1,7 +1,8 @@
-import { CupsPrintQueueExists } from "./CupsPrintQueueExists"
-import { createAssertNode } from "../testUtil"
+import { jest } from "@jest/globals"
+import { CupsPrintQueueExists } from "./CupsPrintQueueExists.js"
+import { createAssertNode } from "../testUtil.js"
 import { ScriptError } from "../ScriptError.js"
-import { PathAccess, PathInfo } from "../util"
+import { PathInfo } from "../util.js"
 
 test("assert", async () => {
   const container = {

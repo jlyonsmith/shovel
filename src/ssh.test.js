@@ -1,4 +1,5 @@
-import { SSH } from "./ssh"
+import { jest } from "@jest/globals"
+import { SSH } from "./ssh.js"
 import EventEmitter from "events"
 
 test("constructor", async () => {

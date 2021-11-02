@@ -1,7 +1,8 @@
-import { FileExists } from "./FileExists"
-import { createAssertNode } from "../testUtil"
+import { jest } from "@jest/globals"
+import { FileExists } from "./FileExists.js"
+import { createAssertNode } from "../testUtil.js"
 import { ScriptError } from "../ScriptError.js"
-import { PathInfo } from "../util"
+import { PathInfo } from "../util.js"
 
 let container = null
 

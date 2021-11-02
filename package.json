@@ -14,7 +14,7 @@
   "scripts": {
     "start": "node src/shovel.js",
     "start:debug": "node --inspect-brk src/shovel.js",
-    "test": "jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules NODE_NO_WARNINGS=1 npx jest",
     "show-coverage": "open coverage/lcov-report/index.html",
     "test:debug": "node --inspect-brk ./node_modules/jest-cli/bin/jest.js --runInBand",
     "deploy": "npm publish --access public"
@@ -26,7 +26,8 @@
       "dist/",
       "node_modules/",
       "scratch/"
-    ]
+    ],
+    "transform": {}
   },
   "repository": {
     "type": "git",

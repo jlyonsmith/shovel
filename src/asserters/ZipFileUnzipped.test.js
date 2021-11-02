@@ -1,8 +1,9 @@
-import { ZipFileUnzipped } from "./ZipFileUnzipped"
+import { jest } from "@jest/globals"
+import { ZipFileUnzipped } from "./ZipFileUnzipped.js"
 import stream from "stream"
-import { createAssertNode } from "../testUtil"
+import { createAssertNode } from "../testUtil.js"
 import { ScriptError } from "../ScriptError.js"
-import { PathInfo } from "../util"
+import { PathInfo } from "../util.js"
 import { Script } from "vm"
 
 test("assert", async () => {

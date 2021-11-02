@@ -1,7 +1,8 @@
-import { DirectoryExists } from "./DirectoryExists"
-import { createAssertNode } from "../testUtil"
+import { jest } from "@jest/globals"
+import { DirectoryExists } from "./DirectoryExists.js"
+import { createAssertNode } from "../testUtil.js"
 import { ScriptError } from "../ScriptError.js"
-import util, { PathInfo } from "../util"
+import util, { PathInfo } from "../util.js"
 
 test("assert", async () => {
   const container = {

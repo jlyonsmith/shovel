@@ -1,4 +1,5 @@
-import { SFTP } from "./sftp"
+import { jest } from "@jest/globals"
+import { SFTP } from "./sftp.js"
 import EventEmitter from "events"
 
 test("constructor", async () => {

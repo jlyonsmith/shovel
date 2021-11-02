@@ -1,7 +1,8 @@
-import { FilesDeleted } from "./FilesDeleted"
-import { createAssertNode } from "../testUtil"
+import { jest } from "@jest/globals"
+import { FilesDeleted } from "./FilesDeleted.js"
+import { createAssertNode } from "../testUtil.js"
 import { ScriptError } from "../ScriptError.js"
-import { PathInfo } from "../util"
+import { PathInfo } from "../util.js"
 
 test("assert", async () => {
   const container = {

@@ -1,5 +1,6 @@
-import { UserDisabled } from "./UserDisabled"
-import { createAssertNode } from "../testUtil"
+import { jest } from "@jest/globals"
+import { UserDisabled } from "./UserDisabled.js"
+import { createAssertNode } from "../testUtil.js"
 import { ScriptError } from "../ScriptError.js"
 
 test("assert", async () => {

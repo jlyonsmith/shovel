@@ -1,5 +1,6 @@
-import { ServiceStopped } from "./ServiceStopped"
-import { createAssertNode } from "../testUtil"
+import { jest } from "@jest/globals"
+import { ServiceStopped } from "./ServiceStopped.js"
+import { createAssertNode } from "../testUtil.js"
 import { ScriptError } from "../ScriptError.js"
 
 test("assert", async () => {

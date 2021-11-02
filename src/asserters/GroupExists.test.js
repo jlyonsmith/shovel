@@ -1,5 +1,6 @@
-import { GroupExists } from "./GroupExists"
-import { createAssertNode } from "../testUtil"
+import { jest } from "@jest/globals"
+import { GroupExists } from "./GroupExists.js"
+import { createAssertNode } from "../testUtil.js"
 import { ScriptError } from "../ScriptError.js"
 
 test("assert", async () => {

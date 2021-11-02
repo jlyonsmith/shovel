@@ -1,7 +1,7 @@
-import { GroupDeleted } from "./GroupDeleted"
-import { createAssertNode } from "../testUtil"
+import { jest } from "@jest/globals"
+import { GroupDeleted } from "./GroupDeleted.js"
+import { createAssertNode } from "../testUtil.js"
 import { ScriptError } from "../ScriptError.js"
-import { Script } from "vm"
 
 test("assert", async () => {
   const container = {

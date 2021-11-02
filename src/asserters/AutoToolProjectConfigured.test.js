@@ -1,5 +1,6 @@
-import { AutoToolProjectConfigured } from "./AutoToolProjectConfigured"
-import { createAssertNode } from "../testUtil"
+import { jest } from "@jest/globals"
+import { AutoToolProjectConfigured } from "./AutoToolProjectConfigured.js"
+import { createAssertNode } from "../testUtil.js"
 import { ScriptError } from "../ScriptError.js"
 
 test("assert", async () => {

@@ -1,5 +1,5 @@
-import { UserExists } from "./UserExists"
-import { createAssertNode } from "../testUtil"
+import { UserExists } from "./UserExists.js"
+import { createAssertNode } from "../testUtil.js"
 import { ScriptError } from "../ScriptError.js"
 
 let container = null

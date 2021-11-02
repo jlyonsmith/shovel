@@ -1,8 +1,9 @@
-import { DirectoryZipped } from "./DirectoryZipped"
+import { jest } from "@jest/globals"
+import { DirectoryZipped } from "./DirectoryZipped.js"
 import stream from "stream"
-import { createAssertNode } from "../testUtil"
+import { createAssertNode } from "../testUtil.js"
 import { ScriptError } from "../ScriptError.js"
-import { PathInfo } from "../util"
+import { PathInfo } from "../util.js"
 
 test("assert", async () => {
   let container = {

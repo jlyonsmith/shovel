@@ -1,5 +1,6 @@
-import { SystemPackageInstalled } from "./SystemPackageInstalled"
-import { createAssertNode } from "../testUtil"
+import { jest } from "@jest/globals"
+import { SystemPackageInstalled } from "./SystemPackageInstalled.js"
+import { createAssertNode } from "../testUtil.js"
 import { ScriptError } from "../ScriptError.js"
 
 let container = null

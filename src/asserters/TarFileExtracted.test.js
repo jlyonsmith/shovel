@@ -1,5 +1,6 @@
-import { TarFileExtracted } from "./TarFileExtracted"
-import { createAssertNode } from "../testUtil"
+import { jest } from "@jest/globals"
+import { TarFileExtracted } from "./TarFileExtracted.js"
+import { createAssertNode } from "../testUtil.js"
 import { ScriptError } from "../ScriptError.js"
 import { Readable, Writable } from "stream"
 

@@ -1,8 +1,8 @@
+import { jest } from "@jest/globals"
 import stream from "stream"
-import { createNode } from "./testUtil"
-import { ScriptError } from "./ScriptError"
+import { createNode } from "./testUtil.js"
+import { ScriptError } from "./ScriptError.js"
 import { Utility, PathInfo, PathAccess } from "./util"
-import fs from "fs-extra"
 
 const testString = "the quick brown fox jumps over the lazy dog"
 
