@@ -6,13 +6,12 @@ import fs from "fs-extra"
 import vm from "vm"
 import path from "path"
 import JSON5 from "@johnls/json5"
-import autobind from "autobind-decorator"
 import * as asserters from "./asserters"
 import util from "./util"
 import { ScriptError } from "./ScriptError"
 import semver from "semver"
+import { bindMethods } from "."
 
-@autobind
 export class ShovelTool {
   constructor(container = {}) {
     this.toolName = container.toolName
@@ -24,10 +23,11 @@ export class ShovelTool {
     this.createSsh = container.createSsh || ((options) => new SSH(options))
     this.createSftp = container.createSftp || ((options) => new SFTP(options))
     this.debug = container.debug
+    bindMethods.call(this)
   }
 
   static minNodeVersion = "v10.17.0"
-  static ltsNodeVersion = "v12.14.0"
+  static ltsNodeVersion = "v17.0.1"
 
   async assertHasNode(ssh) {
     let result = await ssh.run("node --version", {
@@ -412,7 +412,7 @@ export class ShovelTool {
       }
     }
 
-    runContext.results.last = function() {
+    runContext.results.last = function () {
       return this[this.length - 1]
     }
 
@@ -496,16 +496,12 @@ export class ShovelTool {
         this.log.info(JSON5.stringify(runContext.vars, null, "  "))
       }
 
-      const {
-        assertions: assertionsNode,
-        settings: settingsNode,
-      } = scriptNode.value
+      const { assertions: assertionsNode, settings: settingsNode } =
+        scriptNode.value
 
       if (Object.keys(settingsNode.value).length > 0) {
-        const {
-          when: whenNode,
-          description: descriptionNode,
-        } = settingsNode.value
+        const { when: whenNode, description: descriptionNode } =
+          settingsNode.value
 
         if (descriptionNode) {
           this.log.output(`\{ description: "${descriptionNode.value}" \}`)

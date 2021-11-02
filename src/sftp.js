@@ -1,14 +1,13 @@
 import * as nodePty from "node-pty"
-import autobind from "autobind-decorator"
 import Timeout from "await-timeout"
 import readlinePassword from "@johnls/readline-password"
 import { ansiEscapeRegex } from "./util"
 import tempy from "tempy"
 import fs from "fs-extra"
+import { bindMethods } from "."
 
 const ps1 = "sftp>"
 
-@autobind
 export class SFTP {
   constructor(container = {}) {
     this.nodePty = container.nodePty || nodePty
@@ -19,6 +18,7 @@ export class SFTP {
     this.fs = container.fs || fs
     this.debug = container.debug
     this.pty = null
+    bindMethods.call(this)
   }
 
   async connect(options = {}) {

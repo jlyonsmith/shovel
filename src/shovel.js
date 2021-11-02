@@ -3,12 +3,12 @@ import { ShovelTool } from "./ShovelTool"
 import chalk from "chalk"
 import path from "path"
 import ora from "ora"
-import autobind from "autobind-decorator"
+import { bindMethods } from "."
 
-@autobind
 class Log {
   constructor(container = {}) {
     this.ora = container.ora || ora
+    bindMethods.call(this)
   }
 
   info() {

@@ -1,13 +1,12 @@
 import * as nodePty from "node-pty"
-import autobind from "autobind-decorator"
 import readlinePassword from "@johnls/readline-password"
 import Timeout from "await-timeout"
 import { ansiEscapeRegex } from "./util"
+import { bindMethods } from "."
 
 const ps1 = "PS1>"
 const ps2 = "PS2>"
 
-@autobind
 export class SSH {
   constructor(container = {}) {
     this.nodePty = container.nodePty || nodePty
@@ -17,6 +16,7 @@ export class SSH {
     this.console = container.console || console
     this.debug = container.debug
     this.pty = null
+    bindMethods.call(this)
   }
 
   static parseLines(data) {
