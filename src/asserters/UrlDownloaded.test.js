@@ -1,6 +1,6 @@
 import { UrlDownloaded } from "./UrlDownloaded"
 import { createAssertNode } from "../testUtil"
-import { ScriptError } from "../ScriptError"
+import { ScriptError } from "../ScriptError.js"
 import util, { PathInfo } from "../util"
 
 test("assert", async () => {

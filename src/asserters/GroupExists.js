@@ -1,8 +1,8 @@
 import fs from "fs-extra"
 import childProcess from "child-process-es6-promise"
-import util from "../util"
+import util from "../util.js"
 import os from "os"
-import { ScriptError } from "../ScriptError"
+import { ScriptError } from "../ScriptError.js"
 
 export class GroupExists {
   constructor(container) {

@@ -1,7 +1,7 @@
 import childProcess from "child-process-es6-promise"
-import util from "../util"
+import util from "../util.js"
 import path from "path"
-import { ScriptError } from "../ScriptError"
+import { ScriptError } from "../ScriptError.js"
 
 export class AutoToolProjectMade {
   constructor(container) {

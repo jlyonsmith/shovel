@@ -1,6 +1,6 @@
 import { TarFileExtracted } from "./TarFileExtracted"
 import { createAssertNode } from "../testUtil"
-import { ScriptError } from "../ScriptError"
+import { ScriptError } from "../ScriptError.js"
 import { Readable, Writable } from "stream"
 
 test("assert", async () => {

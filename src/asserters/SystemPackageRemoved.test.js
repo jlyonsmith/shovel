@@ -1,6 +1,6 @@
 import { SystemPackageRemoved } from "./SystemPackageRemoved"
 import { createAssertNode } from "../testUtil"
-import { ScriptError } from "../ScriptError"
+import { ScriptError } from "../ScriptError.js"
 
 let container = null
 

@@ -1,14 +1,14 @@
 import { DirectoryZipped } from "./DirectoryZipped"
 import stream from "stream"
 import { createAssertNode } from "../testUtil"
-import { ScriptError } from "../ScriptError"
+import { ScriptError } from "../ScriptError.js"
 import { PathInfo } from "../util"
 
 test("assert", async () => {
   let container = {
     interpolator: (node) => node.value,
     readdirp: (path, options) => {
-      const generateEntries = async function*(entries) {
+      const generateEntries = async function* (entries) {
         for (const entry of entries) {
           yield entry
         }

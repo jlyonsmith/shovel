@@ -4,8 +4,8 @@ import yauzl from "yauzl"
 import readdirp from "readdirp"
 import crypto from "crypto"
 import path from "path"
-import util from "../util"
-import { ScriptError } from "../ScriptError"
+import util from "../util.js"
+import { ScriptError } from "../ScriptError.js"
 
 export class DirectoryZipped {
   constructor(container) {

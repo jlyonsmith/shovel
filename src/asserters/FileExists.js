@@ -1,8 +1,8 @@
 import fs from "fs-extra"
 import os from "os"
 import path from "path"
-import util from "../util"
-import { ScriptError } from "../ScriptError"
+import util from "../util.js"
+import { ScriptError } from "../ScriptError.js"
 
 export class FileExists {
   constructor(container) {

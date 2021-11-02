@@ -1,6 +1,6 @@
 import fs from "fs-extra"
-import util from "../util"
-import { ScriptError } from "../ScriptError"
+import util from "../util.js"
+import { ScriptError } from "../ScriptError.js"
 
 export class FileContains {
   constructor(container) {

@@ -1,6 +1,6 @@
 import { GroupDeleted } from "./GroupDeleted"
 import { createAssertNode } from "../testUtil"
-import { ScriptError } from "../ScriptError"
+import { ScriptError } from "../ScriptError.js"
 import { Script } from "vm"
 
 test("assert", async () => {

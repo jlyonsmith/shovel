@@ -1,7 +1,7 @@
 import fs from "fs-extra"
-import util from "../util"
+import util from "../util.js"
 import path from "path"
-import { ScriptError } from "../ScriptError"
+import { ScriptError } from "../ScriptError.js"
 
 export class FileCopied {
   constructor(container) {

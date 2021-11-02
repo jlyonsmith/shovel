@@ -1,6 +1,6 @@
 import { CupsPrintQueueExists } from "./CupsPrintQueueExists"
 import { createAssertNode } from "../testUtil"
-import { ScriptError } from "../ScriptError"
+import { ScriptError } from "../ScriptError.js"
 import { PathAccess, PathInfo } from "../util"
 
 test("assert", async () => {
@@ -14,7 +14,7 @@ test("assert", async () => {
       runningAsRoot: () => true,
       osInfo: async () => ({
         platform: "linux",
-        id: "centos"
+        id: "centos",
       }),
       pathInfo: async (path) => {
         if (

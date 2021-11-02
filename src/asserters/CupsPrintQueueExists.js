@@ -1,8 +1,8 @@
 import childProcess from "child-process-es6-promise"
-import { ScriptError } from "../ScriptError"
+import { ScriptError } from "../ScriptError.js"
 import path from "path"
 import fs from "fs-extra"
-import util from "../util"
+import util from "../util.js"
 import camelCase from "camelcase"
 
 const updateDeviceUri = 1 << 0
@@ -52,7 +52,8 @@ export class CupsPrintQueueExists {
 
     if (!dirtyCleanRegex.test(cupsdContent)) {
       throw new ScriptError(
-        "DirtyCleanInterval must be set to zero /etc/cups/cupsd.conf for this asserter", this.assertNode
+        "DirtyCleanInterval must be set to zero /etc/cups/cupsd.conf for this asserter",
+        this.assertNode
       )
     }
 

@@ -1,7 +1,7 @@
 import { ZipFileUnzipped } from "./ZipFileUnzipped"
 import stream from "stream"
 import { createAssertNode } from "../testUtil"
-import { ScriptError } from "../ScriptError"
+import { ScriptError } from "../ScriptError.js"
 import { PathInfo } from "../util"
 import { Script } from "vm"
 

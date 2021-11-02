@@ -1,6 +1,6 @@
-import util from "../util"
+import util from "../util.js"
 import fs from "fs-extra"
-import { ScriptError } from "../ScriptError"
+import { ScriptError } from "../ScriptError.js"
 import path from "path"
 
 export class FilesDeleted {

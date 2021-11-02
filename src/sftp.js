@@ -1,10 +1,10 @@
 import * as nodePty from "node-pty"
 import Timeout from "await-timeout"
 import readlinePassword from "@johnls/readline-password"
-import { ansiEscapeRegex } from "./util"
+import { ansiEscapeRegex } from "./util.js"
 import tempy from "tempy"
 import fs from "fs-extra"
-import { bindMethods } from "."
+import { bindMethods } from "./index.js"
 
 const ps1 = "sftp>"
 

@@ -1,16 +1,16 @@
 import parseArgs from "minimist"
-import * as version from "./version"
-import { SSH } from "./ssh"
-import { SFTP } from "./sftp"
+import * as version from "./version.js"
+import { SSH } from "./ssh.js"
+import { SFTP } from "./sftp.js"
 import fs from "fs-extra"
 import vm from "vm"
 import path from "path"
 import JSON5 from "@johnls/json5"
-import * as asserters from "./asserters"
-import util from "./util"
-import { ScriptError } from "./ScriptError"
+import * as asserters from "./asserters/index.js"
+import util from "./util.js"
+import { ScriptError } from "./ScriptError.js"
 import semver from "semver"
-import { bindMethods } from "."
+import { bindMethods } from "./index.js"
 
 export class ShovelTool {
   constructor(container = {}) {

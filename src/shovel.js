@@ -1,9 +1,9 @@
 #!/usr/bin/env node
-import { ShovelTool } from "./ShovelTool"
+import { ShovelTool } from "./ShovelTool.js"
 import chalk from "chalk"
 import path from "path"
 import ora from "ora"
-import { bindMethods } from "."
+import { bindMethods } from "./index.js"
 
 class Log {
   constructor(container = {}) {

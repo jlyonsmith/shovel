@@ -1,8 +1,8 @@
 import * as nodePty from "node-pty"
 import readlinePassword from "@johnls/readline-password"
 import Timeout from "await-timeout"
-import { ansiEscapeRegex } from "./util"
-import { bindMethods } from "."
+import { ansiEscapeRegex } from "./util.js"
+import { bindMethods } from "./index.js"
 
 const ps1 = "PS1>"
 const ps2 = "PS2>"

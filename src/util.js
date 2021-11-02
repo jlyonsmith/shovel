@@ -1,5 +1,5 @@
 import crypto from "crypto"
-import { ScriptError } from "./ScriptError"
+import { ScriptError } from "./ScriptError.js"
 import osInfo from "linux-os-info"
 import fs from "fs-extra"
 import os from "os"

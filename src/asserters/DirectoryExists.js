@@ -1,7 +1,7 @@
 import fs from "fs-extra"
 import os from "os"
-import { ScriptError } from "../ScriptError"
-import util from "../util"
+import { ScriptError } from "../ScriptError.js"
+import util from "../util.js"
 import path from "path"
 
 export class DirectoryExists {

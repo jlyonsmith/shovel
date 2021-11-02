@@ -2,10 +2,10 @@ import fs from "fs-extra"
 import os from "os"
 import path from "path"
 import fetch from "node-fetch"
-import util from "../util"
+import util from "../util.js"
 import HttpsProxyAgent from "https-proxy-agent"
 import HttpProxyAgent from "http-proxy-agent"
-import { ScriptError } from "../ScriptError"
+import { ScriptError } from "../ScriptError.js"
 
 export class UrlDownloaded {
   constructor(container) {

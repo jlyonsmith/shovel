@@ -1,6 +1,6 @@
 import { GroupExists } from "./GroupExists"
 import { createAssertNode } from "../testUtil"
-import { ScriptError } from "../ScriptError"
+import { ScriptError } from "../ScriptError.js"
 
 test("assert", async () => {
   const container = {

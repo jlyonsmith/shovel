@@ -1,6 +1,6 @@
 import childProcess from "child-process-es6-promise"
-import util from "../util"
-import { ScriptError } from "../ScriptError"
+import util from "../util.js"
+import { ScriptError } from "../ScriptError.js"
 import Timeout from "await-timeout"
 
 export class ServiceStopped {

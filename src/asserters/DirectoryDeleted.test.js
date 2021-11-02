@@ -1,6 +1,6 @@
 import { DirectoryDeleted } from "./DirectoryDeleted"
 import { createAssertNode } from "../testUtil"
-import { ScriptError } from "../ScriptError"
+import { ScriptError } from "../ScriptError.js"
 import { PathInfo } from "../util"
 
 test("assert", async () => {
