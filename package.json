@@ -16,7 +16,7 @@
     "start:debug": "node --inspect-brk src/shovel.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules NODE_NO_WARNINGS=1 npx jest",
     "show-coverage": "open coverage/lcov-report/index.html",
-    "test:debug": "node --inspect-brk ./node_modules/jest-cli/bin/jest.js --runInBand",
+    "test:debug": "NODE_OPTIONS=--experimental-vm-modules NODE_NO_WARNINGS=1 node --inspect-brk ./node_modules/jest-cli/bin/jest.js --runInBand",
     "deploy": "npm publish --access public"
   },
   "jest": {
